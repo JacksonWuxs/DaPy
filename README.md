@@ -21,7 +21,8 @@ DataPy.dbsystem(addr='data.csv', title=True, split='AUTO',
 		db=None, name=Data, firstline=1, 
 		miss_value=None)
 - This class is the core function for processing data, which supports user to pretreatment the database.
-- [addr] Your database path and name;
+distribu-
+	  tion of the data.- [addr] Your database path and name;
 - [title] "True" means your database includes title in some line. To the contrary, "False" means the there is no title on it.
 - [split] This variable means the separator of the database in every line. 'AUTO' will ask system find the best match separator to split the file. The system will set separator as ',' if the file type is '.cvs' and set separator as ' ' if the file type is '.txt', while will set separator as '\t' if the file type is '.xls'.
 - [db] You could set a canned database.
@@ -68,7 +69,7 @@ DataPy.CountFrequancy(data, cut=0.5)
 
 
 Datapy.CountDistribution(data, shapes=[0.05,0.1,0.25,0.5,0.75,0.9,0.95])
-- This function could help you find the 
+- This function could help you find the distribution of the data.
 
 
 
