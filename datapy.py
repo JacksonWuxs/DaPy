@@ -41,7 +41,7 @@ __doc__ = 'DataPy - a light data processing library for Python.\n' +\
            'Version: 1.2.3\nUpdata Time: Feb. 10th, 2018\nE-Mail:Wuxsmail@163.com\n'+\
            '-----------------------------\n\n' 
     
-class dbsystem():
+class dataset():
     def __init__(self, addr='data.csv', title=True, split='AUTO', db=None,
                  name='Data', firstline=1, miss_value=None):
         # We set some basic variables as follow.
