@@ -3,7 +3,7 @@ Examples
 <Example 1>
 	>>>
 	>>> import datapy as dp
-	>>> data = dp.dbsystem('testdb.csv')
+	>>> data = dp.dataset('testdb.csv')
 	>>> data.readframe()
 	>>> data.data
 	[Data(A_col=3, B_col=2, C_col=1, D_col=4),
