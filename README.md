@@ -17,7 +17,7 @@ Download using pip via pypi.
 
 Instructions for use
 ========================================================
-DataPy.dbsystem(addr='data.csv', title=True, split='AUTO',
+DataPy.dataset(addr='data.csv', title=True, split='AUTO',
 		db=None, name=Data, firstline=1, 
 		miss_value=None)
 - This class is the core function for processing data, which supports user to pretreatment the database.
@@ -31,34 +31,34 @@ distribu-
 - [miss_value] The missing value in your data will be replace into the simble of this variable.
 
 
-dbsystem.readframe(col=all):
+dataset.readframe(col=all):
 - This function will help you load data from a file as a DataFrame, which implements with some named-tuple in a list. You could pickout the  data with line number and columen name.
 - [col] Giving a iterable variable which contains the column number you would like to choose.
 
 
-dbsystem.readtable(col=all):
+dataset.readtable(col=all):
 - This function will help you load data from a file as a DataFrame, which implements with lists only. So it will not be allowed in pick out data with the column name.
 - [col] Giving a iterable variable which contains the column number you would like to choose.
 
 
-dbsystem.readcol(col=all):
+dataset.readcol(col=all):
 - This function supports user to load data by column which has the data structure as a diction and the keyword is column and the series is value. Additonly, you could pick series of  data in one column.
 - [col] Giving a iterable variable which contains the column number you would like to choose.
 
 
-dbsystem.data:
+dataset.data:
 - Return the data you just loaded before.
 
 
-dbsystem.titles:
+dataset.titles:
 - Return the title of this data set.
 
 
-str(dbsystem.data):
+str(dataset.data):
 - Return the name of this dataset.
 
 
-len(dbsystem.data):
+len(dataset.data):
 - Return the number of records.
 
 
