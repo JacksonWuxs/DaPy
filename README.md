@@ -101,6 +101,7 @@ Datapy.CountDistribution(data, shapes=[0.05,0.1,0.25,0.5,
 Examples
 ========================================================
 <Example 1>
+	>>>
 	>>> import datapy as dp
 	>>> data = dp.dbsystem('testdb.csv')
 	>>> data.readframe()
@@ -111,19 +112,19 @@ Examples
 	 Data(A_col=3, B_col=3, C_col=1, D_col=2), 
 	 Data(A_col=4, B_col=5, C_col=4, D_col=3),
 	 Data(A_col=2, B_col=1, C_col=1, D_col=5)]
-
+	>>>
 From Example 1, you have loaded a data set as a frame 
 from your data profile. Easily, right? Anyway, there is 
 another way to load data by column as series. Here is 
 the example.
 
 <Example 2>
+	>>>
 	>>> data.readcol()
 	>>> data.titles
 	['A_col', 'B_col', 'C_col', 'D_col']
 	>>> for title in data.titles:
 		print title,data[title]
-	
 	A_col [3, 4, 1, 3, 4, 2]
 	B_col [2, 3, 3, 3, 5, 1]
 	C_col [1, 2, 4, 1, 4, 1]
@@ -143,12 +144,13 @@ the third way to load data in bellowed.
 	 [3, 3, 1, 2], 
 	 [4, 5, 4, 3], 
 	 [2, 1, 1, 5]]
-
+	>>>
 Afther we load the data in menmery, we would like to 
 characterize the data set and try to destribe it. See the 
 example as follow.
 
 <Example 3>
+	>>>
 	>>> len(data)
 	6
 	>>> str(data)
@@ -160,11 +162,13 @@ example as follow.
 	0.16666666666666666
 	>>> STAT(Mean=2.8333333333333335, Std=1.1690451, 
 	CV=0.4126041862764749, Min=1, Max=4, Range=3)
+	>>>
 
 Finally, we also support the client opearts the data with
 '-' or '+'. It will help you change the data size.
 
 <Example 4>
+	>>>
 	>>> data.readtable()
 	>>> data - 2
 	>>> len(data)
@@ -174,6 +178,7 @@ Finally, we also support the client opearts the data with
 	 [4, 3, 2, 2], 
 	 [1, 3, 4, 2], 
 	 [3, 3, 1, 2]]
+	>>>
 	
 
 License
