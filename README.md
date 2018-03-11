@@ -28,7 +28,7 @@ Download using pip via pypi.
 Instructions for use
 ========================================================
 ```
-DataPy.dataset(addr='data.csv', title=True, split='AUTO',
+DataPy.DataSet(addr='data.csv', title=True, split='AUTO',
 		db=None, name='Data', firstline=1, 
 		miss_value=None)
 ```
