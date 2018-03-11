@@ -34,8 +34,8 @@ DataPy.dataset(addr='data.csv', title=True, split='AUTO',
 		db=None, name=Data, firstline=1, 
 		miss_value=None)
 - This class is the core function for processing data, which supports user to pretreatment the database.
-distribu-
-	  tion of the data.- [addr] Your database path and name;
+distribution of the data.
+- [addr] Your database path and name;
 - [title] "True" means your database includes title in some line. To the contrary, "False" means the there is no title on it.
 - [split] This variable means the separator of the database in every line. 'AUTO' will ask system find the best match separator to split the file. The system will set separator as ',' if the file type is '.cvs' and set separator as ' ' if the file type is '.txt', while will set separator as '\t' if the file type is '.xls'.
 - [db] You could set a canned database.
