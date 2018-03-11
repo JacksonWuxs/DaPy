@@ -1,3 +1,4 @@
+
 Description
 ========================================================
 DataPy is a light data processing library which could
@@ -13,6 +14,18 @@ Installation
 ========================================================
 Download using pip via pypi.
 	>> pip install datapy
+
+Advantage and Disadvantage
+========================================================
+We have tested the performance of Datapy in loading file.
+It was an amazing result that Datapy has the fastes speed and using less memory.
+However, there is a long way to achieve the honor of Numpy in Science Calculating. Beacause, it doesn't support matrix computing, right now. Here is the result of "Test of Loading .csv".
+
+       		Datapy	Pandas    Numpy   File Info
+	 Loading Time  17.77s | 4.55s  | 62.23s |    N/A
+	Traverse Time   0.5s  | 316.5s |  0.1s  |    N/A
+ 	  Total Spent  18.2s  | 321.1s |  62.3  |    N/A
+ 	  Memory Size   14MB  | 174MB  |  69MB  |    96MB
 
 
 Instructions for use
