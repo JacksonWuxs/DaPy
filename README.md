@@ -1,4 +1,3 @@
-
 Description
 ========================================================
 DataPy is a light data processing library which could
@@ -8,12 +7,6 @@ it contains some basic formulas that help the developers
 to understand the basic variables about the data set.
 The first Stable version (V1.2.3) will be uploaded to 
 pypi by March 15.
-
-
-Installation
-========================================================
-Download using pip via pypi.
-	>> pip install datapy
 
 Advantage and Disadvantage
 ========================================================
@@ -27,6 +20,10 @@ Despite this, because Datapy is not yet able to support matrix operations, it ha
  	  Total Spent  18.2s  | 321.1s |  62.3  |    N/A
  	  Memory Size   14MB  | 174MB  |  69MB  |    96MB
 
+Installation
+========================================================
+Download using pip via pypi.
+> pip install datapy
 
 Instructions for use
 ========================================================
