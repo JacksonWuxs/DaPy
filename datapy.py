@@ -25,7 +25,7 @@ __author__ = 'Xuansheng Wu'
 import collections
 import math
 
-__version__ = '1.2.3'
+__version__ = '1.2.4'
 
 __license__ = 'Datapy  Copyright (C) 2018  Jackson Woo'+\
               '''This program comes with ABSOLUTELY NO WARRANTY; '''+\
