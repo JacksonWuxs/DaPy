@@ -1,3 +1,4 @@
+
 Examples
 ========================================================
 <Example 1>
@@ -13,6 +14,7 @@ Examples
 	 Data(A_col=4, B_col=5, C_col=4, D_col=3),
 	 Data(A_col=2, B_col=1, C_col=1, D_col=5)]
 	>>>
+	
 From Example 1, you have loaded a data set as a frame 
 from your data profile. Easily, right? Anyway, there is 
 another way to load data by column as series. Here is 
