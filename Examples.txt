@@ -21,9 +21,9 @@ the example.
 <Example 2>
 	>>>
 	>>> data.readcol()
-	>>> data.titles
+	>>> data.title
 	['A_col', 'B_col', 'C_col', 'D_col']
-	>>> for title in data.titles:
+	>>> for title in data.title:
 		print title,data[title]
 	A_col [3, 4, 1, 3, 4, 2]
 	B_col [2, 3, 3, 3, 5, 1]
