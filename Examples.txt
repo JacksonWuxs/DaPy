@@ -46,7 +46,7 @@ the third way to load data in bellowed.
 	 [2, 1, 1, 5]]
 	>>>
 Afther we load the data in menmery, we would like to 
-characterize the data set and try to destribe it. See the 
+characterize the data set and try to describe it. See the 
 example as follow.
 
 <Example 3>
