@@ -19,7 +19,7 @@ Advantage and Disadvantage
 ========================================================
 We have tested the performance of Datapy in loading file.
 It was an amazing result that Datapy has the fastes speed and using less memory.
-However, there is a long way to achieve the honor of Numpy in Science Calculating. Beacause, it doesn't support matrix computing, right now. Here is the result of "Test of Loading .csv".
+Despite this, because Datapy is not yet able to support matrix operations, it has a long way to go to achieve Numpy's achievements in scientific computing. Here is the result of "Test of Loading .csv". The testing code has been upload already.
 
        		Datapy	Pandas    Numpy   File Info
 	 Loading Time  17.77s | 4.55s  | 62.23s |    N/A
