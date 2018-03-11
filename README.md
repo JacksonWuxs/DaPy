@@ -28,9 +28,7 @@ Download using pip via pypi.
 Instructions for use
 ========================================================
 ```
-DataPy.DataSet(addr='data.csv', title=True, split='AUTO',
-		db=None, name='Data', firstline=1, 
-		miss_value=None)
+DataPy.DataSet(addr='data.csv', title=True, split='AUTO',db=None, name='Data', firstline=1, miss_value=None)
 ```
 - This class is the core function for processing data, which supports user to pretreatment the database.
 distribution of the data.
