@@ -221,7 +221,7 @@ class DataSet():
         del data
 
 
-def CountFrequancy(data,cut=0.5):
+def CountFrequency(data,cut=0.5):
     Group1, Group2 = 0,0
     for each in data:
         if each < cut:
