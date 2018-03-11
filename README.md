@@ -41,40 +41,40 @@ distribution of the data.
 - [miss_value] The missing value in your data will be replace into the simble of this variable.
 
 ```
-dataset.readframe(col=all)
+DataSet.readframe(col=all)
 ```
 - This function will help you load data from a file as a DataFrame, which implements with some named-tuple in a list. You could pickout the  data with line number and columen name.
 - [col] Giving a iterable variable which contains the column number you would like to choose.
 
 ```
-dataset.readtable(col=all)
+DataSet.readtable(col=all)
 ```
 - This function will help you load data from a file as a DataFrame, which implements with lists only. So it will not be allowed in pick out data with the column name.
 - [col] Giving a iterable variable which contains the column number you would like to choose.
 
 ```
-dataset.readcol(col=all)
+DataSet.readcol(col=all)
 ```
 - This function supports user to load data by column which has the data structure as a diction and the keyword is column and the series is value. Additonly, you could pick series of  data in one column.
 - [col] Giving a iterable variable which contains the column number you would like to choose.
 
 ```
-dataset.data
+DataSet.data
 ```
 - Return the data you just loaded before.
 
 ```
-dataset.titles
+DataSet.titles
 ```
 - Return the title of this data set.
 
 ```
-str(dataset.data)
+str(DataSet.data)
 ```
 - Return the name of this dataset.
 
 ```
-len(dataset.data)
+len(DataSet.data)
 ```
 - Return the number of records.
 
