@@ -72,7 +72,7 @@ class dataset():
         return self.size
         
     def __getitem__(self,pos):
-        return self.db[pos]
+        return self.data[pos]
 
     def __cmp__(self, number):
         if self.size > number:
