@@ -53,12 +53,12 @@ class DataSet():
         self.name = name
         self.first = firstline
         self.miss_value = miss_value
-        self.title = None
+        self.titles = None
         
         if split == 'AUTO':
             self.sep = split_dic.setdefault(addr.split('.')[-1], False)
             if self.sep is False:
-                warnings.warn('\nAuto setting split symbal Failed.',Warning)
+                raise TypeError('Auto setting for splitting symbal failed.')
         else:
             self.sep = split
             
@@ -109,9 +109,9 @@ class DataSet():
         '''
         with open(self.addr,'r') as f:
             lines = f.readlines()
-        self.title = lines[self.first-1][:-1].split(self.sep)
+        self.titles = lines[self.first-1][:-1].split(self.sep)
         if col == all:
-            col = range(len(self.title))
+            col = range(len(self.titles))
         data = list()
         for i in xrange(self.first,len(lines)):
             every = lines[i][:-1].split(self.sep)
@@ -146,16 +146,16 @@ class DataSet():
             
         data = list()
         # Set titles
-        self.title = lines[self.first-1][:-1].split(self.sep)
+        self.titles = lines[self.first-1][:-1].split(self.sep)
         # Set column numbers
         if col == all:
-            col = range(len(self.title))
+            col = range(len(self.titles))
         # Set data structure by titles
         if self.header:
-            self.data_structure = collections.namedtuple(self.name,\
-                                                         [self.title[i] for i in col])
+            self.data_structure = collections.namedtuple(self.name,
+                                                         [self.titles[i] for i in col])
         else:                   
-            self.data_structure = collections.namedtuple(self.name,\
+            self.data_structure = collections.namedtuple(self.name,
                                                          ['col'+str(i) for i in col])
         # Reload data into data structure and transfrom the type
         for i in xrange(self.first,len(lines)):
@@ -191,10 +191,10 @@ class DataSet():
         with open(self.addr,'r') as f:
             lines=f.readlines()
         # Set titles
-        self.title = lines[self.first-1][:-1].split(self.sep)
+        self.titles = lines[self.first-1][:-1].split(self.sep)
         if col == all:
-            col = range(len(self.title))
-        title = [self.title[i] for i in col]
+            col = range(len(self.titles))
+        title = [self.titles[i] for i in col]
         
         data = [list() for i in range(len(col))]
         # Exchange types
