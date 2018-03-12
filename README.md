@@ -193,8 +193,8 @@ example as follow.
 [2,3,4]
 >>> dp.CountFrequancy(data['A_col'],2)
 0.16666666666666666
->>> STAT(Mean=2.8333333333333335, Std=1.1690451, 
-CV=0.4126041862764749, Min=1, Max=4, Range=3)
+>>> dp.Statistic(data['A_col'])
+STAT(Mean=2.8333333333333335, Std=1.1690451, CV=0.4126041862764749, Min=1, Max=4, Range=3)
 ```
 
 Finally, we also support the client opearts the data with
