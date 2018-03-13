@@ -128,7 +128,7 @@ Download using pip via pypi.
 
 Data Structure
 ========================================================
-Since the very beginning, we have adapted Datapy to Python's native data structure as much as possible, so that it is easier for users to adapt to our library. At the same time, we believe that the original data structure of Python will definitely perform better than our own. The results of the experiment also prove this idea.
+Since the very beginning, we have brought about DaPy to Python's native data structure as much as possible, so that it is easier for users to adapt to our library. At the same time, we believe that the original data structure of Python will definitely perform better than our own. The results of the experiment also prove this idea.
 - Type of Value
 	- [float] 
 		If the symbol of '.' is inside of the value, Datapy will try to transfrom the value into 'float' at first, while you load a new dataset from file. The type of float are descided by Python.
