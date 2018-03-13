@@ -57,7 +57,7 @@ def test_load(files):
     gc.collect()
 
     print '\n'
-    print '               Datapy | Pandas | Numpy | File'
+    print '               DaPy | Pandas | Numpy | File'
     print '    Load Time:{0:^4.2f}\t| {1:^4.2f}\t| {2: ^4.2f}\t|  -'.format(t4-t3, t2-t1, t6-t5)
     print 'Traverse Time:{0:^4.1f}\t| {1:^4.1f}\t| {2: ^4.1f}\t|  -'.format(t5-t4, t3-t2, t7-t6)
     print '  Total Spent:{0:^4.1f}\t| {1:^4.1f}\t| {2: ^4.1f}\t|  -'.format(t5-t3, t3-t1, t7-t5)
