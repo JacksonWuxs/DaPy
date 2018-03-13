@@ -1,28 +1,30 @@
 Description
 ========================================================
-DataPy is a light data processing library which could
-be used in loading data from data profiles amenity and 
+DaPy is a light data processing and analyzing library which could
+be used in `loading dataset` from data profiles amenity and 
 contain or reduce part of the dataset conveniency. We hope that
 Datapy can help data scientists process their datasets
-more quickly and easily.Additionly,it contains some 
+more quickly and easily. Additionly,it contains some 
 basic formulas that help the developers to understand 
-the basic attributes about the data set.
-The first public stable version (V1.2.4) will be uploaded
-to pypi by March 15.
+the basic attributes about the data set. In the future, 
+we will implement functions such as `matrix operations` 
+for DaPy, and we will include more `statistic formulas`.
+<br>The first public stable version (V1.2.4) will be uploaded
+to `pypi` by `March 15`.</br>
 
-Trade-offs
+Characteristic
 ========================================================
-We have tested the performance of Datapy in loading file.
-It was an amazing result that Datapy has the `fastes speed` with `less memory`.
-Despite this, because Datapy is not yet able to support matrix operations, it has a long way to go to achieve Numpy's achievements in scientific computing. The testing code has been uploaded already.
+We have tested the performance of DaPy in loading file.
+It was an amazing result that DaPy has the `fastes speed` with `less memory`.
+Despite this, because DaPy is not yet able to support matrix operations, it has a long way to go to achieve Numpy's and Pandas' achievements in scientific computing. The testing code has been uploaded already.
 ```
-   File Size | 96MB
-    Platform | Win10
-    Language | Python2.7-64Bit
-```
-```
-         Result of Testing
-       	       Datapy	Pandas    Numpy   
+            Environment:
+    File Size  96MB
+     Platform  Win10
+     Language  Python2.7-64Bit
+
+            Result of Testing
+       	        DaPy	Pandas    Numpy   
  Loading Time  17.77s | 4.55s  | 62.23s 
 Traverse Time   0.5s  | 316.5s |  0.1s  
   Total Spent  18.2s  | 321.1s |  62.3   
@@ -33,8 +35,8 @@ Examples
 
 ```Python
 <Example 1>
->>> import datapy as dp
->>> data = dp.dataset('testdb.csv')
+>>> import DaPy as dp
+>>> data = dp.DataSet('testdb.csv')
 >>> data.readframe()
 >>> data.data
 [Data(A_col=3, B_col=2, C_col=1, D_col=4),
@@ -60,7 +62,7 @@ the example.
 >>> data.titles
 ['A_col', 'B_col', 'C_col', 'D_col']
 >>> for title in data.titles:
-	print title,data[title]
+	print title, data[title]
 	
 A_col [3, 4, 1, 3, 4, 2]
 B_col [2, 3, 3, 3, 5, 1]
@@ -90,9 +92,9 @@ example as follow.
 
 ```Python
 <Example 4>
->>> len(data)
+>>> len(data) # How much records does dataset include
 6
->>> str(data)
+>>> str(data) # The name of dataset
 'Data'
 >>> dp.CountDistribution(data['A_col'],[0.25,0.5,0.75])
 [2,3,4]
@@ -138,15 +140,15 @@ Since the very beginning, we have adapted Datapy to Python's native data structu
 		If the value doesn't meet any condition, it will be transfrom into 'string'. 
 
 - Type of DataSet
-	- [frame] It is a list with amount of named-tuples inside.
-	- [table] It is a list with amount of lists inside.
-	- [series] It is a diction while the column name are 'Key' and datas are included in a list as 'Value'.
+	- [frame] It is a list with amount of named-tuples inside. You can easily get the records you want with this data structure. And it is write-protected by "tuples", and you can be more at ease with your data. Therefore, we recommend that you use this data structure when you only need to traverse the data without changing it.
+	- [table] It is a list with amount of lists inside. This is a simple data structure for you. While you use this structure, you always expect to process the source data set.
+	- [series] It is a diction while the column name are 'Key' and datas are included in a list as 'Value'. When you need to analyze a variable in the dataset and not all the variables in each record, you can easily extract one column in this structure.
 
 
 Instructions for use
 ========================================================
 ```Python
-DataPy.DataSet(addr='data.csv', title=True, split='AUTO',db=None, name='Data', firstline=1, miss_value=None)
+DaPy.DataSet(addr='data.csv', title=True, split='AUTO',db=None, name='Data', firstline=1, miss_value=None)
 ```
 This class is the core function for processing data, which supports user to pretreatment the database.
 distribution of the data.
@@ -196,20 +198,20 @@ len(DataSet.data)
 - Return the number of records.
 
 ```Python
-DataPy.CountFrequancy(data, cut=0.5)
+DaPy.CountFrequancy(data, cut=0.5)
 ```
 This function is used in counting the distribution of a data series. 
 - [cut] means the cut point you want.If you would like to calculate the proportion of series, you can get help from this function.
 - [data] expects a iterble item, such as tuple() or list(). Unnecessary variable "cut" expects a number. It will return a float means the proportion of data which is larger than "cut".
 
 ```Python
-Datapy.CountDistribution(data, shapes=[0.05,0.1,0.25,0.5,0.75,0.9,0.95])
+Dapy.CountDistribution(data, shapes=[0.05,0.1,0.25,0.5,0.75,0.9,0.95])
 ```
 This function could help you find the distribution of the data.
 - Return the value of each quantile.
 
 ```Python
-Datapy.Statistic(data)
+Dapy.Statistic(data)
 ```
 - Return the basic statistics of the data set as NamedTuple.
 - The tuple includes 'Mean','Std','CV','Min','Max' and 'Range'.
