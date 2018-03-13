@@ -18,7 +18,7 @@ We have tested the performance of DaPy in loading file.
 It was an amazing result that DaPy has the `fastes speed` with `less memory`.
 Despite this, because DaPy is not yet able to support matrix operations, it has a long way to go to achieve Numpy's and Pandas' achievements in scientific computing. The testing code has been uploaded already.
 ```
-            Environment:
+            Environment
     File Size  96MB
      Platform  Win10
      Language  Python2.7-64Bit
