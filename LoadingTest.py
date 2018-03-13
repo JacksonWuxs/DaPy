@@ -1,3 +1,4 @@
+
 import DaPy as dp
 import pandas as pd
 import numpy as np
@@ -64,4 +65,5 @@ def test_load(files):
     print '  Memory Size: %dMB\t| %dMB\t| %dMB\t| %dMB'%(size_DaPy//1048575,size_pandas//1048575,size_numpy//1048575,size_file//1048575)
     print '\n' 
     
-test_load('1718.csv')
+if __name_ == '__main__':
+    test_load('1718.csv')
