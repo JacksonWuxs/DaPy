@@ -1,8 +1,8 @@
-# python2
+# python2/3
 #-*- coding:utf-8 -*-
 
 '''
-datapy module is a useful tool, which try to help you load and analysis data easily.
+DaPy module is a useful tool, which try to help you process and analysis data easily.
 
 Copyright (C) 2018  Xuansheng Wu
 
@@ -27,18 +27,16 @@ import math
 
 __version__ = '1.2.4'
 
-__license__ = 'Datapy  Copyright (C) 2018  Jackson Woo'+\
+__license__ = 'DaPy  Copyright (C) 2018  Jackson Woo'+\
               '''This program comes with ABSOLUTELY NO WARRANTY; '''+\
               '''for details type `show w'.This is free software,'''+\
               '''and you are welcome to redistribute it under certain'''+\
               '''conditions; type `show c' for details.'''
 
-__doc__ = 'DataPy - a light data processing library for Python.\n' +\
-          '====================================================\n'+\
-          'There is only one class called'+\
-          "'dbsystem' with following objects:\n 'readall','readcol'"+\
-          '\n\n-----------------------------\nName: Datapy\nAuthor: Jackson Woo\n'+\
-           'Version: 1.2.3\nUpdata Time: Feb. 10th, 2018\nE-Mail:Wuxsmail@163.com\n'+\
+__doc__ = 'DaPy - a light data processing and analysinglibrary for Python.\n' +\
+          '===============================================================\n'+\
+          '\n\n-----------------------------\nName: DaPy\nAuthor: Jackson Woo\n'+\
+           'Version: %s\nUpdata Time: Feb. 10th, 2018\nE-Mail:Wuxsmail@163.com\n'%__version__+\
            '-----------------------------\n\n' 
     
 class DataSet():
@@ -64,7 +62,6 @@ class DataSet():
             
         if self.data is None:
             self.size = 0
-            
         else:
             self.size = len(self.data)
     
