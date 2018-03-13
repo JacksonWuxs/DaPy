@@ -1,3 +1,4 @@
+
 Description
 ========================================================
 DaPy is a light data processing and analyzing library which could
@@ -18,10 +19,15 @@ We have tested the performance of DaPy in loading file.
 It was an amazing result that DaPy has the `fastes speed` with `less memory`.
 Despite this, because DaPy is not yet able to support matrix operations, it has a long way to go to achieve Numpy's and Pandas' achievements in scientific computing. The testing code has been uploaded already.
 ```
+Date: 2018-3-12
+
             Environment
-    File Size  96MB
-     Platform  Win10
-     Language  Python2.7-64Bit
+	     CPU  Intel Core i7-6560U
+       Hard Disk  NVMe THNSN5256GPU7 NV
+       File Size  96MB
+        Platform  Win10
+        Language  Python2.7-64Bit
+
 
             Result of Testing
        	        DaPy	Pandas    Numpy   
