@@ -59,6 +59,7 @@ Examples
 2
 >>> data[-1].C_col # Data in the third column of the last record
 1
+>>>
 ```
 
 In Example 1, you have loaded a data set as a frame 
@@ -78,6 +79,7 @@ A_col [3, 4, 1, 3, 4, 2, 6, 4, 1, 3, 2, 3]
 B_col [2, 3, 3, 3, 5, 1, 4, 7, 9, 2, 9, 4]
 C_col [1, 2, 4, 1, 4, 1, 3, 8, 8, 6, 1, 1]
 D_col [4, 2, 2, 2, 3, 5, 2, 3, 3, 5, 5, 6]
+>>>
 ```
 
 Example 1 and Example 2  have showed two ways to load data.
@@ -100,6 +102,7 @@ the third way to load data in bellowed.
  [3, 2, 6, 5], 
  [2, 9, 1, 5], 
  [3, 4, 1, 6]]
+>>>
 ```
 Afther we load the data in menmory, we would like to 
 characterize the data set and try to describe it. See the 
@@ -120,6 +123,8 @@ example as follow.
 STAT(Mean=3.0, Std=1.4142135623730951, CV=0.47140452079103173, Min=1, Max=6, Range=5)
 >>> dp.CountQuantiles(data['A_col'])
 [1, 1, 2, 3, 4, 6]
+>>> dp.cov(data['A_col'], data['B_col'])
+-0.5833333333333339
 >>>
 ```
 
@@ -132,12 +137,21 @@ Finally, we also support the user opearts the dataset with
 >>> data.readtable()
 >>> data - 2
 >>> len(data)
-4
+10
 >>> data.data
 [[3, 2, 1, 4], 
  [4, 3, 2, 2], 
  [1, 3, 4, 2], 
- [3, 3, 1, 2]]	
+ [3, 3, 1, 2], 
+ [4, 5, 4, 3], 
+ [2, 1, 1, 5], 
+ [6, 4, 3, 2], 
+ [4, 7, 8, 3], 
+ [1, 9, 8, 3], 
+ [3, 2, 6, 5], 
+ [2, 9, 1, 5], 
+ [3, 4, 1, 6]]
+>>>
 ```
 Installation
 ========================================================
@@ -193,7 +207,11 @@ DataSet.readcol(col=all)
 ```
 This function supports user to load data by column which has the data structure as a diction and the keyword is column and the series is value. Additonly, you could pick series of  data in one column.
 - [col] Giving a iterable variable which contains the column number you would like to choose.
-
+```Python
+DataSet.tocsv(addr)
+```
+This function will help you to save the dataset as a 'csv' file.
+- [addr] Expects a string type value of file address.
 ```Python
 DataSet.data
 ```
@@ -213,7 +231,14 @@ str(DataSet.data)
 len(DataSet.data)
 ```
 - Return the number of records.
-
+```Python
+DaPy.cor(data_1, data_2)
+```
+This function will help you calculate the correlation of two series data.
+```Python
+DaPy.cov(data_1, data_2)
+```
+This function will help you calculate the covariance of two series data.
 ```Python
 DaPy.CountFrequency(data, cut=0.5)
 ```
@@ -225,13 +250,13 @@ This function is used in counting the distribution of a data series.
 DaPy.CountQuantiles(data, shapes=[0.05,0.1,0.25,0.5,0.75,0.9,0.95])
 ```
 This function could help you find the Quantiles of the data.
-- [shapes] expects a iterble item which includes some decimals.
+- [shapes] Expects a iterble item which includes some decimals.
 - Return the value of each quantile.
 ```Python
 DaPy.CountDistribution(data, breaks=10)
 ```
 This function could help you statistic the distribution of the data.
-- [breaks] expects a integer which means how many groups you would like to partition.
+- [breaks] Expects a integer which means how many groups you would like to partition.
 - Return a list that includes the frequency of each partition.
 ```Python
 DaPy.Statistic(data)
