@@ -1,22 +1,20 @@
 
 Description
 ========================================================
-DaPy is a light data processing and analyzing library which could
-be used in `loading dataset` from data profiles amenity and 
+DaPy is a light data processing and analysis library which could
+be used in loading dataset from data profiles amenity and 
 contain or reduce part of the dataset conveniency. We hope that
-Datapy can help data scientists process their datasets
-more quickly and easily. Additionly,it contains some 
+DaPy can help data scientists process their datasets
+more quickly and easily. Additionly,it supports some 
 basic formulas that help the developers to understand 
-the basic attributes about the data set. In the future, 
+the basic attributes about the dataset. In the future, 
 we will implement functions such as `matrix operations` 
-for DaPy, and we will include more `statistic formulas`.
-<br>The first public stable version (V1.2.4) will be uploaded
-to `pypi` by `March 15`.</br>
+for DaPy, and we will add more `statistical formulas`.
 
 Characteristic
 ========================================================
 We have tested the performance of DaPy in loading file.
-It was an amazing result that DaPy has the `fastes speed` with `less memory`.
+It was an amazing result that DaPy has the `fastest speed` with `less memory`.
 Despite this, because DaPy is not yet able to support matrix operations, it has a long way to go to achieve Numpy's and Pandas' achievements in scientific computing. The testing code has been uploaded already.
 ```
 Date: 2018-3-12
@@ -42,7 +40,7 @@ Examples
 ```Python
 <Example 1>
 >>> import DaPy as dp
->>> data = dp.DataSet('testdb.csv')
+>>> data = dp.DataSet('ExamplesDB.csv')
 >>> data.readframe()
 >>> data.data
 [Data(A_col=3, B_col=2, C_col=1, D_col=4),
@@ -50,14 +48,20 @@ Examples
  Data(A_col=1, B_col=3, C_col=4, D_col=2), 
  Data(A_col=3, B_col=3, C_col=1, D_col=2), 
  Data(A_col=4, B_col=5, C_col=4, D_col=3),
- Data(A_col=2, B_col=1, C_col=1, D_col=5)]
+ Data(A_col=2, B_col=1, C_col=1, D_col=5),
+ Data(A_col=6, B_col=4, C_col=3, D_col=2),
+ Data(A_col=4, B_col=7, C_col=8, D_col=3),
+ Data(A_col=1, B_col=9, C_col=8, D_col=3),
+ Data(A_col=3, B_col=2, C_col=6, D_col=5),
+ Data(A_col=2, B_col=9, C_col=1, D_col=5),
+ Data(A_col=3, B_col=4, C_col=1, D_col=6)]
 >>> data[0].B_col # Data in the second column of the first record
 2
 >>> data[-1].C_col # Data in the third column of the last record
 1
 ```
 
-From Example 1, you have loaded a data set as a frame 
+In Example 1, you have loaded a data set as a frame 
 from your data profile. Easily, right? Anyway, there is 
 another way to load data by column as series. Here is 
 the example.
@@ -70,10 +74,10 @@ the example.
 >>> for title in data.titles:
 	print title, data[title]
 	
-A_col [3, 4, 1, 3, 4, 2]
-B_col [2, 3, 3, 3, 5, 1]
-C_col [1, 2, 4, 1, 4, 1]
-D_col [4, 2, 2, 2, 3, 5]
+A_col [3, 4, 1, 3, 4, 2, 6, 4, 1, 3, 2, 3]
+B_col [2, 3, 3, 3, 5, 1, 4, 7, 9, 2, 9, 4]
+C_col [1, 2, 4, 1, 4, 1, 3, 8, 8, 6, 1, 1]
+D_col [4, 2, 2, 2, 3, 5, 2, 3, 3, 5, 5, 6]
 ```
 
 Example 1 and Example 2  have showed two ways to load data.
@@ -89,28 +93,37 @@ the third way to load data in bellowed.
  [1, 3, 4, 2], 
  [3, 3, 1, 2], 
  [4, 5, 4, 3], 
- [2, 1, 1, 5]]
+ [2, 1, 1, 5], 
+ [6, 4, 3, 2], 
+ [4, 7, 8, 3], 
+ [1, 9, 8, 3], 
+ [3, 2, 6, 5], 
+ [2, 9, 1, 5], 
+ [3, 4, 1, 6]]
 ```
-Afther we load the data in menmery, we would like to 
-characterize the data set and try to destribe it. See the 
+Afther we load the data in menmory, we would like to 
+characterize the data set and try to describe it. See the 
 example as follow.
-
 
 ```Python
 <Example 4>
+>>> data.readcol()
 >>> len(data) # How much records does dataset include
-6
+12
 >>> str(data) # The name of dataset
 'Data'
->>> dp.CountDistribution(data['A_col'],[0.25,0.5,0.75])
-[2,3,4]
->>> dp.CountFrequancy(data['A_col'],2)
+>>> dp.CountDistribution(data['A_col'])
+[0.16666666666666666, 0.16666666666666666, 0.0, 0.3333333333333333, 0.0, 0.25, 0.0, 0.0, 0.0, 0.08333333333333333]
+>>> dp.CountFrequency(data['A_col'],2)
 0.16666666666666666
 >>> dp.Statistic(data['A_col'])
-STAT(Mean=2.8333333333333335, Std=1.1690451, CV=0.4126041862764749, Min=1, Max=4, Range=3)
+STAT(Mean=3.0, Std=1.4142135623730951, CV=0.47140452079103173, Min=1, Max=6, Range=5)
+>>> dp.CountQuantiles(data['A_col'])
+[1, 1, 2, 3, 4, 6]
+>>>
 ```
 
-Finally, we also support the client opearts the data with
+Finally, we also support the user opearts the dataset with
 '-' or '+'. It will help you change the data size.
 
 
@@ -128,13 +141,11 @@ Finally, we also support the client opearts the data with
 ```
 Installation
 ========================================================
-Download using pip via pypi.
-> pip install datapy
-
+Download the DaPy.py from https://github.com/JacksonWuxs/DaPy and move it to your base folder of Python.
 
 Data Structure
 ========================================================
-Since the very beginning, we have brought about DaPy to Python's native data structure as much as possible, so that it is easier for users to adapt to our library. At the same time, we believe that the original data structure of Python will definitely perform better than our own. The results of the experiment also prove this idea.
+Since the very beginning, we have designed DaPy to Python's native data structure as much as possible, so that it is easier for users to adapt to our library. At the same time, we believe that the original data structure of Python will definitely perform better than our own. The results of the experiment also prove this idea.
 - Type of Value
 	- [float] 
 		If the symbol of '.' is inside of the value, Datapy will try to transfrom the value into 'float' at first, while you load a new dataset from file. The type of float are descided by Python.
@@ -204,20 +215,26 @@ len(DataSet.data)
 - Return the number of records.
 
 ```Python
-DaPy.CountFrequancy(data, cut=0.5)
+DaPy.CountFrequency(data, cut=0.5)
 ```
 This function is used in counting the distribution of a data series. 
 - [cut] means the cut point you want.If you would like to calculate the proportion of series, you can get help from this function.
 - [data] expects a iterble item, such as tuple() or list(). Unnecessary variable "cut" expects a number. It will return a float means the proportion of data which is larger than "cut".
 
 ```Python
-Dapy.CountDistribution(data, shapes=[0.05,0.1,0.25,0.5,0.75,0.9,0.95])
+DaPy.CountQuantiles(data, shapes=[0.05,0.1,0.25,0.5,0.75,0.9,0.95])
 ```
-This function could help you find the distribution of the data.
+This function could help you find the Quantiles of the data.
+- [shapes] expects a iterble item which includes some decimals.
 - Return the value of each quantile.
-
 ```Python
-Dapy.Statistic(data)
+DaPy.CountDistribution(data, breaks=10)
+```
+This function could help you statistic the distribution of the data.
+- [breaks] expects a integer which means how many groups you would like to partition.
+- Return a list that includes the frequency of each partition.
+```Python
+DaPy.Statistic(data)
 ```
 - Return the basic statistics of the data set as NamedTuple.
 - The tuple includes 'Mean','Std','CV','Min','Max' and 'Range'.
@@ -238,4 +255,4 @@ GNU General Public License for more details.</br>
 <br>
 You should have received a copy of the GNU General Public License
 along with this program.  If not, see https:\\www.gnu.org\licenses.# datapy
-A light Python library for data processing.</br>
+A light Python library for data processing and analysing.</br>
