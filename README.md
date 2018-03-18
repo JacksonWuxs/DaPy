@@ -1,10 +1,10 @@
 
 Description
 ========================================================
-DaPy is a light data processing and analysis library which could
-be used in loading dataset from data profiles amenity and 
-contain or reduce part of the dataset conveniency. We hope that
-DaPy can help data scientists process their datasets
+As a light data processing and analysis library， DaPy 
+can be used to load dataset from data profiles and 
+contain or reduce part of the dataset conveniently. 
+We hope that DaPy can help data scientists process their datasets
 more quickly and easily. Additionly,it supports some 
 basic formulas that help the developers to understand 
 the basic attributes about the dataset. In the future, 
