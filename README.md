@@ -1,15 +1,11 @@
 
 Description
 ========================================================
-As a light data processing and analysis library， DaPy 
-can be used to load dataset from data profiles and 
-contain or reduce part of the dataset conveniently. 
-We hope that DaPy can help data scientists process their datasets
-more quickly and easily. Additionly,it supports some 
-basic formulas that help the developers to understand 
-the basic attributes about the dataset. In the future, 
-we will implement functions such as `matrix operations` 
-for DaPy, and we will add more `statistical formulas`.
+As a light data processing and analysis library，DaPy is committed to saving data scientists the time of analyzing datasets and improving the efficiency of data scientists.
+We hope that DaPy can help data scientists process or analysis their datasets
+more quickly and easily. 
+<br><br>In terms of data loading, DaPy's data structure is clear and concise for data scientists to "feel" data; functions are feature-rich and efficient, saving data scientists the processing time for complex data. In terms of descriptive statistics, DaPy has provided comprehensive calculation formulas that can help data scientists quickly understand data characteristics.</br></br>
+In the future, DaPy will add more data cleansing and inferential statistics functions; implement more formulas used in the mathematical model building process; and even include some simple machine learning models (multilayer perceptrons, support vector machines, etc.). DaPy is continuously improving according to the data analysis process.
 
 Characteristic
 ========================================================
