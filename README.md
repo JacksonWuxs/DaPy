@@ -23,7 +23,7 @@ perceptrons, support vector machines, etc.). DaPy is
 continuously improving according to the data analysis process.  
 
 If you think DaPy is interesting or helpful,
-don't forget to share DaPy to your frineds! If you have 
+don't forget to share DaPy with your frineds! If you have 
 any suggestions, please tell us with "Issues". Besides, 
 giving us a 'Star' will be the best way to encourage us!  
 
