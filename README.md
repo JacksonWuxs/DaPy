@@ -27,6 +27,13 @@ don't forget to share DaPy with your frineds! If you have
 any suggestions, please tell us with "Issues". Besides, 
 giving us a 'Star' will be the best way to encourage us!  
 
+Installation
+========================================================
+The Latest version 1.2.5 had been upload to PyPi.
+```
+pip install DaPy
+```
+
 Characteristic
 ========================================================
 We have tested the performance of DaPy in loading file.
@@ -169,10 +176,6 @@ Finally, we also support the user opearts the dataset with
  [3, 4, 1, 6]]
 >>>
 ```
-Installation
-========================================================
-Download the DaPy.py from https://github.com/JacksonWuxs/DaPy and move it to your base folder of Python.
-
 Data Structure
 ========================================================
 Since the very beginning, we have designed DaPy to Python's native data structure as much as possible, so that it is easier for users to adapt to our library. At the same time, we believe that the original data structure of Python will definitely perform better than our own. The results of the experiment also prove this idea.
