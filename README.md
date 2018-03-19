@@ -3,7 +3,7 @@ Description
 ========================================================
 As a light data processing and analysis library，DaPy is
 committed to saving data scientists the time of analyzing
-datasets and improving the efficiency of data scientists.
+datasets and improving the efficiency of research.
 We hope that DaPy can help data scientists process or 
 analysis their datasets more quickly and easily.  
 
