@@ -29,7 +29,7 @@ giving us a 'Star' will be the best way to encourage us!
 
 Installation
 ========================================================
-The Latest version 1.2.5 had been upload to PyPi.
+The Latest version 1.3.1 had been upload to PyPi.
 ```
 pip install DaPy
 ```
