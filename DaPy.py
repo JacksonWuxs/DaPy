@@ -24,7 +24,7 @@ __author__ = 'Xuansheng Wu'
 
 import collections
 
-__version__ = '1.2.5'
+__version__ = '1.3.1'
 
 __license__ = 'DaPy  Copyright (C) 2018  Jackson Woo'+\
               '''This program comes with ABSOLUTELY NO WARRANTY; '''+\
@@ -40,7 +40,7 @@ except:
           '===============================================================\n'+\
           'A light data processing and analysinglibrary for Python.\n'+\
           '\n-----------------------------\nName: DaPy\nAuthor: Jackson Woo\n'+\
-           'Version: %s\nUpdata: Mar. 15th, 2018\nE-Mail:Wuxsmail@163.com\n'%__version__+\
+           'Version: %s\nUpdata: Mar. 19th, 2018\nE-Mail:Wuxsmail@163.com\n'%__version__+\
            '-----------------------------\n\n' 
     
 class DataSet():
@@ -72,7 +72,7 @@ class DataSet():
     def __len__(self):
         return self.size
         
-    def __getitem__(self,pos):
+    def __getitem__(self, pos):
         return self.data[pos]
 
     def __cmp__(self, number):
@@ -102,19 +102,19 @@ class DataSet():
             raise TypeError("Cannot reduce %s and %s objects."%(type(self.data)\
                                                                 ,type(other)))
         
-    def readtable(self,col=all):
+    def readtable(self, col=all):
         '''
         This function could be used in loading data from a file in a simple way.
         That will be faster than <readframe> function but couldn't give too much
         information about the variables.
         '''
-        with open(self.addr,'r') as f:
+        with open(self.addr, 'r') as f:
             lines = f.readlines()
         self.titles = lines[self.first-1][:-1].split(self.sep)
         if col == all:
             col = range(len(self.titles))
         data = list()
-        for i in xrange(self.first,len(lines)):
+        for i in xrange(self.first, len(lines)):
             every = lines[i][:-1].split(self.sep)
             line = list()
             for j in col:
@@ -135,14 +135,14 @@ class DataSet():
         self.size = len(self.data)
         del data
 
-    def readframe(self,col=all):
+    def readframe(self, col=all):
         '''
         This function is the most useful function in this class which supports
         users to load data from a document easily and returns some core
         information of the data.
         '''
         # Load Files...
-        with open(self.addr,'r') as f:
+        with open(self.addr, 'r') as f:
             lines = f.readlines()
             
         data = list()
@@ -159,7 +159,7 @@ class DataSet():
             self.data_structure = collections.namedtuple(self.name,
                                                          ['col'+str(i) for i in col])
         # Reload data into data structure and transfrom the type
-        for i in xrange(self.first,len(lines)):
+        for i in xrange(self.first, len(lines)):
             every = lines[i][:-1].split(self.sep)
             line = list()
             for j in col:
@@ -182,14 +182,14 @@ class DataSet():
         # Release RAM
         del data, lines, self.header, line
 
-    def readcol(self,col=all):
+    def readcol(self, col=all):
         '''
         <readcol> is another usefule function in datapy because it supports users
         to load data from the document by columen. In another word, you can
         easily pick out the data by each columen.
         '''
         # Load Files
-        with open(self.addr,'r') as f:
+        with open(self.addr, 'r') as f:
             lines=f.readlines()
         # Set titles
         self.titles = lines[self.first-1][:-1].split(self.sep)
@@ -216,7 +216,7 @@ class DataSet():
                 else:
                     data[i].append(data_)
                     
-        self.data = dict(zip(title,data))
+        self.data = dict(zip(title, data))
         self.size = len(data[0])
         del data
 
@@ -265,7 +265,7 @@ def cor(data_1, data_2):
 
     return covariance/(static_1.Std*static_2.Std)
  
-def CountFrequency(data,cut=0.5):
+def CountFrequency(data, cut=0.5):
     Group1, Group2 = 0,0
     for each in data:
         if each < cut:
@@ -274,7 +274,7 @@ def CountFrequency(data,cut=0.5):
             Group2 += 1
     return Group1/float(len(data))
 
-def CountQuantiles(data,shapes=[0.05,0.1,0.25,0.5,0.75,0.9,0.95]):
+def CountQuantiles(data, shapes=[0.05,0.1,0.25,0.5,0.75,0.9,0.95]):
     data = sorted(data)
     groups = list()
     lenth = len(data) + 1
