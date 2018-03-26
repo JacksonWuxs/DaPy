@@ -1,4 +1,3 @@
-<img src="https://img.shields.io/pypi/v/dapy.svg" alt="Latest Release" />  
 
 Description
 ========================================================
