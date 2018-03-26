@@ -1,31 +1,32 @@
+<img src="https://img.shields.io/pypi/v/dapy.svg" alt="Latest Release" />  
 
 Description
 ========================================================
-As a light data processing and analysis library，DaPy is
+As a light data **processing** and **analysis** library，**DaPy** is
 committed to saving data scientists the time of analyzing
 datasets and improving the efficiency of research.
 We hope that DaPy can help data scientists process or 
-analysis their datasets more quickly and easily.  
+analysis their datasets more *quickly* and *easily*.  
 
-In terms of data loading, DaPy's data structure 
+In terms of **data loading**, DaPy's data structure 
 is so clear and concise that data scientists could "feel" data;
 functions are feature-rich and efficient, saving data
 scientists the processing time for complex data. In terms
-of descriptive statistics, DaPy has provided comprehensive
+of **descriptive statistics**, DaPy has provided comprehensive
 calculation formulas that can help data scientists quickly
 understand data characteristics.  
 
 In the future, DaPy will add more data cleansing and
-inferential statistics functions; implement more formulas
-used in mathematical modeling; and even
-include some simple machine learning models (multilayer
+***inferential statistics functions***; implement more formulas
+used in ***mathematical modeling***; and even
+include some simple ***machine learning models*** (multilayer
 perceptrons, support vector machines, etc.). DaPy is
 continuously improving according to the data analysis process.  
 
 If you think DaPy is interesting or helpful,
 don't forget to share DaPy with your frineds! If you have 
 any suggestions, please tell us with "Issues". Besides, 
-giving us a 'Star' will be the best way to encourage us!  
+*giving us a 'Star'* will be the best way to encourage us!  
 
 Installation
 ========================================================
@@ -39,24 +40,68 @@ Characteristic
 We have tested the performance of DaPy in loading file.
 It was an amazing result that DaPy has the `fastest speed` with `less memory`.
 Despite this, because DaPy is not yet able to support matrix operations, it has a long way to go to achieve Numpy's and Pandas' achievements in scientific computing. The testing code has been uploaded already.
-```
-Date: 2018-3-12
+<table>
+<tr>
+	<td>Date: 2018-3-12</td>
+	<td>Testing Information</td>
+	</tr>
+<tr>
+	<td>CPU</td>
+	<td>Intel Core i7-6560U</td>
+	</tr>
+<tr>
+	<td>Hard Disk</td>
+	<td>NVMe THNSN5256GPU7 NV</td>
+	</tr>
+<tr>
+	<td>File Size</td>
+	<td>96MB</td>
+	</tr>
+<tr>
+	<td>Platform</td>
+	<td>Win10</td>
+	</tr>
+<tr>
+	<td>Lancher</td>
+	<td>Python2.7-64Bit</td>
+	</tr>
+</table>
+<table>
+<tr>
+	<td>Result of Testing</td>
+</tr>
+<tr>
+	<td></td>
+	<td>DaPy</td>
+	<td>Pandas</td>
+	<td>Numpy</td> 
+</tr>
+<tr>
+	<td>Loading Time</td>
+	<td>17.77s</td>
+	<td>4.55s</td>
+	<td>62.23s</td>
+</tr>
+<tr>
+	<td>Traverse Time</td>
+	<td>0.5s</td>
+	<td>316.5s</td>
+	<td>0.1s</td>
+</tr>
+<tr>
+	<td>Total Spent</td>
+	<td>18.2s</td>
+	<td>321.1s</td>
+	<td>62.3</td>
+	</tr>
+<tr>
+	<td>Memory Size</td>
+	<td>14MB</td>
+	<td>174MB</td>
+	<td>69MB</td>
+	</tr>
+</table>
 
-            Environment
-	     CPU  Intel Core i7-6560U
-       Hard Disk  NVMe THNSN5256GPU7 NV
-       File Size  96MB
-        Platform  Win10
-        Language  Python2.7-64Bit
-
-
-            Result of Testing
-       	        DaPy	Pandas    Numpy   
- Loading Time  17.77s | 4.55s  | 62.23s 
-Traverse Time   0.5s  | 316.5s |  0.1s  
-  Total Spent  18.2s  | 321.1s |  62.3   
-  Memory Size   14MB  | 174MB  |  69MB    
-```
 Examples
 ========================================================
 
