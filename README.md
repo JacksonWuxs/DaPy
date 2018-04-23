@@ -2,8 +2,8 @@
 Description
 ========================================================
 As a light data **processing** and **analysis** library，**DaPy** is
-committed to saving data scientists the time of analyzing
-datasets and improving the efficiency of research.
+committed to saving analyzing time of data scientists 
+and improving the efficiency of research.
 We hope that DaPy can help data scientists process or 
 analysis their datasets more *quickly* and *easily*.  
 
@@ -18,7 +18,7 @@ understand data characteristics.
 In the future, DaPy will add more data cleansing and
 ***inferential statistics functions***; implement more formulas
 used in ***mathematical modeling***; and even
-include some simple ***machine learning models*** (multilayer
+includes more ***machine learning models*** (multilayer
 perceptrons, support vector machines, etc.). DaPy is
 continuously improving according to the data analysis process.  
 
@@ -29,19 +29,29 @@ any suggestions, please tell us with "Issues". Besides,
 
 Installation
 ========================================================
-The Latest version 1.3.1 had been upload to PyPi.
+The Latest version 1.3.2 had been upload to PyPi.
 ```
 pip install DaPy
+```
+Updating your last version to 1.3.2 with PyPi as follow.
+```
+pip install -U DaPy
 ```
 
 Characteristic
 ========================================================
-We have tested the performance of DaPy in loading file.
-It was an amazing result that DaPy has the `fastest speed` with `less memory`.
-Despite this, because DaPy is not yet able to support matrix operations, it has a long way to go to achieve Numpy's and Pandas' achievements in scientific computing. The testing code has been uploaded already.
+We have testified the performance of DaPy in three fields 
+(load data, sort data & traverse data), 
+which were most useful function to a data processing library.
+In contrast with those packages written by C programe languages,
+DaPy showed amazing efficiency in testing. In all subjects of
+test, DaPy spent almost only twice as long as the fastest
+C program language library.
+
+
 <table>
 <tr>
-	<td>Date: 2018-3-12</td>
+	<td>Date: 2018-4-21</td>
 	<td>Testing Information</td>
 	</tr>
 <tr>
@@ -53,173 +63,53 @@ Despite this, because DaPy is not yet able to support matrix operations, it has 
 	<td>NVMe THNSN5256GPU7 NV</td>
 	</tr>
 <tr>
-	<td>File Size</td>
-	<td>96MB</td>
+	<td>File</td>
+	<td>240MB / 4.32 million records</td>
 	</tr>
 <tr>
 	<td>Platform</td>
-	<td>Win10</td>
-	</tr>
-<tr>
-	<td>Lancher</td>
-	<td>Python2.7-64Bit</td>
+	<td>Win10 / Python2.7-64Bit</td>
 	</tr>
 </table>
 <table>
 <tr>
 	<td>Result of Testing</td>
-</tr>
-<tr>
-	<td></td>
 	<td>DaPy</td>
 	<td>Pandas</td>
 	<td>Numpy</td> 
 </tr>
 <tr>
 	<td>Loading Time</td>
-	<td>17.77s</td>
-	<td>4.55s</td>
-	<td>62.23s</td>
+	<td>23.4s (1.9x)</td>
+	<td>12.3s (1.0x)</td>
+	<td>169.0s (13.7x)</td>
 </tr>
 <tr>
 	<td>Traverse Time</td>
-	<td>0.5s</td>
-	<td>316.5s</td>
-	<td>0.1s</td>
+	<td>0.53s (2.5x)</td>
+	<td>4.18s (20.9x)</td>
+	<td>0.21s (1.0x)</td>
 </tr>
 <tr>
-	<td>Total Spent</td>
-	<td>18.2s</td>
-	<td>321.1s</td>
-	<td>62.3</td>
+	<td>Sort Time</td>
+	<td>1.41s (1.65x)</td>
+	<td>0.86s (1.0x)</td>
+	<td>5.37s (10.1x)</td>
 	</tr>
 <tr>
-	<td>Memory Size</td>
-	<td>14MB</td>
-	<td>174MB</td>
-	<td>69MB</td>
+	<td>Total Spent</td>
+	<td>25.4s (1.5x)</td>
+	<td>17.4s (1.0x)</td>
+	<td>174.6s (10.0x)</td>
+	</tr>
+<tr>
+	<td>Version</td>
+	<td>1.3.2</td>
+	<td>0.22.0</td>
+	<td>1.14.0</td>
 	</tr>
 </table>
 
-Examples
-========================================================
-
-```Python
-<Example 1>
->>> import DaPy as dp
->>> data = dp.DataSet('ExamplesDB.csv')
->>> data.readframe()
->>> data.data
-[Data(A_col=3, B_col=2, C_col=1, D_col=4),
- Data(A_col=4, B_col=3, C_col=2, D_col=2), 
- Data(A_col=1, B_col=3, C_col=4, D_col=2), 
- Data(A_col=3, B_col=3, C_col=1, D_col=2), 
- Data(A_col=4, B_col=5, C_col=4, D_col=3),
- Data(A_col=2, B_col=1, C_col=1, D_col=5),
- Data(A_col=6, B_col=4, C_col=3, D_col=2),
- Data(A_col=4, B_col=7, C_col=8, D_col=3),
- Data(A_col=1, B_col=9, C_col=8, D_col=3),
- Data(A_col=3, B_col=2, C_col=6, D_col=5),
- Data(A_col=2, B_col=9, C_col=1, D_col=5),
- Data(A_col=3, B_col=4, C_col=1, D_col=6)]
->>> data[0].B_col # Data in the second column of the first record
-2
->>> data[-1].C_col # Data in the third column of the last record
-1
->>>
-```
-
-In Example 1, you have loaded a data set as a frame 
-from your data profile. Easily, right? Anyway, there is 
-another way to load data by column as series. Here is 
-the example.
-
-```Python
-<Example 2>
->>> data.readcol()
->>> data.titles
-['A_col', 'B_col', 'C_col', 'D_col']
->>> for title in data.titles:
-	print title, data[title]
-	
-A_col [3, 4, 1, 3, 4, 2, 6, 4, 1, 3, 2, 3]
-B_col [2, 3, 3, 3, 5, 1, 4, 7, 9, 2, 9, 4]
-C_col [1, 2, 4, 1, 4, 1, 3, 8, 8, 6, 1, 1]
-D_col [4, 2, 2, 2, 3, 5, 2, 3, 3, 5, 5, 6]
->>>
-```
-
-Example 1 and Example 2  have showed two ways to load data.
-But a simpler data structure is always neccessary. We offer
-the third way to load data in bellowed.
-
-```Python
-<Example 3>
->>> data.readtable()
->>> data.data
-[[3, 2, 1, 4], 
- [4, 3, 2, 2], 
- [1, 3, 4, 2], 
- [3, 3, 1, 2], 
- [4, 5, 4, 3], 
- [2, 1, 1, 5], 
- [6, 4, 3, 2], 
- [4, 7, 8, 3], 
- [1, 9, 8, 3], 
- [3, 2, 6, 5], 
- [2, 9, 1, 5], 
- [3, 4, 1, 6]]
->>>
-```
-Afther we load the data in menmory, we would like to 
-characterize the data set and try to describe it. See the 
-example as follow.
-
-```Python
-<Example 4>
->>> data.readcol()
->>> len(data) # How much records does dataset include
-12
->>> str(data) # The name of dataset
-'Data'
->>> dp.CountDistribution(data['A_col'])
-[0.16666666666666666, 0.16666666666666666, 0.0, 0.3333333333333333, 0.0, 0.25, 0.0, 0.0, 0.0, 0.08333333333333333]
->>> dp.CountFrequency(data['A_col'],2)
-0.16666666666666666
->>> dp.Statistic(data['A_col'])
-STAT(Mean=3.0, Std=1.4142135623730951, CV=0.47140452079103173, Min=1, Max=6, Range=5)
->>> dp.CountQuantiles(data['A_col'])
-[1, 1, 2, 3, 4, 6]
->>> dp.cov(data['A_col'], data['B_col'])
--0.5833333333333339
->>>
-```
-
-Finally, we also support the user opearts the dataset with
-'-' or '+'. It will help you change the data size.
-
-
-```Python
-<Example 5>
->>> data.readtable()
->>> data - 2
->>> len(data)
-10
->>> data.data
-[[3, 2, 1, 4], 
- [4, 3, 2, 2], 
- [1, 3, 4, 2], 
- [3, 3, 1, 2], 
- [4, 5, 4, 3], 
- [2, 1, 1, 5], 
- [6, 4, 3, 2], 
- [4, 7, 8, 3], 
- [1, 9, 8, 3], 
- [3, 2, 6, 5], 
- [2, 9, 1, 5], 
- [3, 4, 1, 6]]
->>>
-```
 Data Structure
 ========================================================
 Since the very beginning, we have designed DaPy to Python's native data structure as much as possible, so that it is easier for users to adapt to our library. At the same time, we believe that the original data structure of Python will definitely perform better than our own. The results of the experiment also prove this idea.
