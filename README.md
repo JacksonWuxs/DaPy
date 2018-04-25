@@ -1,33 +1,12 @@
+DaPy - A data analysis library
+====
+![](https://img.shields.io/badge/Version-1.3.2-green.svg)  ![](https://img.shields.io/badge/Download-PyPi-green.svg)  ![](https://img.shields.io/badge/License-GNU-blue.svg)  
 
-Description
-========================================================
-As a light data **processing** and **analysis** library，**DaPy** is
-committed to saving analyzing time of data scientists 
-and improving the efficiency of research.
-  
-In terms of **data loading**, DaPy's data structure 
-is so clear and concise that data scientists could "feel" data;
-functions are feature-rich and efficient, saving data
-scientists the processing time for complicated data. In terms
-of **descriptive statistics**, it has provided comprehensive
-calculation formulas that can help data scientists quickly
-understand data characteristics. Finally, in terms of 
-**algorithms**, it has provided a simple multilayer 
-perceptrons for predicting.
+**DaPy** is committed to saving the analyzing time of data scientists and improving the efficiency of research.  
 
-In the future, DaPy will add more data cleansing and
-**inferential statistics** functions; implement more formulas
-used in **mathematical modeling**; and even includes more 
-**machine learning models** (support vector machines, liner regresion, etc.). DaPy is
-continuously improving according to the data analysis process.  
+[Installation](#installation) | [Features](#features) | [Quick Start](#quick-start) | [To Do List](#todo) | [License](#license) | [Version Log](#version-log)
 
-If you think DaPy is interesting or helpful,
-don't forget to share DaPy with your frineds! If you have 
-any suggestions, please tell us with "Issues". Besides, 
-**giving us a 'Star'** will be the best way to encourage us!  
-
-Installation
-========================================================
+## Installation
 The Latest version 1.3.2 had been upload to PyPi.
 ```
 pip install DaPy
@@ -37,8 +16,7 @@ Updating your last version to 1.3.2 with PyPi as follow.
 pip install -U DaPy
 ```
 
-Features
-========================================================
+## Features
 #### Ⅰ. Comfortable Experience
 Since the very beginning, we have designed DaPy to Python's 
 native data structures as much as possible and we try to make 
@@ -112,8 +90,7 @@ has more than 4.5 million records and total size is
 	</tr>
 </table>  
 
-Quick Start
-========================================================
+## Quick-Start
 #### Ⅰ. Loading a dataset
 DaPy comes with a few famous datasets, for examples the **iris** 
 and **wine** datasets for classification.   
@@ -241,6 +218,8 @@ dataset apart in 80% of total. We select this training set with the
     Completed: 99.98 	Remaining Time: 0.00 s
  - Total Spent: 1.5 s	Errors: 12.211424 %
 ```
+   ![Page Not Found](https://github.com/JacksonWuxs/DaPy/blob/master/doc/picture_folder/testing.png 'Result of Training')  
+  
 Now, *mlp* has been trained. It should be attention that the *Error* 
 in last line does not means the correct proportion of classfication, 
 instead that it means the absolutely error of the target vector.  
@@ -266,8 +245,40 @@ model to predict a new record as:
 >>> mlp.readpkl('First_mlp.pkl')
 >>> mlp.predict(My_new_data)
 ```
-License
-========================================================
+
+## TODO  
+* Descriptive Statistics
+	- Summary table
+	- Conditional query
+* Inferential statistics
+	- Mean interval estimation
+	- Hypothetical test
+	- Univariate linear regression model
+* Feature Engineering
+	- PCA (Principal Component Analysis)
+	- LDA (Linear Discriminant Analysis)
+	- MIC (Maximal information coefficient)
+	
+* Algorithm
+	- SVM ( Support Vector Machine)
+	- K-Means
+	- Lasso Regression  
+
+## Version-Log
+* V1.3.2 (2018-04-26)
+	- Increased the efficiency of loading data significantly;
+	- Added more useful functions for DaPy.DataSet;
+	- Added a new data structure called DaPy.Matrix;
+	- Added some mathematic formulas (e.g. corr, dot, exp);
+	- Added the first algorithm of machine learning called dp.MLP;
+	- Added some standard dataset.
+* V1.3.1 (2018-03-19)
+	- Fixed some bugs in the loading data function;
+	- Added the function which supports to save data as a file.
+* V1.2.5 (2018-03-15)
+	- First version of DaPy!
+
+## License
 Copyright (C) 2018 Xuansheng Wu
 <br>
 This program is free software: you can redistribute it and/or modify
