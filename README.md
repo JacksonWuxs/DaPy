@@ -39,10 +39,10 @@ pip install -U DaPy
 
 Features
 ========================================================
-### Ⅰ. Comfortable Experience
+#### Ⅰ. Comfortable Experience
 Since the very beginning, we have designed DaPy to Python's 
 native data structures as much as possible and we try to make 
-it support more Python operaing habits. Therefore you can 
+it support more Python syntax habits. Therefore you can 
 adapt to DaPy quickly. In addition, we do our best to simplify
 the formulas or functions in it in order to let users 
 implement their ideas fluently.  
@@ -56,7 +56,7 @@ your dataset.
  data.sort(('A_col', 'DESC'), ('B_col', 'ASC'), ('D_col', 'DESC'))
  ```
   
-### Ⅱ. Efficiency  
+#### Ⅱ. Efficiency  
 We have testified the performance of DaPy in three fields 
 (load data, sort data & traverse data), 
 those were most useful functions to a data processing library.
@@ -68,7 +68,7 @@ fastest C language library.
   
 We tested DaPy on the platform with
 Intel i7-6560U while the Python version is 2.7.13-64Bit. The 
-dataset (Download Addr: https://pan.baidu.com/s/1kK3_V8XbbVim4urDkKyI8A)
+dataset (https://pan.baidu.com/s/1kK3_V8XbbVim4urDkKyI8A)
 has more than 4.5 million records and total size is 
 240.2 MB. 
 
@@ -114,13 +114,14 @@ has more than 4.5 million records and total size is
 
 Quick Start
 ========================================================
-## Loading a dataset
+#### Ⅰ. Loading a dataset
 DaPy comes with a few famous datasets, for examples the **iris** 
 and **wine** datasets for classification.   
   
-In the following, we will launch a Python shell and then 
-load the wine datasets. 
+In the following, we will start a Python shell and then 
+load the wine datasets as an example: 
 ```Python
+>>> import DaPy as dp
 >>> from DaPy import datasets
 >>> wine, info = datasets.wine()
 ```
@@ -129,9 +130,9 @@ all the data while a description of data will be returned at the
 same time. 
   
 In general, to load from an external dataset, you can use these 
-statements, please refer to GuideBook for more details.
+statements, please refer to GuideBook for more details:
 ```Python
->>> import DaPy as dp
+
 >>> data = dp.DataSet(file_name)
 >>> data.readcol()
 ```
@@ -188,33 +189,83 @@ you can browse the dataset of *wine* as:
                      class_3       |       0      |     <list>    |    <int>    
                --------------------+--------------+---------------+-------------
 ```
-## Preparing data
+#### Ⅱ. Preparing data
 Before we start a machine learning subject, we should process our 
 data so that the data can meet the requirements of the models.   
   
 By just accessed our data we found that our dataset is arrangement 
-by class. For supporting a proportionate training data, we can 
-mass our data with *shuffles()*.
+by class. For supporting a balance proportion of the training data, we can 
+mass our data with *shuffles()*. In addition, for the reason that 
+the dimensional difference between variables is significant, which 
+we found in scanning data, we suppose to normalize the data:
 ```Python
 >>> wine.shuffles()
+>>> wine.normalized()
 ```
 After disrupting the data, we should separte our data according to the 
-target variables and feature variables. In addition, we will convert 
-the data into a *DaPy.Matrix* structure Simultaneously.
+target variables and feature variables: 
 ```Python
->>> import DaPy as dp
->>> target = dp.Matrix(wine.pop_col('class_1', 'class_2', 'class_3')) # contains the target
->>> wine.tomatrix()  # contains the feature variables
+>>> target = wine.pop_col('class_1', 'class_2', 'class_3') # contains the target
 ```
-## Learning and predicting
+#### Ⅲ. Learning and predicting
 In the case of the wine dataset, the task is to predict, given a new record, 
 which class it represents. We are given samples of each of the 3 possible classes on 
 which we fit an estimator to be able to predict the classes to which unseen samples belong.  
   
-In DaPy, and example of an estimator is the class DaPy.MLP that implements *mutilayers perceptrons*. 
+In DaPy, an example of an estimator is the class DaPy.MLP that 
+implements *mutilayer perceptrons*: 
 ```Python
->>>
-
+>>> mlp = dp.MLP()
+>>> mlp.create(input_cell=13, output_cell=3)
+ Create structure: 13 - 14 - 3
+```
+We call our estimator instance mlp, as it is a multilayer perceptrons. 
+It now must be trained to the model, that is, it must learn from the 
+known dataset. As a training set, let us use 142 records from our 
+dataset apart in 80% of total. We select this training set with the
+[:142] Python syntax, which produces a new SeriesSet that contains 
+80% records of total:  
+```Python
+>>> mlp.train(wine[:142], target[:142])
+ - Start Training...
+ - Initial Error: 149.99 %
+    Completed: 10.00 	Remaining Time: 2.63 s
+    Completed: 20.00 	Remaining Time: 1.60 s
+    Completed: 29.99 	Remaining Time: 1.21 s
+    Completed: 39.99 	Remaining Time: 1.01 s
+    Completed: 49.99 	Remaining Time: 0.78 s
+    Completed: 59.99 	Remaining Time: 0.61 s
+    Completed: 69.99 	Remaining Time: 0.44 s
+    Completed: 79.98 	Remaining Time: 0.29 s
+    Completed: 89.98 	Remaining Time: 0.14 s
+    Completed: 99.98 	Remaining Time: 0.00 s
+ - Total Spent: 1.5 s	Errors: 12.211424 %
+```
+Now, *mlp* has been trained. It should be attention that the *Error* 
+in last line does not means the correct proportion of classfication, 
+instead that it means the absolutely error of the target vector.  
+  
+Let us use our model to classifier the left records in wine dataset, 
+which we have not used to train the estimator:
+```Python
+>>> mlp.test(wine[142:], target[142:])
+'Classification Correct: 97.2222%'
+```
+As you can see, our model has a satisfactory ability in classification. 
+#### Ⅳ. Postscript
+In order to save time in the next task by using a ready-made model, 
+it is possible to save our model in a file:
+```Python
+>>> mlp.topkl('First_mlp.pkl')
+```
+In a real working environment, you can quickly use your trained 
+model to predict a new record as:
+```Python
+>>> import DaPy as dp
+>>> mlp = dp.MLP()
+>>> mlp.readpkl('First_mlp.pkl')
+>>> mlp.predict(My_new_data)
+```
 License
 ========================================================
 Copyright (C) 2018 Xuansheng Wu
