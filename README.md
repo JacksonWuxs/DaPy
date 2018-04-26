@@ -2,9 +2,9 @@ DaPy - A data analysis library
 ====
 ![](https://img.shields.io/badge/Version-1.3.2-green.svg)  ![](https://img.shields.io/badge/Download-PyPi-green.svg)  ![](https://img.shields.io/badge/License-GNU-blue.svg)  
 
-**DaPy** is committed to saving the analyzing time of data scientists and improving the efficiency of research.  
+**DaPy** is committed to saving the time of data scientists and improving the efficiency of research.  
 
-[Installation](#installation) | [Features](#features) | [Quick Start](https://github.com/JacksonWuxs/DaPy/blob/master/Quick%20Start.md ) | [To Do List](#todo) | [License](#license) | [Version Log](#version-log)
+[Installation](#installation) | [Features](#features) | [Quick Start](https://github.com/JacksonWuxs/DaPy/blob/master/Quick%20Start.md ) | [To Do List](#todo) | [Version Log](#version-log) | [License](#license)
 
 ## Installation
 The Latest version 1.3.2 had been upload to PyPi.
