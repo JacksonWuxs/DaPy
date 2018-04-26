@@ -1,0 +1,70 @@
+
+import DaPy as dp
+import pandas as pd
+import numpy as np
+import time
+
+def test_Pandas(files):
+    # Testing of Pandas
+    t1 = time.clock()
+    data_pandas = pd.DataFrame(pd.read_csv(files))
+    t2 = time.clock()
+    for index in data_pandas.itertuples():
+        this_line = index
+    t3 = time.clock()
+    data_pandas.sort_values(by='Price')
+    t4 = time.clock()
+
+    
+    print '                Pandas'
+    print '    Load Time: %.2f s '%(t2-t1)
+    print 'Traverse Time: %.2f s '%(t3-t2)
+    print '    Sort Time: %.2f s '%(t4-t3)
+    print '   Total Time: %.2f s '%(t4-t1)
+
+def test_Numpy(files):
+    # Testing of Pandas
+    t1 = time.clock()
+    data_numpy = np.genfromtxt(files, dtype=None, delimiter=',', names=True)
+    t2 = time.clock()
+    for index in data_numpy:
+        this_line = index
+    t3 = time.clock()
+    data_numpy[np.lexsort(data_numpy.T[2, None])]
+    t4 = time.clock()
+
+    
+    print '                Numpy'
+    print '    Load Time: %.2f s '%(t2-t1)
+    print 'Traverse Time: %.2f s '%(t3-t2)
+    print '    Sort Time: %.2f s '%(t4-t3)
+    print '   Total Time: %.2f s '%(t4-t1)
+
+
+def test_DaPy(files):
+    # Testing of Pandas
+    t1 = time.clock()
+    data_dapy = dp.DataSet(files)
+    data_dapy.readframe()
+    t2 = time.clock()
+    for line in data_dapy:
+        this_line = line 
+    t3 = time.clock()
+    data_dapy._data.sort(('Price', 'ASC'))
+    t4 = time.clock()
+
+
+    print '                Dapy'
+    print '    Load Time: %.2f s '%(t2-t1)
+    print 'Traverse Time: %.2f s '%(t3-t2)
+    print '    Sort Time: %.2f s '%(t4-t3)
+    print '   Total Time: %.2f s '%(t4-t1)
+    
+def main(files):
+    test_Pandas(files)
+    test_Numpy(files)
+    test_DaPy(files)
+    
+if __name__ == '__main__':
+    main('1718.csv')
+    raw_input('Continue...')
