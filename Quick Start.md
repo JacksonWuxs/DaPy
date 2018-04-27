@@ -126,7 +126,7 @@ dataset apart in 80% of total. We select this training set with the
     Completed: 99.98 	Remaining Time: 0.00 s
  - Total Spent: 1.5 s	Errors: 12.211424 %
 ```
-   ![Page Not Found](https://github.com/JacksonWuxs/DaPy/blob/master/doc/picture_folder/testing.png 'Result of Training')  
+   ![Page Not Found](https://github.com/JacksonWuxs/DaPy/blob/master/doc/material/QuickStartResult.png 'Result of Training')  
   
 Now, *mlp* has been trained. It should be attention that the *Error* 
 in last line does not means the correct proportion of classfication, 
