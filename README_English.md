@@ -4,7 +4,7 @@ DaPy - A data analysis library
 
 As a data analysis and processing library, **DaPy** is committed to saving the time of data scientists and improving the efficiency of research, and try it best to offer you a new experience in data science.
 
-[Installation](#installation) | [Features](#features) | [Quick Start](https://github.com/JacksonWuxs/DaPy/blob/master/Quick%20Start.md ) | [To Do List](#todo) | [Version Log](#version-log) | [License](#license) | [中文版](#wdfdfdfsf)
+[Installation](#installation) | [Features](#features) | [Quick Start](https://github.com/JacksonWuxs/DaPy/blob/master/Quick%20Start.md ) | [To Do List](#todo) | [Version Log](#version-log) | [License](#license) | [中文版](https://github.com/JacksonWuxs/DaPy/blob/master/README.md)
 
 ## Installation
 The Latest version 1.3.2 had been upload to PyPi.
