@@ -4,9 +4,9 @@ DaPy - 一个数据分析和数据挖掘的Python库
 
 作为一个数据分析和数据处理的库，**DaPy**致力于节约数据科学家的时间并提高他们的研究效率，同时它也在尽其所能为你提供舒适的体验。我们希望通过DaPy证明，中国人也能开发出高质量的底层库。
 
-[安装](#installation) | [特性](#features) | [快速开始](https://github.com/JacksonWuxs/DaPy/blob/master/Quick%20Start.md ) | [远期规划](#todo) | [更新日志](#version-log) | [版权归属](#license)
+[安装](#安装) | [特性](#特性) | [快速开始](https://github.com/JacksonWuxs/DaPy/blob/master/Quick%20Start.md ) | [远期规划](#远期规划) | [更新日志](#更新日志) | [版权归属](#版权归属) | [English](https://github.com/JacksonWuxs/DaPy/blob/master/README_English.md)
 
-## Installation
+## 安装
 最新版本1.3.2已上传至PyPi。
 ```
 pip install DaPy
@@ -17,7 +17,7 @@ pip install DaPy
 pip install -U DaPy
 ```
 
-## Features
+## 特性
 #### Ⅰ. 舒适的体验
   从设计之初，我们就尽可能地让DaPy使用更多Python原生的数据结构，并
 让他能支持更多Pythonic的写法特性。因此，你可以快速地适应何使用DaPy
@@ -79,7 +79,7 @@ pip install -U DaPy
 </table>  
 
 
-## TODO  
+## 远期规划  
 * 描述性统计
 	- 汇总表（交叉表）
 	- 条件查询
@@ -98,7 +98,7 @@ pip install -U DaPy
 	- K-Means
 	- Lasso Regression  
 
-## Version-Log
+## 更新日志
 * V1.3.2 (2018-04-26)
 	- 显著提高了数据加载的效率;
 	- 为DaPy.DataSet添加了更多实用的功能;
@@ -112,7 +112,7 @@ pip install -U DaPy
 * V1.2.5 (2018-03-15)
 	- DaPy的第一个版本！
 
-## License
+## 版权归属
 Copyright (C) 2018 Xuansheng Wu
 <br>
 This program is free software: you can redistribute it and/or modify
