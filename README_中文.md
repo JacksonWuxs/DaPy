@@ -2,29 +2,29 @@ DaPy - 一个数据分析和数据挖掘的Python库
 ====
 ![](https://img.shields.io/badge/Version-1.3.2-green.svg)  ![](https://img.shields.io/badge/Download-PyPi-green.svg)  ![](https://img.shields.io/badge/License-GNU-blue.svg)  
 
-作为一个数据分析和数据处理的库，**DaPy**致力于节约数据科学家的时间并提高他们的研究效率，同时它也在尽其所能为你提供舒适的体验。
-As a data analysis and processing library, **DaPy** is committed to saving the time of data scientists and improving the efficiency of research, and try it best to offer you a new experience in data science.
+作为一个数据分析和数据处理的库，**DaPy**致力于节约数据科学家的时间并提高他们的研究效率，同时它也在尽其所能为你提供舒适的体验。我们希望通过DaPy证明，中国人也能开发出高质量的底层库。
 
 [安装](#installation) | [特性](#features) | [快速开始](https://github.com/JacksonWuxs/DaPy/blob/master/Quick%20Start.md ) | [远期规划](#todo) | [更新日志](#version-log) | [版权归属](#license)
 
 ## Installation
-最新版本1.3.2已上传至PyPi：
+最新版本1.3.2已上传至PyPi。
 ```
 pip install DaPy
-```
-用下面的代码将DaPy更新至1.3.2版本：
+```  
+
+用下面的代码将DaPy更新至1.3.2版本。
 ```
 pip install -U DaPy
 ```
 
 ## Features
 #### Ⅰ. 舒适的体验
-    从设计之初，我们就尽可能地让DaPy使用更多Python原生的数据结构，并
+  从设计之初，我们就尽可能地让DaPy使用更多Python原生的数据结构，并
 让他能支持更多Pythonic的写法特性。因此，你可以快速地适应何使用DaPy
 中的数据结构和操作。另外，为了能让用户更流畅地实现他们的想法，我们尽可能
 简化了DaPy中的公式或方法参数。 
   
-    按照不同的字段及标准排序记录是了解数据集的常用方式。在这个功能中，DaPy支持
+  按照不同的字段及标准排序记录是了解数据集的常用方式。在这个功能中，DaPy支持
 你使用多个不同的排序要求进行排序。 
 ```Pyton
  data.sort(('A_col', 'DESC'), ('B_col', 'ASC'), ('D_col', 'DESC'))
@@ -36,7 +36,7 @@ pip install -U DaPy
 效率。在所有的测试项目中，DaPy始终保持着与最快的C语言优化的库2倍内的耗时。 
 
 我们在搭载Intel i7-6560U处理器的平台上，通过64位2.7.13版本的Python进行了测试。
-测试数据集(https://pan.baidu.com/s/1kK3_V8XbbVim4urDkKyI8A)包含多达
+测试数据集(https://pan.baidu.com/s/1kK3_V8XbbVim4urDkKyI8A)  包含多达
 450万条记录，并且总的大小为240.2MB。
 
 <table>
