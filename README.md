@@ -1,8 +1,8 @@
-DaPy - 一个数据分析和数据挖掘的Python库
+DaPy - 数据分析Python库
 ====
 ![](https://img.shields.io/badge/Version-1.3.2-green.svg)  ![](https://img.shields.io/badge/Download-PyPi-green.svg)  ![](https://img.shields.io/badge/License-GNU-blue.svg)  
 
-作为一个数据分析和数据处理的库，**DaPy**致力于节约数据科学家的时间并提高他们的研究效率，同时它也在尽其所能为你提供舒适的体验。我们希望通过DaPy证明，中国人也能开发出高质量的底层库。
+作为一个数据分析和数据处理的库，**DaPy**致力于节约数据科学家的时间并提高他们的研究效率，同时它也在尽其所能为你提供舒适的体验。我们希望通过DaPy说明，中国人也能开发出高质量的库。
 
 [安装](#安装) | [特性](#特性) | [快速开始](https://github.com/JacksonWuxs/DaPy/blob/master/Quick%20Start.md ) | [远期规划](#远期规划) | [更新日志](#更新日志) | [版权归属](#版权归属) | [English](https://github.com/JacksonWuxs/DaPy/blob/master/README_English.md)
 
