@@ -1,6 +1,6 @@
 
 '''
-DaPy module is a useful tool, which try to help you process and analysis data easily.
+DaPy module is a useful tool, which help you readily process and analysis data.
 
 Copyright (C) 2018  Xuansheng Wu
 
@@ -18,21 +18,12 @@ You should have received a copy of the GNU General Public License
 along with this program.  If not, see https:\\www.gnu.org\licenses.
 '''
 
+from __version__ import *
 
-
-__author__ = 'Xuansheng Wu'
-
-__version__ = '1.3.3.1'
-
-__license__ = 'DaPy  Copyright (C) 2018  Jackson Woo'+\
-              '''This program comes with ABSOLUTELY NO WARRANTY; '''+\
-              '''for details type `show w'.This is free software,'''+\
-              '''and you are welcome to redistribute it under certain'''+\
-              '''conditions; type `show c' for details.'''
-
-__all__ = ['MLP', 'datasets', 'Frame', 'SeriesSet',
+__all__ = [ 'datasets', 'Frame', 'SeriesSet', 'machine_learn',
+            'mathematical_statistics',
            'DataSet', 'Table', 'Matrix', 'cov', 'corr', 'frequency',
-           'quantiles', 'sum', 'is_iter', 'read', 'set_encode',
+           'quantiles', 'sum', 'is_iter', 'read', 'encode',
            'distribution','describe', 'mean', 'exp', 'dot', 'is_math']
 
 from os.path import dirname, join
@@ -40,30 +31,33 @@ from core import (cov, corr, distribution, describe, sum,
                   Frame, SeriesSet, DataSet, Matrix, Table,
                   frequency, quantiles, mean, is_math, is_iter)
 from matlib import exp, dot
-import multilayer_perceptron
-import inference_statistic
+import machine_learn 
+import mathematical_statistics
 
 try:
     module_path = dirname(__file__)
     with open(join(module_path, 'README.md'),'r') as f:
         __doc__ = f.read()
 except IOError:
-    __doc__ = 'DaPy\n' +\
-          '===============================================================\n'+\
-          'A light data processing and analysing library for Python.\n'+\
-          '\n-----------------------------\nName: DaPy\nAuthor: Jackson Woo\n'+\
-           'Version: %s\nUpdata: May. 9th, 2018\nE-Mail:Wuxsmail@163.com\n'%__version__+\
+    __doc__ = 'DaPy - A readily data processing and analysing library for Python.\n' +\
+           '===============================================================\n'+\
+           '\n-----------------------------\n'+\
+           'Name: DaPy\n'+\
+           'Author: Jackson Woo\n'+\
+           'Version: %s'%__version__ +\
+           '\nUpdata: Jun. 13th, 2018\n'+\
+           'E-Mail:Wuxsmail@163.com\n'+\
            '-----------------------------\n\n' 
 
 
-def read(addr, dtype='col', miss_symbol='', miss_value=None, sep=None,
+def read(addr, dtype='col', sheet_name=None, miss_symbol='', miss_value=None, sep=None,
             first_line=1, title_line=0, type_float=False, type_str=False):
     data = DataSet()
-    data.read(addr, dtype, miss_symbol, miss_value, sep, first_line,
+    data.read(addr, dtype, sheet_name, miss_symbol, miss_value, sep, first_line,
               title_line, type_float, type_str)
     return data
 
-def set_encode(code='cp936'):
+def encode(code='cp936'):
     import sys
     stdi, stdo, stde = sys.stdin, sys.stdout, sys.stderr
     reload(sys)
