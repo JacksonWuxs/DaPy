@@ -1,18 +1,18 @@
-DaPy - 数据分析Python库
+DaPy - 别让语法束缚了思想
 ====
-![](https://img.shields.io/badge/Version-1.3.2-green.svg)  ![](https://img.shields.io/badge/Download-PyPi-green.svg)  ![](https://img.shields.io/badge/License-GNU-blue.svg)  
+![](https://img.shields.io/badge/Version-1.3.3-green.svg)  ![](https://img.shields.io/badge/Download-PyPi-green.svg)  ![](https://img.shields.io/badge/License-GNU-blue.svg)  
 
-作为一个数据分析和数据处理的库，**DaPy**致力于节约数据科学家的时间并提高他们的研究效率，同时它也在尽其所能为你提供舒适的体验。我们希望通过DaPy说明，中国人也能开发出高质量的库。
+作为一个基于Python原生数据结构搭建的数据分析和数据挖掘库，**DaPy**致力于节约数据科学家的时间并提高他们的研究效率，同时它也在尽其所能为他们提供更舒适和流畅的操作体验。
 
-[安装](#安装) | [特性](#特性) | [快速开始](https://github.com/JacksonWuxs/DaPy/blob/master/快速开始.md) | [远期规划](#远期规划) | [更新日志](#更新日志) | [版权归属](#版权归属) | [English](https://github.com/JacksonWuxs/DaPy/blob/master/README_English.md)
+[安装](#安装) | [特性](#特性) | [快速开始](https://github.com/JacksonWuxs/DaPy/blob/master/快速开始.md) | [远期规划](#远期规划) | [更新日志](#更新日志) | [版权归属](#版权归属) | [English](https://github.com/JacksonWuxs/DaPy/blob/master/README.md)
 
 ## 安装
-最新版本1.3.2已上传至PyPi。
+最新版本1.3.3已上传至PyPi。
 ```
 pip install DaPy
 ```  
 
-用下面的代码将DaPy更新至1.3.2版本。
+用下面的代码将DaPy更新至1.3.3版本。
 ```
 pip install -U DaPy
 ```
@@ -48,14 +48,14 @@ pip install -U DaPy
 </tr>
 <tr>
 	<td>加载数据</td>
-	<td> 23.4s (1.9x)</td>
+	<td> 29.3s (2.4x)</td>
 	<td> 12.3s (1.0x)</td>
   <td>169.0s (13.7x)</td>
 </tr>
 <tr>
 	<td>遍历数据</td>
-	<td>0.53s (2.5x)</td>
-<td>4.18s (20.9x)</td>
+	<td>0.34s (1.6x)</td>
+<td>3.10s (14.8x)</td>
 	<td>0.21s (1.0x)</td>
 </tr>
 <tr>
@@ -66,13 +66,13 @@ pip install -U DaPy
 	</tr>
 <tr>
 	<td>总耗时</td>
-	<td>25.4s (1.5x)</td>
+	<td>31.1s (1.8x)</td>
 	<td>17.4s (1.0x)</td>
 	<td>174.6s (10.0x)</td>
 	</tr>
 <tr>
 	<td>版本信息</td>
-	<td>1.3.2</td>
+	<td>1.3.3</td>
 	<td>0.22.0</td>
 	<td>1.14.0</td>
 	</tr>
@@ -81,34 +81,43 @@ pip install -U DaPy
 
 ## 远期规划  
 * 描述性统计
-	- 汇总表（交叉表）
-	- 条件查询
 * 推断性统计
-	- 均值估计
-	- 假设检验
-	- Univariate linear regression model
 * 特征工程
 	- 主成分分析
 	- LDA (Linear Discriminant Analysis)
 	- MIC (Maximal information coefficient)
-	
-* 算法
-  - 朴素贝叶斯
+* 模型
+  	- 朴素贝叶斯
 	- 支持向量机
 	- K-Means
-	- Lasso Regression  
+	- Lasso Regression 
 
 ## 更新日志
+* V1.3.3 (2018-06-20)
+	- 添加 外部数据文件读取能力拓展: Excel, SPSS, SQLite3, CSV;
+	- 重构 DaPy架构, 提高了远期拓展能力;
+	- 重构 DaPy.DataSet类, 一个DataSet实例可以批量管理多个数据表;
+	- 重构 DaPy.Frame类, 删除了格式验证, 适配更多类型的数据集;
+	- 重构 DaPy.SeriesSet类, 删除了格式验证, 适配更多类型的数据集;
+	- 移除 DaPy.Table类;
+	- 优化 DaPy.Matrix类, 效率提升接近2倍;
+	- 优化 DaPy.Frame 及 Data.SeriesSet类的展示, 数据呈现更为清晰美观;
+	- 添加 `线性回归`及`方差分析`至DaPy.mathematical_statistics;
+	- 添加 DaPy.io.encode()函数, 更好地适配中文数据;
+	- 替换 read_col(), read_frame(), read_matrix() 为 read()函数;
+
 * V1.3.2 (2018-04-26)
-	- 显著提高了数据加载的效率;
-	- 为DaPy.DataSet添加了更多实用的功能;
-	- 添加了新的数据结构DaPy.Matrix,支持常规的矩阵运算;
-	- 添加了一些数据分析的函数 (例如： corr, dot, exp);
-	- 添加了第一个DaPy中的机器学习算法：DaPy.multilayer_periceptron.MLP;
-	- 添加了一些标准数据集.
+	- 优化 数据加载的效率;
+	- 添加 更多实用的功能到DaPy.DataSet中;
+	- 添加 新的数据结构DaPy.Matrix,支持常规的矩阵运算;
+	- 添加 常用描述数据的函数 (例如： corr, dot, exp);
+	- 添加 `支持向量机`至DaPy.machine_learn;
+	- 添加 一些标准数据集.
+	
 * V1.3.1 (2018-03-19)
-	- 修复了在加载数据及中的bug;
-	- 添加了支持保存数据集的功能.
+	- 修复 在加载数据及中的bug;
+	- 添加 支持保存数据集的功能.
+	
 * V1.2.5 (2018-03-15)
 	- DaPy的第一个版本！
 
