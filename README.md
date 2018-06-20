@@ -1,6 +1,6 @@
 DaPy - don't limit your mind by syntax
 ====
-![](https://img.shields.io/badge/Version-1.3.2-green.svg)  ![](https://img.shields.io/badge/Download-PyPi-green.svg)  ![](https://img.shields.io/badge/License-GNU-blue.svg)  
+![](https://img.shields.io/badge/Version-1.3.3-green.svg)  ![](https://img.shields.io/badge/Download-PyPi-green.svg)  ![](https://img.shields.io/badge/License-GNU-blue.svg)  
 
 As a data analysis and processing library based on the origion data structures in Python, **DaPy** is not only committed to saving the time of data scientists and improving the efficiency of research, but also try it best to offer you a new experience in data science.
 
