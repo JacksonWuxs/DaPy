@@ -6,7 +6,7 @@ and **wine** datasets for classification.
 In the following, we will start a Python shell and then 
 load the wine datasets as an example: 
 ```Python
->>> import DaPy as dp
+>>> from DaPy import machine_learn
 >>> from DaPy import datasets
 >>> wine, info = datasets.wine()
 ```
@@ -17,9 +17,7 @@ same time.
 In general, to load from an external dataset, you can use these 
 statements, please refer to GuideBook for more details:
 ```Python
-
->>> data = dp.DataSet(file_name)
->>> data.readcol()
+>>> data = dp.read(file_name)
 ```
 In this case, as a supervised problem, all of the 
 independent variables and dependent variables are stored in the 
@@ -42,37 +40,37 @@ Nonflavanoid phenols: <0.28, 0.26, 0.3, 0.24, 0.39, ... ,0.52, 0.43, 0.43, 0.53,
              class_1: <1, 1, 1, 1, 1, ... ,0, 0, 0, 0, 0>
              class_2: <0, 0, 0, 0, 0, ... ,0, 0, 0, 0, 0>
              class_3: <0, 0, 0, 0, 0, ... ,1, 1, 1, 1, 1>
--------------------------------------
-SeriesSet{178 Records & 16 Variables}
 ```
 Every object of *SeriesSet* will auto concluses some basic information of the 
 dataset (number of miss value, number of records & variable names). For exaples, 
 you can browse the dataset of *wine* as:
 ```Python
 >>> wine.info
+sheet:data
+==========
 1.  Structure: DaPy.SeriesSet
-2.   Set Name: MySeries
-3. Dimensions: Ln=178 | Col=16
-4. Miss Value: 0 elements
-5.    Columns:        Title        |  Miss Value  |  Column Type  |  Value Type 
-               --------------------+--------------+---------------+-------------
-                     Alcohol       |       0      |     <list>    |   <float>   
-                    Malic acid     |       0      |     <list>    |   <float>   
-                       Ash         |       0      |     <list>    |   <float>   
-                Alcalinity of ash  |       0      |     <list>    |   <float>   
-                    Magnesium      |       0      |     <list>    |    <int>    
-                  Total phenols    |       0      |     <list>    |   <float>   
-                    Flavanoids     |       0      |     <list>    |   <float>   
-               Nonflavanoid phenols|       0      |     <list>    |   <float>   
-                 Proanthocyanins   |       0      |     <list>    |   <float>   
-                 Color intensity   |       0      |     <list>    |   <float>   
-                       Hue         |       0      |     <list>    |   <float>   
-                      OD280        |       0      |     <list>    |   <float>   
-                     Proline       |       0      |     <list>    |    <int>    
-                     class_1       |       0      |     <list>    |    <int>    
-                     class_2       |       0      |     <list>    |    <int>    
-                     class_3       |       0      |     <list>    |    <int>    
-               --------------------+--------------+---------------+-------------
+2. Dimensions: Ln=178 | Col=16
+3. Miss Value: 0 elements
+4.   Describe: 
+        Title         | Miss | Min | Max | Mean | Std  |Dtype
+----------------------+------+-----+-----+------+------+-----
+       Alcohol        |  0   | 0.0 | 1.0 | 0.52 | 0.21 | list
+      Malic acid      |  0   | 0.0 | 1.0 | 0.32 | 0.22 | list
+         Ash          |  0   | 0.0 | 1.0 | 0.54 | 0.15 | list
+  Alcalinity of ash   |  0   | 0.0 | 1.0 | 0.46 | 0.17 | list
+      Magnesium       |  0   |  0  |  1  | 0.01 | 0.07 | list
+    Total phenols     |  0   | 0.0 | 1.0 | 0.45 | 0.22 | list
+      Flavanoids      |  0   | 0.0 | 1.0 | 0.36 | 0.21 | list
+ Nonflavanoid phenols |  0   | 0.0 | 1.0 | 0.44 | 0.23 | list
+   Proanthocyanins    |  0   | 0.0 | 1.0 | 0.37 | 0.18 | list
+   Color intensity    |  0   | 0.0 | 1.0 | 0.32 | 0.20 | list
+         Hue          |  0   | 0.0 | 1.0 | 0.39 | 0.19 | list
+        OD280         |  0   | 0.0 | 1.0 | 0.49 | 0.26 | list
+       Proline        |  0   |  0  |  1  | 0.01 | 0.07 | list
+       class_1        |  0   |  0  |  1  | 0.33 | 0.47 | list
+       class_2        |  0   |  0  |  1  | 0.40 | 0.49 | list
+       class_3        |  0   |  0  |  1  | 0.27 | 0.45 | list
+=============================================================
 ```
 #### Ⅱ. Preparing data
 Before we start a machine learning subject, we should process our 
@@ -90,7 +88,7 @@ we found in scanning data, we suppose to normalize the data:
 After disrupting the data, we should separte our data according to the 
 target variables and feature variables: 
 ```Python
->>> target = wine.pop_col('class_1', 'class_2', 'class_3') # contains the target
+>>> feature, target = wine[:'Proline'], wine['class_1':] # contains the target
 ```
 #### Ⅲ. Learning and predicting
 In the case of the wine dataset, the task is to predict, given a new record, 
@@ -102,7 +100,7 @@ implements *mutilayer perceptrons*:
 ```Python
 >>> mlp = dp.MLP()
 >>> mlp.create(input_cell=13, output_cell=3)
- Create structure: 13 - 14 - 3
+ - Create structure: 13 - 12 - 3
 ```
 We call our estimator instance mlp, as it is a multilayer perceptrons. 
 It now must be trained to the model, that is, it must learn from the 
@@ -111,20 +109,20 @@ dataset apart in 80% of total. We select this training set with the
 [:142] Python syntax, which produces a new SeriesSet that contains 
 80% records of total:  
 ```Python
->>> mlp.train(wine[:142], target[:142])
+>>> mlp.train(feature[:142], target[:142])
  - Start Training...
- - Initial Error: 149.99 %
-    Completed: 10.00 	Remaining Time: 2.63 s
-    Completed: 20.00 	Remaining Time: 1.60 s
-    Completed: 29.99 	Remaining Time: 1.21 s
-    Completed: 39.99 	Remaining Time: 1.01 s
-    Completed: 49.99 	Remaining Time: 0.78 s
-    Completed: 59.99 	Remaining Time: 0.61 s
-    Completed: 69.99 	Remaining Time: 0.44 s
-    Completed: 79.98 	Remaining Time: 0.29 s
-    Completed: 89.98 	Remaining Time: 0.14 s
-    Completed: 99.98 	Remaining Time: 0.00 s
- - Total Spent: 1.5 s	Errors: 12.211424 %
+ - Initial Error: 150.55 %
+    Completed: 10.00 	Remain Time: 1.32 s	Error: 11.82%
+    Completed: 20.00 	Remain Time: 1.37 s	Error: 8.37%
+    Completed: 29.99 	Remain Time: 1.26 s	Error: 6.64%
+    Completed: 39.99 	Remain Time: 1.11 s	Error: 5.59%
+    Completed: 49.99 	Remain Time: 0.94 s	Error: 4.88%
+    Completed: 59.99 	Remain Time: 0.72 s	Error: 4.36%
+    Completed: 69.99 	Remain Time: 0.54 s	Error: 3.96%
+    Completed: 79.98 	Remain Time: 0.36 s	Error: 3.65%
+    Completed: 89.98 	Remain Time: 0.18 s	Error: 3.39%
+    Completed: 99.98 	Remain Time: 0.00 s	Error: 3.18%
+ - Total Spent: 2.0 s	Error: 3.1763 %
 ```
    ![Page Not Found](https://github.com/JacksonWuxs/DaPy/blob/master/doc/material/QuickStartResult.png 'Result of Training')  
   
@@ -135,7 +133,7 @@ instead that it means the absolutely error of the target vector.
 Let us use our model to classifier the left records in wine dataset, 
 which we have not used to train the estimator:
 ```Python
->>> mlp.test(wine[142:], target[142:])
+>>> mlp.test(feature[142:], target[142:])
 'Classification Correct: 97.2222%'
 ```
 As you can see, our model has a satisfactory ability in classification. 
@@ -149,7 +147,7 @@ In a real working environment, you can quickly use your trained
 model to predict a new record as:
 ```Python
 >>> import DaPy as dp
->>> mlp = dp.MLP()
+>>> mlp = machine_learn.MLP()
 >>> mlp.readpkl('First_mlp.pkl')
 >>> mlp.predict(My_new_data)
 ```
