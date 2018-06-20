@@ -59,15 +59,14 @@ has more than 4.5 million records and total size is
 </tr>
 <tr>
 	<td>Loading Time</td>
-	<td>23.4s (1.9x)</td>
+	<td>29.3s (2.4x)</td>
 	<td>12.3s (1.0x)</td>
-
-<td>169.0s (13.7x)</td>
+	<td>169.0s (13.7x)</td>
 </tr>
 <tr>
 	<td>Traverse Time</td>
-	<td>0.53s (2.5x)</td>
-<td>4.18s (20.9x)</td>
+	<td>0.34s (1.6x)</td>
+	<td>3.10s (14.8x)</td>
 	<td>0.21s (1.0x)</td>
 </tr>
 <tr>
@@ -84,7 +83,7 @@ has more than 4.5 million records and total size is
 	</tr>
 <tr>
 	<td>Version</td>
-	<td>1.3.2</td>
+	<td>1.3.3</td>
 	<td>0.22.0</td>
 	<td>1.14.0</td>
 	</tr>
@@ -93,29 +92,33 @@ has more than 4.5 million records and total size is
 
 ## TODO  
 * Descriptive Statistics
-	- Summary table
-	- Conditional query
 * Inferential statistics
-	- Mean interval estimation
-	- Hypothetical test
-	- Univariate linear regression model
 * Feature Engineering
 	- PCA (Principal Component Analysis)
 	- LDA (Linear Discriminant Analysis)
 	- MIC (Maximal information coefficient)
-	
 * Algorithm
 	- SVM ( Support Vector Machine)
 	- K-Means
 	- Lasso Regression  
 
 ## Version-Log
+* V1.3.3 (2018-06-20)
+	- Added more external data file: Excel, SPSS, SQLite3, CSV;
+	- Added `Linear Regression` and `ANOVA` to DaPy.Mathematical_statistics;
+	- Added `DaPy.io.encode()` for better adepted to Chinese;
+	- Replaced read_col(), read_frame(), read_matrix() by read();
+	- Optimized the DaPy.Matrix so that the speed in calculating is two times faster;
+	- Expreesed SeriesSet and Frame in more beautiful way;
+	- Refactored the DaPy.DataSet, which can manage multiple sheets at the same time;
+	- Refactored the DaPy.Frame and DaPy.SeriesSet, delete the attribute limitation of types.
+	- Removed DaPy.Table;
 * V1.3.2 (2018-04-26)
 	- Increased the efficiency of loading data significantly;
 	- Added more useful functions for DaPy.DataSet;
 	- Added a new data structure called DaPy.Matrix;
 	- Added some mathematic formulas (e.g. corr, dot, exp);
-	- Added the first algorithm of machine learning called dp.MLP;
+	- Added `Multi-Layers Perceptrons` to DaPy.machine_learn;
 	- Added some standard dataset.
 * V1.3.1 (2018-03-19)
 	- Fixed some bugs in the loading data function;
