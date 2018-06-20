@@ -1,17 +1,17 @@
-DaPy - A data analysis library
+DaPy - don't limit your mind by syntax
 ====
 ![](https://img.shields.io/badge/Version-1.3.2-green.svg)  ![](https://img.shields.io/badge/Download-PyPi-green.svg)  ![](https://img.shields.io/badge/License-GNU-blue.svg)  
 
-As a data analysis and processing library, **DaPy** is committed to saving the time of data scientists and improving the efficiency of research, and try it best to offer you a new experience in data science.
+As a data analysis and processing library based on the origion data structures in Python, **DaPy** is not only committed to saving the time of data scientists and improving the efficiency of research, but also try it best to offer you a new experience in data science.
 
-[Installation](#installation) | [Features](#features) | [Quick Start](https://github.com/JacksonWuxs/DaPy/blob/master/Quick%20Start.md ) | [To Do List](#todo) | [Version Log](#version-log) | [License](#license) | [中文版](https://github.com/JacksonWuxs/DaPy/blob/master/README.md)
+[Installation](#installation) | [Features](#features) | [Quick Start](https://github.com/JacksonWuxs/DaPy/blob/master/Quick%20Start.md ) | [To Do List](#todo) | [Version Log](#version-log) | [License](#license) | [中文版](https://github.com/JacksonWuxs/DaPy/blob/master/README_Chinese.md)
 
 ## Installation
-The Latest version 1.3.2 had been upload to PyPi.
+The Latest version 1.3.3 had been upload to PyPi.
 ```
 pip install DaPy
 ```
-Updating your last version to 1.3.2 with PyPi as follow.
+Updating your last version to 1.3.3 with PyPi as follow.
 ```
 pip install -U DaPy
 ```
