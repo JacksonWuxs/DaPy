@@ -95,10 +95,10 @@ In the case of the wine dataset, the task is to predict, given a new record,
 which class it represents. We are given samples of each of the 3 possible classes on 
 which we fit an estimator to be able to predict the classes to which unseen samples belong.  
   
-In DaPy, an example of an estimator is the class DaPy.MLP that 
+In DaPy, an simple estimator is in the DaPy.machine_learn that 
 implements *mutilayer perceptrons*: 
 ```Python
->>> mlp = dp.MLP()
+>>> mlp = machine_learn.MLP()
 >>> mlp.create(input_cell=13, output_cell=3)
  - Create structure: 13 - 12 - 3
 ```
