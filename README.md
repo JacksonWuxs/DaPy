@@ -77,8 +77,8 @@ has more than 4.5 million records and total size is
 	</tr>
 <tr>
 	<td>Total Spent</td>
-	<td>25.4s (1.5x)</td>
-	<td>17.4s (1.0x)</td>
+	<td>31.1s (1.9x)</td>
+	<td>16.3s (1.0x)</td>
 	<td>174.6s (10.0x)</td>
 	</tr>
 <tr>
