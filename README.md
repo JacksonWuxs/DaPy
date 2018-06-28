@@ -26,7 +26,7 @@ In addition, we do our best to simplify
 the formulas or mathematical models in it, in order to let you  
 implement your ideas fluently.  
 
-Here are just a few of the things that DaPy does well:
+* Here are just a few of the things that DaPy does well:  
 	- Efficiently manage diverse data files with `DataSet` structure.
 	- Easy handling of missing data in any type of value.
 	- Quick insert and delete a mount of new records or new variables.
