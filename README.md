@@ -1,4 +1,4 @@
-DaPy - don't limit your mind by syntax
+DaPy - don't limit your mind by complex syntax
 ====
 ![](https://img.shields.io/badge/Version-1.3.3-green.svg)  ![](https://img.shields.io/badge/Download-PyPi-green.svg)  ![](https://img.shields.io/badge/License-GNU-blue.svg)  
 
@@ -17,34 +17,28 @@ pip install -U DaPy
 ```
 
 ## Features
-#### Ⅰ. Comfortable Experience
+Convinience and efficiency are the cornerstone of DaPy. 
 Since the very beginning, we have designed DaPy to Python's 
 native data structures as much as possible and we try to make 
-it support more Python syntax habits. Therefore you can 
-adapt to DaPy quickly. In addition, we do our best to simplify
-the formulas or functions in it in order to let users 
-implement their ideas fluently.  
+it supports more Python syntax habits. Therefore you can 
+adapt to DaPy quickly, if you imagine you are opearting an Excel table.
+In addition, we do our best to simplify
+the formulas or mathematical models in it, in order to let you  
+implement your ideas fluently.  
+
+Here are just a few of the things that DaPy does well:
+	- Efficiently manage diverse data files with `DataSet` structure.
+	- Easy handling of missing data in any type of value.
+	- Quick insert and delete a mount of new records or new variables.
+	- Make it easy to access a part of your dataset, not only by index or variable names, but also by specefic conditions.
+	- Functional IO tools for loading data from CSV files, Excel files, database and even SPSS files.
+	- Sort your records by multiple conditions.
+	- Fast verify your ideas with the built-in analysis models (e.g. `ANOVA`, `MLP`).
+	- A variety of ways to help you easily perceive your dataset.
   
-  
-Sorting records obeyed different arranging orders is a 
-common way to help you recognize your dataset. In this case,
-DaPy supports you set up more than one conditions to arrangement 
-your dataset. 
-```Pyton
- data.sort(('A_col', 'DESC'), ('B_col', 'ASC'), ('D_col', 'DESC'))
- ```
-  
-#### Ⅱ. Efficiency  
-We have testified the performance of DaPy in three fields 
-(load data, sort data & traverse data), 
-those were most useful functions to a data processing library.
-In contrast with those packages written by C programe languages,
-DaPy showed an amazing efficiency in testing. In all subjects of
-test, DaPy just spends less than twice time as long as the 
-fastest C language library.   
-  
-  
-We tested DaPy on the platform with
+Even if it uses Python native data structures, 
+DaPy still has efficiency comparable to some libraries which wrote by C.
+We have tested DaPy on the platform with
 Intel i7-6560U while the Python version is 2.7.13-64Bit. The 
 dataset (https://pan.baidu.com/s/1kK3_V8XbbVim4urDkKyI8A)
 has more than 4.5 million records and total size is 
