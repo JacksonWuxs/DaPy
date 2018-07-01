@@ -102,25 +102,25 @@ If you want to follow up the latest developments, you can visit [here](https://w
 
 ## Version-Log
 * V1.3.3 (2018-06-20)
-	-      Added more external data file: Excel, SPSS, SQLite3, CSV;
-	-      Added `Linear Regression` and `ANOVA` to DaPy.Mathematical_statistics;
-	-      Added `DaPy.io.encode()` for better adepted to Chinese;
-	-   Replaced read_col(), read_frame(), read_matrix() by read();
-	-  Optimized the DaPy.Matrix so that the speed in calculating is two times faster;
-	-  Expreesed SeriesSet and Frame in more beautiful way;
+	- Added more external data file: Excel, SPSS, SQLite3, CSV;
+	- Added `Linear Regression` and `ANOVA` to DaPy.Mathematical_statistics;
+	- Added `DaPy.io.encode()` for better adepted to Chinese;
+	- Expreesed SeriesSet and Frame in more beautiful way;
+	- Optimized the DaPy.Matrix so that the speed in calculating is two times faster;
+	- Replaced read_col(), read_frame(), read_matrix() by read();
 	- Refactored the DaPy.DataSet, which can manage multiple sheets at the same time;
-	- Refactored the DaPy.Frame and DaPy.SeriesSet, delete the attribute limitation of types.
-	-    Removed DaPy.Table;
+	- Refactored the DaPy.Frame and DaPy.SeriesSet, delete the attribute limitation of types;
+	- Removed DaPy.Table;
 * V1.3.2 (2018-04-26)
-	-  Increased the efficiency of loading data significantly;
-	-      Added more useful functions for DaPy.DataSet;
-	-      Added a new data structure called DaPy.Matrix;
-	-      Added some mathematic formulas (e.g. corr, dot, exp);
-	-      Added `Multi-Layers Perceptrons` to DaPy.machine_learn;
-	-      Added some standard dataset.
+	- Added more useful functions for DaPy.DataSet;
+	- Added a new data structure called DaPy.Matrix;
+	- Added some mathematic formulas (e.g. corr, dot, exp);
+	- Added `Multi-Layers Perceptrons` to DaPy.machine_learn;
+	- Added some standard dataset;
+	- Optimized the loading function significantly;
 * V1.3.1 (2018-03-19)
-	-      Fixed some bugs in the loading data function;
-	-      Added the function which supports to save data as a csv file;
+	- Added the function which supports to save data as a csv file;
+	- Fixed some bugs in the loading data function;
 * V1.2.5 (2018-03-15)
 	- First public version of DaPy!
 
