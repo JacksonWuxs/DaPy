@@ -7,7 +7,7 @@ As a data analysis and processing library based on the origion data structures i
 [Installation](#installation) | [Features](#features) | [Quick Start](https://github.com/JacksonWuxs/DaPy/blob/master/Quick%20Start.md ) | [To Do List](#todo) | [Version Log](#version-log) | [License](#license) | [中文版](https://github.com/JacksonWuxs/DaPy/blob/master/README_Chinese.md)
 
 ## Installation
-The Latest version 1.3.3 had been upload to PyPi.
+The latest version 1.3.3 had been upload to PyPi.
 ```
 pip install DaPy
 ```
@@ -17,13 +17,13 @@ pip install -U DaPy
 ```
 
 ## Features
-Convinience and efficiency are the cornerstone of DaPy. 
+**Convinience** and **efficiency** are the cornerstone of DaPy. 
 Since the very beginning, we have designed DaPy to Python's 
 native data structures as much as possible and we try to make 
 it supports more Python syntax habits. Therefore you can 
 adapt to DaPy quickly, if you imagine you are opearting an Excel table.
 In addition, we do our best to simplify
-the formulas or mathematical models in it, in order to let you  
+the formulas or mathematical models in it, in order to let you 
 implement your ideas fluently.  
 
 * Here are just a few of the things that DaPy does well:  
@@ -33,14 +33,14 @@ implement your ideas fluently.
 	- Make it easy to access a part of your dataset, not only by index or variable names, but also by specefic conditions.
 	- Functional IO tools for loading data from CSV files, Excel files, database and even SPSS files.
 	- Sort your records by multiple conditions.
-	- Fast verify your ideas with the built-in analysis models (e.g. `ANOVA`, `MLP`).
+	- Fast verify your ideas with the built-in analysis models (e.g. `ANOVA`, `MLP`, `Linear Regression`).
 	- A variety of ways to help you easily perceive your dataset.
   
 Even if it uses Python native data structures, 
-DaPy still has efficiency comparable to some libraries which wrote by C.
+DaPy still has efficiency comparable to some libraries which was wrote by C.
 We have tested DaPy on the platform with
-Intel i7-6560U while the Python version is 2.7.13-64Bit. The 
-dataset (https://pan.baidu.com/s/1kK3_V8XbbVim4urDkKyI8A)
+Intel i7-6560U while the Python version is 2.7.13-64Bit. The dataset
+([download](https://pan.baidu.com/s/1kK3_V8XbbVim4urDkKyI8A))
 has more than 4.5 million records and total size is 
 240.2 MB. 
 
@@ -87,6 +87,7 @@ has more than 4.5 million records and total size is
 ## TODO  
 * Descriptive Statistics
 * Inferential statistics
+	- Time Sequence
 * Feature Engineering
 	- PCA (Principal Component Analysis)
 	- LDA (Linear Discriminant Analysis)
@@ -95,30 +96,33 @@ has more than 4.5 million records and total size is
 	- SVM ( Support Vector Machine)
 	- K-Means
 	- Lasso Regression  
+	- Bayes Classification
+	
+If you want to follow up the latest developments, you can visit [here](https://www.teambition.com/project/5b1b7bd40b6c410019df8c41/tasks/scrum/5b1b7bd51e4661001838eb10).
 
 ## Version-Log
 * V1.3.3 (2018-06-20)
-	- Added more external data file: Excel, SPSS, SQLite3, CSV;
-	- Added `Linear Regression` and `ANOVA` to DaPy.Mathematical_statistics;
-	- Added `DaPy.io.encode()` for better adepted to Chinese;
-	- Replaced read_col(), read_frame(), read_matrix() by read();
-	- Optimized the DaPy.Matrix so that the speed in calculating is two times faster;
-	- Expreesed SeriesSet and Frame in more beautiful way;
+	-      Added more external data file: Excel, SPSS, SQLite3, CSV;
+	-      Added `Linear Regression` and `ANOVA` to DaPy.Mathematical_statistics;
+	-      Added `DaPy.io.encode()` for better adepted to Chinese;
+	-   Replaced read_col(), read_frame(), read_matrix() by read();
+	-  Optimized the DaPy.Matrix so that the speed in calculating is two times faster;
+	-  Expreesed SeriesSet and Frame in more beautiful way;
 	- Refactored the DaPy.DataSet, which can manage multiple sheets at the same time;
 	- Refactored the DaPy.Frame and DaPy.SeriesSet, delete the attribute limitation of types.
-	- Removed DaPy.Table;
+	-    Removed DaPy.Table;
 * V1.3.2 (2018-04-26)
-	- Increased the efficiency of loading data significantly;
-	- Added more useful functions for DaPy.DataSet;
-	- Added a new data structure called DaPy.Matrix;
-	- Added some mathematic formulas (e.g. corr, dot, exp);
-	- Added `Multi-Layers Perceptrons` to DaPy.machine_learn;
-	- Added some standard dataset.
+	-  Increased the efficiency of loading data significantly;
+	-      Added more useful functions for DaPy.DataSet;
+	-      Added a new data structure called DaPy.Matrix;
+	-      Added some mathematic formulas (e.g. corr, dot, exp);
+	-      Added `Multi-Layers Perceptrons` to DaPy.machine_learn;
+	-      Added some standard dataset.
 * V1.3.1 (2018-03-19)
-	- Fixed some bugs in the loading data function;
-	- Added the function which supports to save data as a file.
+	-      Fixed some bugs in the loading data function;
+	-      Added the function which supports to save data as a csv file;
 * V1.2.5 (2018-03-15)
-	- First version of DaPy!
+	- First public version of DaPy!
 
 ## License
 Copyright (C) 2018 Xuansheng Wu
