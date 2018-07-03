@@ -1,6 +1,16 @@
 from .core import Matrix, is_math, is_iter
 import math
 
+def multiply(m1, m2):
+    if is_math(m1) and is_math(m2):
+        return m1 * m2
+    
+    if isinstance(m1, Matrix) or isinstance(m2, Matrix):
+        return m1 * m2
+
+    return Matrix(m1) * m2
+    
+
 def dot(matrix_1, matrix_2):
     try:
         return matrix_1.dot(matrix_2)

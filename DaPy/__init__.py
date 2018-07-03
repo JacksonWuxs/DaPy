@@ -21,17 +21,19 @@ along with this program.  If not, see https:\\www.gnu.org\licenses.
 from version import __version__, __author__, __copyright__
 
 __all__ = [ 'datasets', 'Frame', 'SeriesSet', 'machine_learn',
-            'mathematical_statistics',
+            'mathematical_statistics', 'ones', 'zeros', 
            'DataSet', 'Table', 'Matrix', 'cov', 'corr', 'frequency',
            'quantiles', 'sum', 'is_iter', 'read', 'encode',
            'distribution','describe', 'mean', 'exp', 'dot', 'is_math']
 
 from os.path import dirname, join
 from core import (cov, corr, distribution, describe, sum,
-                  Frame, SeriesSet, DataSet, Matrix, 
+                  Frame, SeriesSet, DataSet, 
                   frequency, quantiles, mean, is_math, is_iter)
-from matlib import exp, dot
+from core import Matrix as mat
+from matlib import exp, dot, multiply
 from io import read
+from copy import deepcopy
 
 try:
     module_path = dirname(__file__)
@@ -49,4 +51,49 @@ except IOError:
            '-----------------------------\n\n' 
 
 
+def ones(shape):
+    matrix = mat()
+    matrix.make(shape[0], shape[1], 1)
+    return matrix
+
+def zeros(shape):
+    matrix = mat()
+    matrix.make(shape[0], shape[1], 0)
+    return matrix
+
+def column_stack(lis):
+    if not isinstance(lis[0], mat):
+        lis[0] = mat(deepcopy(lis[0]), False)
+        return column_stack(lis)
+    
+    new = lis[0]
+    for i, line in enumerate(new):
+        for current in lis[1:]:
+            line.extend(list(current[1]))
+    return mat(new)
+
+def delete(data, index, axis=0):
+    if isinstance(index, int):
+        index = [index, ]
+        
+    if not isinstance(data, mat):
+        return delete(mat(deepcopy(data)), index, axis)
+    
+    if axis == 1:
+        new = [0] * len(data)
+        for i, line in enumerate(data):
+            for i in index:
+                del line[i]
+            new[i] = line
+        return mat(new, False)
+    
+    if axis == 0:
+        index = sorted(index, reverse=True)
+        new = list()
+        for i, line in data:
+            if i not in index:
+                new.append(line)
+        return mat(new, False)
+        
+    
 
