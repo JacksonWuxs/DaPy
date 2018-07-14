@@ -6,7 +6,8 @@ DaPy is a Python package providing efficiency and readily usable data structures
 It aims to be a fundamental and friendly tools for real-world data processing in Python. Additionally, we also built some common data analysis algorithms, both in statistics and machine learning, in the library, in order to help you testify your idea as soon as posible.  
 
 #### Why use DaPy?  
-There are a lot of high quality libraries in recently, which have fast speed with C programe language. However, these data structures are hard to use. 
+A large number of high quality libraries are now available to efficiently support scientific computing and data analysis. However, these kind of libraries are not friendly to a freshman in Python, because they have to spend a lot of time getting familiar with these data structures. 
+
 
 ## Contents  
 [Features]
