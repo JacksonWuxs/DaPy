@@ -1,16 +1,16 @@
 # DaPy - enjoy the tour of data mining
 
 ## Introduction
-There are amount of data processing library in Python currently, why we need DaPy? 
+#### What is DaPy?
+DaPy is a Python package providing efficiency and readily usable data structures designed by Python native data strucutres. 
+It aims to be a fundamental and friendly tools for real-world data processing in Python. Additionally, we also built some common data analysis algorithms, both in statistics and machine learning, in the library, in order to help you testify your idea as soon as posible.  
 
-I met Pandas and Numpy 1 year ago. At that time, I just a beginer in Python and only understood some basic opeartions of Python native syntax. Numpy is fast but hard to use, because it is a little uncomfortable while you use numpy, the reason is the functions in Numpy is a huge different between that in Python native data structures. Every time I wanted to do a opeartion with Pandas or Numpy, the first syntax, which jumped out of my mind, was usually wrong, and I had to find the correct way on Guide Book or Internet. 
+#### Why use DaPy?  
+There are a lot of high quality libraries in recently, which have fast speed with C programe language. However, these data structures are hard to use. 
 
-I wondered whether it was my personal problem, so I asked my friends and professors around me. However, they gave the almost same answer as mine. Then I imagined that what about developing a new data processing and analysis library, which has a similar using habits with the native Python data structures. And further more, I believe that everyone knows how to use Excel.
-
-Finally, DaPy came out! In DaPy, you can operate the data just like in a Excel File with the familiar syntax you learnt in Python. 
-
-
-## Contents
+## Contents  
+[Features]
+   
 [Quick Start](https://github.com/JacksonWuxs/DaPy/blob/master/doc/GuideBook.md#quick-start)
   - load a dataset
   - pre-process data
