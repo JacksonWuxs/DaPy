@@ -11,7 +11,7 @@ Finally, DaPy came out! In DaPy, you can operate the data just like in a Excel F
 
 
 ## Contents
-[Quick Start](Quick Start)
+[Quick Start](https://github.com/JacksonWuxs/DaPy/blob/master/doc/GuideBook.md#quick-start)
   - load a dataset
   - pre-process data
   - Build up your model
