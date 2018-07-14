@@ -101,7 +101,7 @@ sheet:data
        class_3        |  0   |  0  |  1  | 0.27 | 0.45 | list
 =============================================================
 ```
-#### Ⅱ. Preparing data
+#### Ⅱ. Preprocessing data
 Before we start a machine learning subject, we should process our 
 data so that the data can meet the requirements of the models.   
   
@@ -166,6 +166,7 @@ which we have not used to train the estimator:
 'Classification Correct: 97.2222%'
 ```
 As you can see, our model has a satisfactory ability in classification. 
+
 #### Ⅳ. Postscript
 In order to save time in the next task by using a ready-made model, 
 it is possible to save our model in a file:
