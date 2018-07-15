@@ -6,10 +6,12 @@
   - How to use DaPy?
   
 [Features]
-  - Visiblly manage diverse data files.
+  - Visibly manage diverse data.
   - Quickly add or remove the data.
   - Readily access a part of data.
   - Flexible I/O tools.
+  - Built in functional methods.
+  
 [Quick Start](https://github.com/JacksonWuxs/DaPy/blob/master/doc/GuideBook.md#quick-start)
   - load a dataset
   - pre-process data
