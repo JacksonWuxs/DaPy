@@ -20,16 +20,21 @@ While you using DaPy as a data processing tool in your programe, you just need t
 First of all, we make a `Frame` structure as follow. Frame is a kind of `sheet` in DaPy, the another `sheet` structure is `SeriesSet`.
 ```Python
 >>> import DaPy as dp
-data = dp.Frame([
+>>> data = dp.Frame([
 	[1, 2, 3, 4, 5, 6],
 	[1, 3, 5, 7, 9, 11],
 	[2, 4, 6, 8, 10, 12]], 
-   ['A_col', 'B_col', 'C_col', 'D_col', 'E_col', 'F_col'])
+   	['A_col', 'B_col', 'C_col', 'D_col', 'E_col', 'F_col'])
 ```
 Now, our task is picking out following columns: 'B_col', 'C_col', 'D_col', and 'F_col'. We find that 'B_col', 'C_col' and 'D_col' are connected together. Think about the `slice` using in native Python structures such as list. Here is what we do.
 ```Python
 >>> data['B_col': 'D_col', 'F_col']
-
+ B_col | C_col | D_col | F_col
+-------+-------+-------+-------
+   2   |   3   |   4   |   6   
+   3   |   5   |   7   |   11  
+   4   |   6   |   8   |   12  
+ ```
 
 ## Contents  
 [Features]
