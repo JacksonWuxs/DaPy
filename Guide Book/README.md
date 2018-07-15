@@ -1,6 +1,6 @@
 # DaPy - enjoy the tour of data mining
 ## Contents  
-[Introduction]
+[Introduction](https://github.com/JacksonWuxs/DaPy/blob/master/Guide%20Book/README.md#introduction)
   - What is DaPy?
   - Why use DaPy?
   - How to use DaPy?
