@@ -1,5 +1,31 @@
 # DaPy - enjoy the tour of data mining
-
+## Contents  
+[Introduction]
+  - What is DaPy?
+  - Why use DaPy?
+  - How to use DaPy?
+  
+[Features]
+  - Visiblly manage diverse data files.
+  - Quickly add or remove the data.
+  - Readily access a part of data.
+  - Flexible I/O tools.
+[Quick Start](https://github.com/JacksonWuxs/DaPy/blob/master/doc/GuideBook.md#quick-start)
+  - load a dataset
+  - pre-process data
+  - Build up your model
+  - Show the result  
+  
+[Data Structures]
+  - Introduction
+  - DataSet
+  - Sheets
+  - Matrix  
+  
+[Inside Methods]
+  - Machine Learn
+  - Mathematical Statistics
+  
 ## Introduction
 #### What is DaPy?
 DaPy is a Python package providing efficiency and readily usable data structures designed by Python native data strucutres. 
@@ -36,23 +62,6 @@ Now, our task is picking out following columns: 'B_col', 'C_col', 'D_col', and '
    4   |   6   |   8   |   12  
  ```
 
-## Contents  
-[Features]
-   
-[Quick Start](https://github.com/JacksonWuxs/DaPy/blob/master/doc/GuideBook.md#quick-start)
-  - load a dataset
-  - pre-process data
-  - Build up your model
-  - Show the result  
-  
-[Data Structures]
-  - Introduction
-  - DataSet
-  - Sheets
-  - Matrix  
-  
-[Inside Methods]
-  - Machine Learn
-  - Mathematical Statistics
+
 
 
