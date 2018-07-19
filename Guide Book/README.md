@@ -4,8 +4,8 @@
   - [Why use DaPy?](https://github.com/JacksonWuxs/DaPy/tree/master/Guide%20Book#why-use-dapy)
   - [How to use DaPy?](https://github.com/JacksonWuxs/DaPy/tree/master/Guide%20Book#how-to-use-dapy)
   
-[Features]
-  - Visibly manage diverse data.
+[Features](https://github.com/JacksonWuxs/DaPy/blob/master/Guide%20Book/Features%20Introduction.md)
+  - [Visibly manage diverse data](https://github.com/JacksonWuxs/DaPy/blob/master/Guide%20Book/Features%20Introduction.md#visibly-manage-diverse-data)
   - Quickly add or remove the data.
   - Readily access a part of data.
   - Flexible I/O tools.
