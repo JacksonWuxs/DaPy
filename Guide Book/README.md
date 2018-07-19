@@ -45,7 +45,7 @@ A recommend way to use DaPy is that using it while you do some pre-process of yo
 While you using DaPy as a data processing tool in your programe, you just need to imagine it as a Excel file. And in the most of time, the first idea which jumped out from your mind is the correct syntax while you processing the data. Here is a simple example to testify if the syntax matches your idea. 
 
 First of all, we make a `Frame` structure as follow. Frame is a kind of `sheet` in DaPy, the another `sheet` structure is `SeriesSet`.
-```Python
+```
 >>> import DaPy as dp
 >>> data = dp.Frame([
 	[1, 2, 3, 4, 5, 6],
@@ -60,7 +60,7 @@ First of all, we make a `Frame` structure as follow. Frame is a kind of `sheet` 
    2   |   4   |   6   |   8   |   10  |   12  
 ```
 Now, our task is picking out following columns: 'B_col', 'C_col', 'D_col', and 'F_col'. We find that 'B_col', 'C_col' and 'D_col' are connected together. Think about the `slice` using in native Python structures such as list. Here is what we do.
-```Python
+```
 >>> data['B_col': 'D_col', 'F_col']
  B_col | C_col | D_col | F_col
 -------+-------+-------+-------
