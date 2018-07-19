@@ -10,12 +10,12 @@ implement your ideas fluently.
 
 #### Visibly manage diverse data
 Every data scientist should have at least one experience in handling the needed datas 
-in multiple sources. It is inconvenient to manage or scan datas with amount of 
+with multiple sources. It is inconvenient to manage or access datas with amount of 
 variables names. In this section, we will simply introduce a data container, which 
 represented the ideology of designing DaPy, called *DataSet*.
 
-Not only data scientist, but also a young kid in primary school, are skillful in 
-MS Office Excel software. In that case, every data should be contained in a 
+Both data scientist and a young kid in primary school are skillful in 
+MS Office Excel software. In this software, every data should be contained in a 
 *sheet* structures. We draw on ideas from Excel and proposed a data managing structure  
 that is *DataSet*. 
 
@@ -56,5 +56,17 @@ sheet:Scholarship
  1805.0 |    Second   
  1806.0 |    First    
  ```
- 
- 
+ And now, we have a new sheet named "tuition" that needs to be added into data and save it as "new_students.xlsx". One of the sheet structure in DaPy is *Frame*. You can initialize a new Frame object with records and column names. 
+ ```
+>>> tuition = dp.Frame(
+	[[1801, 3000],
+	 [1802, 3500],
+	 [1803, 3000],
+	 [1804, 2500],
+	 [1805, 2500],
+	 [1806, 2500],
+	 [1807, 3000]],
+	['ID', 'Tuition'])
+>>> data.add(tuition, 'Tuition')
+>>> data.save("new_students.xlsx")
+``` 
