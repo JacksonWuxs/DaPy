@@ -19,7 +19,7 @@ MS Office Excel software. In this software, every data should be contained in a
 *sheet* structures. We draw on ideas from Excel and proposed a data managing structure  
 that is *DataSet*. 
 
-Here is a example how does DaPy work basically to manage diverse dataset. We have prepared a students.xlsx file as a example, which has 3 sheets insides, named "Info", "Course", and "Scholarship". Now, we will use DaPy to read this file into a DataSet object and access the data.
+Here is a example how does DaPy work basically to manage diverse dataset. We have prepared a [students.xlsx](C:\Users\JacksonWoo\AppData\Roaming\Zoom\bin\Zoom.exe) file as a example, which has 3 sheets insides, named "Info", "Course", and "Scholarship". Now, we will use DaPy to read this file into a DataSet object and access the data.
 ```
 >>> import DaPy as dp
 >>> data = dp.read('students.xlsx', 'frame')
@@ -56,7 +56,7 @@ sheet:Scholarship
  1805.0 |    Second   
  1806.0 |    First    
  ```
- And now, we have a new sheet named "tuition" that needs to be added into data and save it as "new_students.xlsx". One of the sheet structure in DaPy is *Frame*. You can initialize a new Frame object with records and column names. 
+And now, we have a new sheet named "tuition" that needs to be added into data and save it as "new_students.xlsx". One of the sheet structure in DaPy is *Frame*. You can initialize a new Frame object with records and column names. 
  ```
 >>> tuition = dp.Frame(
 	[[1801, 3000],
@@ -70,3 +70,4 @@ sheet:Scholarship
 >>> data.add(tuition, 'Tuition')
 >>> data.save("new_students.xlsx")
 ``` 
+#### 
