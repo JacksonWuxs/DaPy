@@ -19,7 +19,7 @@ MS Office Excel software. In this software, every data should be contained in a
 *sheet* structures. We draw on ideas from Excel and proposed a data managing structure  
 that is *DataSet*. 
 
-Here is a example how does DaPy work basically to manage diverse dataset. We have prepared a ![students.xlsx](ftp://106.14.184.242/DaPy/Examples/students.xlsx) file as a example, which has 3 sheets insides, named "Info", "Course", and "Scholarship". Now, we will use DaPy to read this file into a DataSet object and access the data.
+Here is a example how does DaPy work basically to manage diverse dataset. We have prepared a students.xlsx(download:ftp://106.14.184.242/DaPy/Examples/students.xlsx) file as a example, which has 3 sheets insides, named "Info", "Course", and "Scholarship". Now, we will use DaPy to read this file into a DataSet object and access the data.
 ```
 >>> import DaPy as dp
 >>> data = dp.read('students.xlsx', 'frame')
