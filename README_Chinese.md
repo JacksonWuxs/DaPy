@@ -1,4 +1,4 @@
-DaPy - 别让语法束缚了思想
+DaPy - 享受数据挖掘之旅
 ====
 ![](https://img.shields.io/badge/Version-1.3.3-green.svg)  ![](https://img.shields.io/badge/Download-PyPi-green.svg)  ![](https://img.shields.io/badge/License-GNU-blue.svg)  
 
@@ -25,20 +25,21 @@ pip install -U DaPy
 流畅地实现你的想法。
 
 * 以下是DaPy做得很好的一些事情：
-	- 使用`DataSet`结构高效管理各种数据文件。
-	- 快速完成"增删改查"操作。
-	- 使您可以轻松访问数据集的一部分，不仅可以通过索引或变量名称，还可以通过特殊条件访问。
-	- 从CSV文件，Excel文件，数据库甚至SPSS文件加载数据的强大I/O工具。
-	- 按多种条件对记录进行排序。
-	- 使用内置分析模型快速验证您的想法（例如“方差分析”，“多层感知机”，“线性回归”）。
-	- 多种方法可帮助您轻松感知数据集。
-  
+    - 使用`DataSet`结构高效管理各种数据文件。
+    - 快速完成数据的"增删改查"操作。
+    - 轻松访问数据集的一部分，不仅可以通过索引或变量名称，还可以通过特殊条件访问。
+    - 从CSV文件，Excel文件，数据库甚至SPSS文件加载数据的强大I/O工具。
+    - 按多种条件对记录进行排序。
+    - 使用内置分析模型快速验证您的想法（例如“方差分析”，“多层感知机”，“线性回归”）。
+    - 多种方法可帮助您轻松感知数据集。
+    
+    
 即使它使用Python原生数据结构，
 DaPy的效率仍然与C写的一些库相当。
 我们在平台上测试了DaPy
-Intel i7-6560U虽然Python版本是2.7.13-64Bit。数据集
-（[下载](https://pan.baidu.com/s/1kK3_V8XbbVim4urDkKyI8A)）
-有超过450万条记录，总规模是
+Intel i7-6560U虽然Python版本是2.7.13-64Bit。
+（[数据集](https://pan.baidu.com/s/1kK3_V8XbbVim4urDkKyI8A)）
+有超过450万条记录，文件大小
 240.2 MB。
 
 如果您想跟进最新进展，可以访问[这里](https://www.teambition.com/project/5b1b7bd40b6c410019df8c41/tasks/scrum/5b1b7bd51e4661001838eb10)。
