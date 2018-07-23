@@ -4,7 +4,7 @@ DaPy - 别让语法束缚了思想
 
 作为一个基于Python原生数据结构搭建的数据分析和数据挖掘库，**DaPy**致力于节约数据科学家的时间并提高他们的研究效率，同时它也在尽其所能为他们提供更舒适和流畅的操作体验。
 
-[安装](#安装) | [特性](#特性) | [快速开始](https://github.com/JacksonWuxs/DaPy/blob/master/快速开始.md) | [远期规划](#远期规划) | [更新日志](#更新日志) | [版权归属](#版权归属) | [English](https://github.com/JacksonWuxs/DaPy/blob/master/README.md)
+[安装](#安装) | [特性](#特性) | [快速开始](https://github.com/JacksonWuxs/DaPy/blob/master/快速开始.md) | [远期规划](#远期规划) | [更新日志](#更新日志) | [版权归属](#版权归属) [用户手册](https://github.com/JacksonWuxs/DaPy/blob/master/Guide%20Book/Chinese/README.md)| [English](https://github.com/JacksonWuxs/DaPy/blob/master/README.md)
 
 ## 安装
 最新版本1.3.3已上传至PyPi。
@@ -18,27 +18,32 @@ pip install -U DaPy
 ```
 
 ## 特性
-#### Ⅰ. 舒适的体验
-  从设计之初，我们就尽可能地让DaPy使用更多Python原生的数据结构，并
-让他能支持更多Pythonic的写法特性。因此，你可以快速地适应何使用DaPy
-中的数据结构和操作。另外，为了能让用户更流畅地实现他们的想法，我们尽可能
-简化了DaPy中的公式或方法参数。 
-  
-  按照不同的字段及标准排序记录是了解数据集的常用方式。在这个功能中，DaPy支持
-你使用多个不同的排序要求进行排序。 
-```Pyton
- data.sort(('A_col', 'DESC'), ('B_col', 'ASC'), ('D_col', 'DESC'))
- ```
-  
-#### Ⅱ. 高效性  
-我们在数据处理库中最常用的三个操作（加载数据、排序数据和遍历数据）测试
-了DaPy的性能水平。相较于其他使用C语言优化的库，DaPy在测试中表现出了惊人的
-效率。在所有的测试项目中，DaPy始终保持着与最快的C语言优化的库2倍内的耗时。 
+**便捷**和**高效**是DaPy的设计基石。
+从一开始，我们就让
+DaPy使用尽可能多的Python原生数据结构，且试图让
+它支持更多的Python语法习惯。所以你可以快速地适应DaPy。
+此外，我们尽力简化
+其中的公式或数学模型，以便让你
+流利地实现你的想法。
 
-我们在搭载Intel i7-6560U处理器的平台上，通过64位2.7.13版本的Python进行了测试。
-测试数据集(https://pan.baidu.com/s/1kK3_V8XbbVim4urDkKyI8A)  包含多达
-450万条记录，并且总的大小为240.2MB。
+* 以下是DaPy做得很好的一些事情：
+	- 使用`DataSet`结构高效管理各种数据文件。
+	- 快速完成"增删改查"操作。
+	- 使您可以轻松访问数据集的一部分，不仅可以通过索引或变量名称，还可以通过特殊条件访问。
+	- 从CSV文件，Excel文件，数据库甚至SPSS文件加载数据的强大I/O工具。
+	- 按多种条件对记录进行排序。
+	- 使用内置分析模型快速验证您的想法（例如“方差分析”，“多层感知机”，“线性回归”）。
+	- 多种方法可帮助您轻松感知数据集。
+  
+即使它使用Python原生数据结构，
+DaPy的效率仍然与C写的一些库相当。
+我们在平台上测试了DaPy
+Intel i7-6560U虽然Python版本是2.7.13-64Bit。数据集
+（[下载](https://pan.baidu.com/s/1kK3_V8XbbVim4urDkKyI8A)）
+有超过450万条记录，总规模是
+240.2 MB。
 
+如果您想跟进最新进展，可以访问[这里](https://www.teambition.com/project/5b1b7bd40b6c410019df8c41/tasks/scrum/5b1b7bd51e4661001838eb10)。
 <table>
 <tr>
 	<td>测试结果</td>
@@ -83,7 +88,7 @@ pip install -U DaPy
 * 描述性统计
 * 推断性统计
 * 特征工程
-	- 主成分分析
+	- PCA (主成分分析)
 	- LDA (Linear Discriminant Analysis)
 	- MIC (Maximal information coefficient)
 * 模型
