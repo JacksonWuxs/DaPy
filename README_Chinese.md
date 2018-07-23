@@ -4,7 +4,7 @@ DaPy - 享受数据挖掘之旅
 
 作为一个基于Python原生数据结构搭建的数据分析和数据挖掘库，**DaPy**致力于节约数据科学家的时间并提高他们的研究效率，同时它也在尽其所能为他们提供更舒适和流畅的操作体验。
 
-[安装](#安装) | [特性](#特性) | [快速开始](https://github.com/JacksonWuxs/DaPy/blob/master/快速开始.md) | [远期规划](#远期规划) | [更新日志](#更新日志) | [版权归属](#版权归属) [用户手册](https://github.com/JacksonWuxs/DaPy/blob/master/Guide%20Book/Chinese/README.md)| [English](https://github.com/JacksonWuxs/DaPy/blob/master/README.md)
+[安装](#安装) | [特性](#特性) | [快速开始](https://github.com/JacksonWuxs/DaPy/blob/master/快速开始.md) | [远期规划](#远期规划) | [更新日志](#更新日志) | [用户手册](https://github.com/JacksonWuxs/DaPy/blob/master/Guide%20Book/Chinese/README.md) | [版权归属](#版权归属) | [English](https://github.com/JacksonWuxs/DaPy/blob/master/README.md)
 
 ## 安装
 最新版本1.3.3已上传至PyPi。
@@ -21,8 +21,7 @@ pip install -U DaPy
 **便捷**和**高效**是DaPy的基石。
 从一开始，我们就让DaPy使用尽可能多的Python原生数据结构，且试图让
 它支持更多的Python语法习惯，因此你可以快速地适应DaPy。
-此外，我们极力简化内置的模型，以便让你
-流畅地实现你的想法。
+此外，我们极力简化内置的模型，以便让你流畅地实现你的想法。
 
 * 以下是DaPy做得很好的一些事情：
     - 使用`DataSet`结构高效管理各种数据文件。
