@@ -1,17 +1,17 @@
-#DaPy - 享受数据挖掘之旅
-[简介]（https://github.com/JacksonWuxs/DaPy/blob/master/Guide%20Book/README.md#introduction）
-   - [什么是DaPy？]（https://github.com/JacksonWuxs/DaPy/tree/master/Guide%20Book#what-is-dapy）
-   - [为什么要使用DaPy？]（https://github.com/JacksonWuxs/DaPy/tree/master/Guide%20Book#why-use-dapy）
-   - [如何使用DaPy？]（https://github.com/JacksonWuxs/DaPy/tree/master/Guide%20Book#how-to-use-dapy）
+# DaPy - 享受数据挖掘之旅
+[简介](https://github.com/JacksonWuxs/DaPy/blob/master/Guide%20Book/README.md#introduction)
+   - [什么是DaPy？](https://github.com/JacksonWuxs/DaPy/tree/master/Guide%20Book#what-is-dapy)
+   - [为什么要使用DaPy？](https://github.com/JacksonWuxs/DaPy/tree/master/Guide%20Book#why-use-dapy)
+   - [如何使用DaPy？](https://github.com/JacksonWuxs/DaPy/tree/master/Guide%20Book#how-to-use-dapy)
   
-[特征]（https://github.com/JacksonWuxs/DaPy/blob/master/Guide%20Book/Features%20Introduction.md）
-   - [可视化管理各种数据]（https://github.com/JacksonWuxs/DaPy/blob/master/Guide%20Book/Features%20Introduction.md#visibly-manage-diverse-data）
+[特征](https://github.com/JacksonWuxs/DaPy/blob/master/Guide%20Book/Features%20Introduction.md)
+   - [可视化管理各种数据](https://github.com/JacksonWuxs/DaPy/blob/master/Guide%20Book/Features%20Introduction.md#visibly-manage-diverse-data)
    - 快速完成“增删改查"操作
    - 轻松访问部分数据
    - 灵活的I/O工具
    - 易于使用内建模型算法
   
-[快速入门]（https://github.com/JacksonWuxs/DaPy/blob/master/doc/GuideBook.md#quick-start）
+[快速入门](https://github.com/JacksonWuxs/DaPy/blob/master/doc/GuideBook.md#quick-start)
    - 加载数据集
    - 预处理数据
    - 模型建立与训练
