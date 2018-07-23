@@ -9,13 +9,13 @@
    - 快速完成“增删改查"操作
    - 轻松访问部分数据
    - 灵活的I/O工具
-   - 易于使用内建模型算法
-  
-[快速入门](https://github.com/JacksonWuxs/DaPy/blob/master/doc/GuideBook.md#quick-start)
-   - 加载数据集
-   - 预处理数据
-   - 模型建立与训练
-   - 显示结果
+   - 易于使用内建模型算法   
+   
+[快速入门](https://github.com/JacksonWuxs/DaPy/blob/master/doc/GuideBook.md#quick-start)  
+   - 加载数据集  
+   - 预处理数据  
+   - 模型建立与训练  
+   - 预测未来  
   
 [数据结构]
   - 介绍
