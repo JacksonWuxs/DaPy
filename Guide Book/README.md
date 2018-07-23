@@ -37,7 +37,7 @@ A large number of eminent libraries are now available to efficiently support sci
 
 Traversing the data set for example, most people would use ``for`` syntax as their first idea. But Pandas would iterate the column names only, not the records. Moreover, when users try to select some of the records with conditions, Pandas needs a `Bool` set at first. It is not visible for user to know how the data opearted. 
 
-There is no doubt that these deferential libraries play major roles in the data science filed. However, they would need some complementary products at the same time. In contrast with these data processing or computing libraries, DaPy focus on a specific aspect, which is defined as rapid development. In a simple word, DaPy is suitable for the users who are in the begining of a new research. With the DaPy help, scientists can quickly implements their ideas without limitation of complex syntax.  
+There is no doubt that these deferential libraries play major roles in the data science filed. However, they would need some complementary products at the same time. In contrast with these data processing or computing libraries, DaPy focus on a specific aspect, which is defined as rapid development. In a simple word, DaPy is suitable for the users who are in the begining of a new research. With the DaPy help, scientists can fluently implements their ideas without limitation of complex syntax.  
 
 A recommend way to use DaPy is that using it while you do some pre-process of your data set in a new research. After you testify your demo, you can use numpy or tensorflow data structures to rewrite your idea. But it doesn't means that DaPy is not up to the processing of big data. On the contrary, he also has strong operational efficiency in some aspects.
 
