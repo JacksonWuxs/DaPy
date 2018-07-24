@@ -36,11 +36,10 @@ implement your ideas fluently.
 	- Fast verify your ideas with the built-in analysis models (e.g. `ANOVA`, `MLP`, `Linear Regression`).
 	- A variety of ways to help you easily perceive your dataset.
   
-Even if it uses Python native data structures, 
+Even if it uses Python original data structures, 
 DaPy still has efficiency comparable to some libraries which was wrote by C.
 We have tested DaPy on the platform with
-Intel i7-6560U while the Python version is 2.7.13-64Bit. The dataset
-([download](https://pan.baidu.com/s/1kK3_V8XbbVim4urDkKyI8A))
+Intel i7-6560U while the Python version is 2.7.13-64Bit. The [dataset](https://pan.baidu.com/s/1kK3_V8XbbVim4urDkKyI8A)
 has more than 4.5 million records and total size is 
 240.2 MB. 
 
