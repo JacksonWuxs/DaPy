@@ -109,7 +109,7 @@ dataset apart in 80% of total. We select this training set with the
 [:142] Python syntax, which produces a new SeriesSet that contains 
 80% records of total:  
 ```Python
->>> mlp.train(feature[:142], target[:142])
+>>> mlp.fit(feature[:142], target[:142])
  - Start Training...
  - Initial Error: 150.55 %
     Completed: 10.00 	Remain Time: 1.32 s	Error: 11.82%
@@ -123,6 +123,7 @@ dataset apart in 80% of total. We select this training set with the
     Completed: 89.98 	Remain Time: 0.18 s	Error: 3.39%
     Completed: 99.98 	Remain Time: 0.00 s	Error: 3.18%
  - Total Spent: 2.0 s	Error: 3.1763 %
+>>> mlp.show_error()
 ```
    ![Page Not Found](https://github.com/JacksonWuxs/DaPy/blob/master/doc/material/QuickStartResult.png 'Result of Training')  
   
@@ -133,22 +134,30 @@ instead that it means the absolutely error of the target vector.
 Let us use our model to classifier the left records in wine dataset, 
 which we have not used to train the estimator:
 ```Python
->>> mlp.test(feature[142:], target[142:])
+>>> mlp.performance(feature[142:], target[142:], mode='clf')
 'Classification Correct: 97.2222%'
 ```
 As you can see, our model has a satisfactory ability in classification. 
 
 #### Ⅳ. Postscript
 In order to save time in the next task by using a ready-made model, 
-it is possible to save our model in a file:
+it is possible to save our model in a file with pickle model. There are two ways could be used with the same result.
 ```Python
->>> mlp.topkl('First_mlp.pkl')
+>>> mlp.save('First_mlp.pkl') # way 1
+>>> 
+>>> import pickle # Way 2
+>>> pickle.dump(mlp, open('First_mlp.pkl', 'wb'))
 ```
 In a real working environment, you can quickly use your trained 
-model to predict a new record as:
+model to predict a new record with two ways:
 ```Python
->>> import DaPy as dp
->>> mlp = machine_learn.MLP()
->>> mlp.readpkl('First_mlp.pkl')
->>> mlp.predict(My_new_data)
+>>> # the first way
+>>> from DaPy.machine_learn import MLP
+>>> mlp = MLP()
+>>> mlp.load('First_mlp.pkl')
+>>> mlp.predict_proba(My_new_data)
+>>>
+>>> # the second way
+>>> import pickle
+>>> mlp = pickle.load(open('First_mlp.pkl', 'rb'))
 ```
