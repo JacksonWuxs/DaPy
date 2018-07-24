@@ -1,8 +1,8 @@
-# DaPy - enjoy the tour of data mining 
+# DaPy - Enjoy the Tour of Data Mining 
 [Introduction](https://github.com/JacksonWuxs/DaPy/blob/master/Guide%20Book/README.md#introduction)
   - [What is DaPy?](https://github.com/JacksonWuxs/DaPy/tree/master/Guide%20Book#what-is-dapy)
   - [Why use DaPy?](https://github.com/JacksonWuxs/DaPy/tree/master/Guide%20Book#why-use-dapy)
-  - [How to use DaPy?](https://github.com/JacksonWuxs/DaPy/tree/master/Guide%20Book#how-to-use-dapy)
+  - [Who use DaPy?](https://github.com/JacksonWuxs/DaPy/tree/master/Guide%20Book#who-use-dapy)
   
 [Features](https://github.com/JacksonWuxs/DaPy/blob/master/Guide%20Book/Features%20Introduction.md)
   - [Visibly manage diverse data](https://github.com/JacksonWuxs/DaPy/blob/master/Guide%20Book/Features%20Introduction.md#visibly-manage-diverse-data)
@@ -40,6 +40,11 @@ Traversing the data set for example, most people would use ``for`` syntax as the
 There is no doubt that these deferential libraries play major roles in the data science filed. However, they would need some complementary products at the same time. In contrast with these data processing or computing libraries, DaPy focus on a specific aspect, which is defined as rapid development. In a simple word, DaPy is suitable for the users who are in the begining of a new research. With the DaPy help, scientists can fluently implements their ideas without limitation of complex syntax.  
 
 A recommend way to use DaPy is that using it while you do some pre-process of your data set in a new research. After you testify your demo, you can use numpy or tensorflow data structures to rewrite your idea. But it doesn't means that DaPy is not up to the processing of big data. On the contrary, he also has strong operational efficiency in some aspects.
+
+
+#### Who use DaPy?
+DaPy is a powerful and flexible data processing tools, therefore it suitable most of users who have the demand in data mining. DaPy can help a expert develop and testify their own method quickly, can help reserachers handletheir data conviniencetly, and help a novice make their dream come true. By the way, in Shanghai University of International Business and Economics, DaPy has been widely used in some programs.
+
 
 #### How to use DaPy?
 While you using DaPy as a data processing tool in your programe, you just need to imagine it as a Excel file. And in the most of time, the first idea which jumped out from your mind is the correct syntax while you processing the data. Here is a simple example to testify if the syntax matches your idea. 
