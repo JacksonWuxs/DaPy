@@ -20,7 +20,7 @@ MS Office Excel software. In this software, every data should be contained in a
 that is *DataSet*. 
 
 Here is a example how does DaPy work basically to manage diverse dataset. We have prepared a students.xlsx(download:ftp://106.14.184.242/DaPy/Examples/students.xlsx) file as a example, which has 3 sheets insides, named "Info", "Course", and "Scholarship". Now, we will use DaPy to read this file into a DataSet object and access the data.
-```
+```Python2
 >>> import DaPy as dp
 >>> data = dp.read('students.xlsx', 'frame')
 >>> data
@@ -57,7 +57,7 @@ sheet:Scholarship
  1806.0 |    First    
  ```
 And now, we have a new sheet named "tuition" that needs to be added into data and save it as "new_students.xlsx". One of the sheet structure in DaPy is *Frame*. You can initialize a new Frame object with records and column names. 
- ```
+ ```Python3
 >>> tuition = dp.Frame(
 	[[1801, 3000],
 	 [1802, 3500],
