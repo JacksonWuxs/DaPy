@@ -90,7 +90,7 @@ target variables and feature variables:
 ```Python
 >>> feature, target = wine[:'Proline'], wine['class_1':] # contains the target
 ```
-#### Ⅲ. Learning and predicting
+#### Ⅲ. Methods
 In the case of the wine dataset, the task is to predict, given a new record, 
 which class it represents. We are given samples of each of the 3 possible classes on 
 which we fit an estimator to be able to predict the classes to which unseen samples belong.  
