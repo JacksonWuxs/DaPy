@@ -4,7 +4,7 @@ DaPy - enjoy the tour in data mining
 
 As a data analysis and processing library based on the origion data structures in Python, **DaPy** is not only committed to saving the time of data scientists and improving the efficiency of research, but also try it best to offer you a new experience in data science.
 
-[Installation](#installation) | [Features](#features) | [Quick Start](https://github.com/JacksonWuxs/DaPy/blob/master/Quick%20Start.md ) | [To Do List](#todo) | [Version Log](#version-log) | [License](#license) | [Guide Book](https://github.com/JacksonWuxs/DaPy/tree/master/Guide%20Book) | [中文版](https://github.com/JacksonWuxs/DaPy/blob/master/README_Chinese.md)
+[Installation](#installation) | [Features](#features) | [Quick Start](https://github.com/JacksonWuxs/DaPy/blob/master/Guide%20Book/English/Quick%20Start.md ) | [To Do List](#todo) | [Version Log](#version-log) | [License](#license) | [Guide Book](https://github.com/JacksonWuxs/DaPy/tree/master/Guide%20Book) | [中文版](https://github.com/JacksonWuxs/DaPy/blob/master/README_Chinese.md)
 
 ## Installation
 The latest version 1.3.3 had been upload to PyPi.
@@ -27,13 +27,12 @@ the formulas or mathematical models in it, in order to let you
 implement your ideas fluently.  
 
 * Here are just a few of the things that DaPy does well:  
-	- Efficiently manage diverse data files with `DataSet` structure.
-	- Easy handling of missing data in any type of value.
-	- Quick insert and delete a mount of new records or new variables.
-	- Make it easy to access a part of your dataset, not only by index or variable names, but also by specefic conditions.
-	- Functional IO tools for loading data from CSV files, Excel files, database and even SPSS files.
-	- Sort your records by multiple conditions.
-	- Fast verify your ideas with the built-in analysis models (e.g. `ANOVA`, `MLP`, `Linear Regression`).
+	- [Efficiently manage diverse data with clearly perceiving approach](https://github.com/JacksonWuxs/DaPy/blob/master/Guide%20Book/English/Features.md#visibly-manage-diverse-data)
+	- [Quick insert and delete a mount of new records or new variables]
+	- [Make it easy to access a part of your dataset, not only by index or variable names, but also by specefic conditions]
+	- [Functional IO tools for loading data from CSV files, Excel files, database and even SPSS files]
+	- [Sort your records by multiple conditions]
+	- [Fast verify your ideas with the built-in analysis models (e.g. `ANOVA`, `MLP`, `Linear Regression`)]
 	- A variety of ways to help you easily perceive your dataset.
   
 Even if it uses Python original data structures, 
