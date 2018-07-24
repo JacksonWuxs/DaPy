@@ -109,7 +109,7 @@ dataset apart in 80% of total. We select this training set with the
 [:142] Python syntax, which produces a new SeriesSet that contains 
 80% records of total:  
 ```Python
->>> mlp.fit(feature[:142], target[:142])
+>>> mlp.train(feature[:142], target[:142], 5000)
  - Start Training...
  - Initial Error: 150.55 %
     Completed: 10.00 	Remain Time: 1.32 s	Error: 11.82%
