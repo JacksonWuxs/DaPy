@@ -2,6 +2,8 @@ DaPy - Enjoy the Tour in Data Mining
 ====
 ![](https://img.shields.io/badge/Version-1.3.3-green.svg)  ![](https://img.shields.io/badge/Download-PyPi-green.svg)  ![](https://img.shields.io/badge/License-GNU-blue.svg)  
 
+![](https://github.com/JacksonWuxs/DaPy/blob/master/logo.bmp)
+
 As a data analysis and processing library based on the origion data structures in Python, **DaPy** is not only committed to saving the time of data scientists and improving the efficiency of research, but also try it best to offer you a new experience in data science.
 
 [Installation](#installation) | [Features](#features) | [Quick Start](https://github.com/JacksonWuxs/DaPy/blob/master/Guide%20Book/English/Quick%20Start.md ) | [To Do List](#todo) | [Version Log](#version-log) | [License](#license) | [Guide Book](https://github.com/JacksonWuxs/DaPy/tree/master/Guide%20Book) | [中文版](https://github.com/JacksonWuxs/DaPy/blob/master/README_Chinese.md)
