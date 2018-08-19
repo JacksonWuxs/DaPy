@@ -9,12 +9,10 @@ TRANS_FUN_SET = {float: atof,
                  bool: strtobool,
                  str: strip}
 
-def read(addr, dtype='col', sheet_name=None, miss_symbol='', miss_value=None, sep=None,
-            first_line=1, title_line=0, prefer_type=bool):
+def read(addr, dtype='col', **kward):
     from core import DataSet
     data = DataSet()
-    data.read(addr, dtype, sheet_name, miss_symbol, miss_value, sep, first_line,
-              title_line, prefer_type)
+    data.read(addr, dtype, **kward)
     return data
 
 def encode(code='cp936'):
@@ -30,19 +28,12 @@ def str2value(value, prefer_type=None):
         return value
 
     elif value.isdigit() or value[1:].isdigit():
-        if isinstance(prefer_type, float):
-            return atof(value)
+        if prefer_type is float:
+            return atof(value.replace(',', ''))
         return atoi(value)
     
     elif value.count('.') == 1:
-        try:
-            return atof(value)
-        except ValueError:
-            pass
-        try:
-            return atof(value.replace(',', ''))
-        except ValueError:
-            pass
+        return atof(value.replace(',', ''))
 
     elif prefer_type is bool:
         try:

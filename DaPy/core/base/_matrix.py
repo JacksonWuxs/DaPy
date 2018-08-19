@@ -57,7 +57,7 @@ class Matrix(object):
         D = float(self.D)
         N = [1] * self._dim.Ln
         for i in range(self._dim.Ln):
-            N[i] = [self.get_cofactor(i, j).D / D for j in range(self._dim.Col)]
+            N[i] = [self._get_cofactor(i, j).D / D for j in range(self._dim.Col)]
         return Matrix(N)
         
     @property
@@ -70,7 +70,7 @@ class Matrix(object):
                    self._matrix[0][1] * self._matrix[1][0]
         total = 0.0
         for c in range(self._dim.Col):
-            total += (-1) ** (c + 1) * self._matrix[1][c] * self.get_cofactor(1, c).D
+            total += (-1) ** (c + 1) * self._matrix[1][c] * self._get_cofactor(1, c).D
         return total
 
         start = 0
@@ -122,7 +122,16 @@ class Matrix(object):
         frame += '       ' + u'\u2517'.encode('utf-8') + ' ' * (sum(column_size) + len(column_size) - 1) +\
                  u'\u251B'.encode('utf-8')+ ')'
         return frame
-    
+
+    def __getstate__(self):
+        instance = self.__dict__.copy()
+        instance['_dim'] = tuple(self._dim)
+        return instance
+
+    def __setstate__(self, dict):
+        self._matrix = dict['_matrix']
+        self._dim = Matrix.dims(*dict['_dim'])
+        
     def __contains__(self, e):
         if isinstance(e, list):
             for record in self._matrix:
@@ -470,7 +479,7 @@ class Matrix(object):
         for i in range(size):
             self._matrix[i][i] = 1.0
 
-    def get_cofactor(self, x, y):
+    def _get_cofactor(self, x, y):
         if self._dim.Ln != self._dim.Col:
             raise ValueError('can not operate a non-sqrt matrix.')
 
@@ -486,7 +495,10 @@ class Matrix(object):
             del line[y]
         return Matrix(M, False)
             
-    def read_text(self, addr, first_line=1, sep=','):
+    def read_text(self, addr, **kward):
+        first_line = kward.get('first_line', 1)
+        sep = kward.get('sep', ',')
+        
         with open(addr, 'r') as f:
             reader = csv.reader(f, delimiter=sep)
             self._matrix = list()
@@ -506,5 +518,7 @@ class Matrix(object):
             raise ValueError('records in your data do not have the same lenth.')
         self._dim = Matrix.dims(len(self._matrix), col)
 
-    def shuffles(self):
-        shuffle(self._matrix)
+    def tolist(self):
+        if self._dim.Col == 1:
+            return [record[0] for record in self._matrix]
+        return self._matrix

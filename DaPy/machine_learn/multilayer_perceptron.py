@@ -5,7 +5,7 @@ from warnings import warn
 from .Layers import Fully_Connected_Layer
 from .contents import CELL, ONE_CELL
 from .active_functions import functions
-
+from .tools import _str2engine, _engine2str
 try:
     import cPickle as pkl
 except ImportError:
@@ -55,7 +55,7 @@ class MLP(object):
      - Total Spent: 9.0 s	Error: 0.9578 %
     >>> mlp.performance(new_data) # Test the performance of model
      - Classification Correct: 98.2243%
-    >>> mlp.predict(your_data) # Predict your real task.
+    >>> mlp.predict_proba(your_data) # Predict your real task.
     '''
         
     def __init__(self, engine='numpy',  alpha=0.025,
@@ -85,18 +85,12 @@ class MLP(object):
 
         '''
         
-        self._upfactor = upfactor     # Upper Rate
-        self._downfactor = downfactor # Down Rate
-        self._alpha = alpha           # Learning Rate
-        self._beta = beta             # transforming Rate
-
-        if engine.lower() == 'numpy':
-            import numpy as f
-        elif engine.lower() == 'dapy':
-            import DaPy as f
-        else:
-            raise ValueError('do not support engine as %s'%engine)
-        self._engine = f              # which library we are using
+        self._upfactor = upfactor               # Upper Rate
+        self._downfactor = downfactor           # Down Rate
+        self._alpha = alpha                     # Learning Rate
+        self._beta = beta                       # transforming Rate
+        self._layer_list = []
+        self._engine = _str2engine(engine)      # which library for camputing
 
     @property
     def weight(self):
@@ -111,25 +105,15 @@ class MLP(object):
     def engine(self):
         '''Return the calculating tool that you are using
         '''
-        return str(self._engine).split("'")[1]
+        return _engine2str(self._engine)
 
     @engine.setter
     def engine(self, value):
         '''Reset the calculating library (DaPy or Numpy)
         '''
-        if value.lower() == 'numpy':
-            import numpy as engine
-            engine.seterr(divide='ignore', invalid='ignore')
-            
-        elif value.lower() == 'dapy':
-            import DaPy as engine
-            
-        else:
-            raise ValueError('do not support engine as %s, "DaPy" or "numpy" only.'%value)
-
-        self._engine = engine
+        self._engine = _str2engine(value)
         for layer in self._layer_list:
-            layer.engine = engine
+            layer.engine = self._engine
 
     def __repr__(self):
         max_size_y = max([layer.shape[1] for layer in self._layer_list]) * 2
@@ -156,6 +140,19 @@ class MLP(object):
         output += 'Tips:' + CELL + ' represents the normal cell in layer; \n'
         output += '     ' + ONE_CELL + ' represents the automatically added offset cells.'
         return output
+
+    def __getstate__(self):
+        obj = self.__dict__.copy()
+        obj['_engine'] = _engine2str(self._engine)
+        return obj
+
+    def __setstate__(self, dict):
+        self._engine = _str2engine(dict['_engine'])
+        self._layer_list = dict['_layer_list']
+        self._alpha = dict['_alpha']
+        self._beta = dict['_beta']
+        self._upfactor = dict['_upfactor']
+        self._downfactor = dict['_downfactor']
         
     def create(self, input_cell, output_cell, hidden_cell=None, func=None):
         ''' Create a new MLP model with multiable hiddent layers.
@@ -173,7 +170,7 @@ class MLP(object):
             with a experience formula. If you want to build more than 1 hidden
             layer, you should input a numbers in list.
 
-        func : str (default: None)
+        func : str, str in list (default: None)
             The active function of each layer.
 
         Return
@@ -221,7 +218,7 @@ class MLP(object):
         self._size = len(self._layer_list)
         return ' - Create structure: ' + ' - '.join(map(str, cells))
             
-    def train(self, data, target, train_time=500, info=True):
+    def train(self, X, Y, train_time=500, verbose=True, mini_error=0.05):
         '''Fit your model
 
         Parameters
@@ -247,27 +244,32 @@ class MLP(object):
         ------
         None
         '''
-        X = Matrix(data)
-        Y = Matrix(target)                       # Target Matrix
-        self._Error = [1, ]                      # Mistakes Recorder
+        X = Matrix(X)
+        Y = Matrix(Y)                       # Target Matrix
+        self._Error = [1,]                      # Mistakes Recorder
+        mini_error = mini_error * 100
+        start = clock()                          # Training Start
 
-        start = clock()  # Training Start
         for term in range(1, train_time + 1): # Make a Loop
             # Foreward Propagating
             results = self._foreward(X)
             # Back Propagation
             self._backward(results, Y)
 
+            if self._Error[-1] < mini_error:
+                print('Early stop with the target error rates.')
+                break
+
             # show out information
-            if info and term%((train_time+1)//10)==0:
+            if verbose and term % 20 == 0:
                 spent = clock() - start
                 finish_rate = (term/(train_time+1.0))*100
                 last = spent/(finish_rate/100) - spent
                 print('    Completed: %.2f \t'%finish_rate +\
                       'Remain Time: %.2f s\t'%last +\
-                      'Error: %.2f'%self._Error[-1] + '%')
+                      'Mean Error: %.2f'%self._Error[-1] + '%')
                       
-            elif term == 10:
+            elif term == 5:
                 spent = clock() - start
                 finish_rate = (term/(train_time+1.0))*100
                 last = spent/(finish_rate/100) - spent
@@ -275,7 +277,7 @@ class MLP(object):
                       '-'.join(map(str, localtime()[:3])) + ' ' +\
                       ':'.join(map(str, localtime()[3:6])) + ' ' +\
                       'Remain: %.2f s\t'%last +\
-                      'Error: %.2f'%self._Error[-1] + '%') 
+                      'Init Error: %.2f'%self._Error[-1] + '%') 
                 
         print(' - Total Spent: %.1f s\tError: %.4f'%(clock()-start,
                                                 self._Error[-1]) + '%')
@@ -300,8 +302,22 @@ class MLP(object):
         if self._Error[-1] > self._Error[-2]:
             return self._alpha * self._upfactor
         return self._alpha * self._downfactor
+
+    def fit(self, X, Y, train_time=500, hidden_cells=None,
+            func=None, mini_error=0.05, verbose=False):
+        '''create a new model and train it.
+
+        This model will help you create a model which suitable for this
+        dataset and then train it. It will use the function self.create()
+        at the first place, and call self.train() function following.
+        '''
+        X, Y = Matrix(X), Matrix(Y)
+        respone = self.create(X.shape.Col, Y.shape.Col, hidden_cells, func)
+        if verbose:
+            print(respone)
+        self.train(X, Y, train_time, verbose, mini_error)
                                         
-    def predict(self, data):
+    def predict_proba(self, data):
         '''
         Predict your own data with fitting model
 
@@ -316,12 +332,14 @@ class MLP(object):
         '''
         return Matrix(self._foreward(Matrix(data))[-1])
 
-    def topkl(self, addr):
+    def save(self, addr):
         '''Save your model to a .pkl file
         '''
-        with open(addr, 'w') as f:
-            pkl.dump(dict(weight=[layer._weight for layer in self._layer_list],
-                          func=[layer.function for layer in self._layer_list]), f)
+        pkl.dump(self, open(addr, 'wb'))
+
+    def load(self, addr):
+        obj = pkl.load(open(addr, 'rb'))
+        self.__setstate__(obj.__getstate__())
 
     def show_error(self):
         '''use matplotlib library to draw the error curve during the training.
@@ -341,6 +359,7 @@ class MLP(object):
         '''
         with open(addr) as f:
             data = pkl.load(f)
+            
         for i, weight in enumerate(data['weight']):
             layer = Layer(self._engine, 0, 0, i, data['func'][i])
             layer._weight = weight
@@ -350,7 +369,7 @@ class MLP(object):
         if len(data) != len(target):
             raise IndexError("the number of target data is not equal to variable data")
 
-        result, target = self.predict(data), Matrix(target)
+        result, target = self.predict_proba(data), Matrix(target)
         if mode == 'clf':
             error = 0
             if all(map(is_math, target)):
@@ -367,7 +386,7 @@ class MLP(object):
                 (1 - float(error)/len(target))*100) + '%'
         
         elif mode == 'reg':
-            return ' - Regression MSE: %.4f'%self._f.mean(\
+            return ' - Regression MSE: %.4f' % self._f.mean(\
                 Matrix(target - result) ** 2)
         
         else:

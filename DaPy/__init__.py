@@ -1,6 +1,6 @@
 
 '''
-DaPy module is a useful tool, which help you readily process and analysis data.
+DaPy module is a fundemantal data process tool, which help you readily process and analysis data.
 
 Copyright (C) 2018  Xuansheng Wu
 

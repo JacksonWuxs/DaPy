@@ -38,9 +38,6 @@ def get_sorted_index(seq, cmp=None, key=None, reverse=False):
     new_index = list()
     for value in new_value:
         new_index.extend(index_dict[value])
-
-    if reverse:
-        return new_index.reverse()
     return new_index
 
 def is_value(n):

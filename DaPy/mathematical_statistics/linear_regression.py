@@ -26,8 +26,7 @@ def LinearRegression(X, Y):
     Xiaoling Xu, Ronghua Wang. (2013). Probability Theory & Mathematical Statistics.
         Shanghai: Shanghai Jiaotong University Press
     '''
-##    X_, Y_ = Matrix(X_), Matrix(Y_)
-##    beta_ = 
+
     # Calculate Model
     len_x, len_y = len(X), len(Y)
     if len_x != len_y:
@@ -54,6 +53,7 @@ def LinearRegression(X, Y):
     return_model = Frame([
         [round(alpha, 4), round(beta, 4), round(sigma_2, 4), round(T, 4)]],
         ['Constant', 'Beta', 'Sigma^2', 'T-value'])
+        
     return_F_test = Frame([
         ['Regression', round(U, 4), 1, round(U, 4), round(F, 4)],
         ['Residual', round(Se, 4), len_x - 2, round(MS2), ''],

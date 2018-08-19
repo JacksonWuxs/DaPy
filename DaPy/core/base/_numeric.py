@@ -65,7 +65,7 @@ def cov(data_1, data_2):
     '''
     try:
         size = min(float(len(data_1)), float(len(data_2)))
-        xy = [data_1[i]*data_2[i] for i in range(int(size))]
+        xy = [data_1[i] * data_2[i] for i in range(int(size))]
         Exy = sum(xy)/size
         Ex = sum(data_1)/size
         Ey = sum(data_2)/size
@@ -75,20 +75,19 @@ def cov(data_1, data_2):
         return cov(data_1, data_2)
     except ZeroDivisionError:
         return None
-        
-    return Exy - Ex*Ey
+    return Exy - Ex * Ey
      
 def corr(data_1, data_2):
     '''
-    formula: cor(x,y) = cov(x,y)/(std(x)*std(y))
+    formula: cor(x,y) = cov(x,y) / (std(x)*std(y))
     '''
     static_1 = describe(data_1)
     static_2 = describe(data_2)
     covariance = cov(data_1, data_2)
     try:
-        return covariance/(static_1.Sn * static_2.Sn)
+        return covariance / (static_1.Sn * static_2.Sn)
     except TypeError:
-         return None
+        return None
     except ZeroDivisionError:
         return float('+inf')
         

@@ -1,25 +1,25 @@
 from array import array
 from collections import namedtuple, deque, OrderedDict, Counter, Iterable
 from copy import deepcopy
-import csv
+from csv import reader
 from datetime import date, datetime
 from _numeric import describe, mean, _sum, log
 from _function import is_seq, is_iter, is_math, is_value, get_sorted_index
 from _numeric import corr as f_c
 from DaPy.io import str2value, TRANS_FUN_SET
 from warnings import warn
-from operator import itemgetter, attrgetter
+from operator import itemgetter
 from os import path
-from pprint import pprint
-from random import random, randint, shuffle
-from string import atof, atoi
+from random import random, shuffle
 from distutils.util import strtobool
+from re import search as re_search
 
 __all__ = ['SeriesSet', 'Frame']
 
-class SeriesSet(object):
-    '''every variable will be stored by a sequene.
+dims = namedtuple('sheet', ['Ln', 'Col'])
 
+class _base_sheet(object):
+    '''
     Attributes
     ----------
     _columns : str in list
@@ -27,53 +27,59 @@ class SeriesSet(object):
 
     _dim : namedtuple
         the two dimensional span of this data set.
-        
-    _miss_value : value
+
+    _miss_symbol : value
         the symbol represented miss value in current seriesset.
 
-    _m_value : values in list
+    _miss_value : values in list
         the number of miss value in each column.
 
-    _set : OrderedDict
+    _data : OrderedDict or list
         the OrderedDict object contains all the data by columns.
-
-    _type_column : types in list
-        the sequence type of each column.
     '''
-    dims = namedtuple('SeriesSet', ['Ln', 'Col'])
 
-    def __init__(self, series=None, columns=None, 
+    def __init__(self, obj=None, columns=None,
                  miss_symbol=None, miss_value=None):
-        
-        self._set = OrderedDict()
-        self._miss_value = miss_value
-        self._m_value = list()
-        self._columns = columns
+        self._miss_symbol = miss_value
+        self._miss_value = []
+        miss_symbol = self._check_miss_symbol(miss_symbol)
 
-        if series is None and columns is None:
-            self.__init_empty()
-        elif isinstance(series, SeriesSet):
-            self.__init_set(series)
-        elif isinstance(series, (dict, OrderedDict)):
-            self.__init_dict(series, miss_symbol)
-        elif hasattr(series, 'items'):
-            self.__init_dict(dict(series.items()))
-        elif isinstance(series, (Frame, )):
-            self.__init_frame_matrix(series, miss_symbol)
-        elif is_seq(series) or is_iter(series):
-            self.__init_normal(series, miss_symbol, columns)
+        if not obj and columns is None:
+            self._columns = []
+            self._dim = dims(0, 0)
+
+        elif not obj and columns is not None:
+            if isinstance(columns, str):
+                columns = [columns,]
+            self._dim = dims(0, len(columns))
+            self._init_col_name(columns)
+
+        elif isinstance(obj, SeriesSet):
+            self._init_col(obj)
+
+        elif isinstance(obj, Frame):
+            self._init_frame(obj, miss_symbol, columns)
+
+        elif isinstance(obj, (dict, OrderedDict)):
+            self._init_dict(obj, miss_symbol, columns)
+
+        elif hasattr(obj, 'items'):
+            self._init_dict(dict(obj.items()), miss_symbol, columns)
+
+        elif is_seq(obj) and all(map(is_seq, obj)):
+            self._init_like_table(obj, miss_symbol, columns)
+
+        elif is_seq(obj) and all(map(is_value, obj)):
+            self._init_like_seq(obj, miss_symbol, columns)
+
         else:
-            raise TypeError("SeriesSet unsupport %s given."%type(series))
+            raise TypeError("sheet structure does not " +\
+                            "support %s type." % type(obj))
 
-    @property
-    def __dict__(self):
-        return ['_set', '_columns', '_dim', '_type_column',
-                '_type_value', '_m_value', '_miss_value']
-    
     @property
     def data(self):
-        return self._set
-    
+        return self._data
+
     @property
     def shape(self):
         return self._dim
@@ -82,36 +88,396 @@ class SeriesSet(object):
     def columns(self):
         return self._columns
 
-    @property
-    def miss_value(self):
-        return self._miss_value
-
     @columns.setter
     def columns(self, item):
-        if isinstance(item, str):
-            new_ = OrderedDict()
-            for i, title in enumerate(self._columns):
-                new_[item + '_%d'%i] = self._set[title]
-            self._set = new_
-            self._columns = [item + '_' + str(i) for i in range(self._dim.Col)]
+        self._init_col_name(item)
 
-        elif is_iter(item):
-            if len(set(item)) == self._dim.Col:
-                new_ = OrderedDict()
-                for i, title in enumerate(self._columns):
-                    new_[item[str(i)]] = self._set[title]
-                self._set = new_
-                self._columns = [str(i) for i in item]
-            else:
-                raise ValueError('incorrect dimention of titles.')
+        if isinstance(self._data, list):
+            return
+
+        new_data = OrderedDict()
+        for i, value in enumerate(self._data.values()):
+            new_data[self._columns[i]] = value
+
+    @property
+    def miss_symbol(self):
+        return self._miss_symbol
+
+    @miss_symbol.setter
+    def miss_symbol(self, item):
+        if not is_value(item):
+            raise TypeError('miss value should be a value object, not %s' % type(item))
+
+        if isinstance(self._data, list):
+            for record in self._data:
+                for j, value in enumerate(record):
+                    if value == self._miss_symbol:
+                        record[j] = item
         else:
-            raise TypeError('unknow title as %s'%item)
+            for i, mv in enumerate(self._miss_value):
+                if mv != 0:
+                    seq = self._data[self.columns[i]]
+                    for j, value in enumerate(seq):
+                        if value == self._miss_symbol:
+                            seq[j] = item
+
+        self._miss_symbol = item
+
+    @property
+    def miss_value(self):
+        return sum(self._miss_value)
+
+    def __len__(self):
+        return self._dim.Ln
+
+    def __contains__(self, e):
+        if isinstance(e, str):
+            return e in self._columns
+
+        if is_seq(e):
+            if len(e) == self._dim.Col:
+                for record in self:
+                    if record == e:
+                        return True
+            elif len(e) == self._dim.Ln:
+                for variable in self.values():
+                    if variable == e:
+                        return True
+
+        if is_value(other):
+            for record in self:
+                for value in record:
+                    if value == other:
+                        return True
+        return False
+
+    def __eq__(self, other):
+        if is_seq(other):
+            other = Frame(other)
+            if other.shape != self.shape:
+                return False
+            for a, b in zip(self, other):
+                if a != b:
+                    return False
+            return True
+        return False
+
+    def __setitem__(self, key, value):
+        if isinstance(key, int):
+            if key <= self._dim.Ln:
+                self.__delitem__(key)
+                self.insert(key, value)
+            else:
+                self.append(value)
+
+        elif isinstance(key, str):
+            if key in self._columns:
+                pos = self._columns.index(key)
+                self.__delitem__(key)
+                self.insert_col(pos, value, key)
+            else:
+                self.append_col(value, key)
+
+        else:
+            raise TypeError('only can set one record or one column each time.')
+
+    def _getitem_by_tuple(self, interval, obj):
+        error_msg = "Can't get data by columns and index at the same time.\n" +\
+                    "Try: S['A':'B'][3:10] or S[3:10]['A':'B']"
+        for arg in interval:
+            if isinstance(arg, str):
+                if obj and obj.shape.Ln != self._dim.Ln:
+                    raise SyntaxError(error_msg)
+                obj.append_col(self[arg], arg)
+
+            elif isinstance(arg, slice):
+                start, stop = arg.start, arg.stop
+                if isinstance(start, str) or isinstance(stop, str):
+                    if obj and obj.shape.Ln != self._dim.Ln:
+                        raise SyntaxError(error_msg)
+                    extend_data = self.__getslice__(start, stop)
+                    for title, sequence in extend_data.items():
+                        if title not in obj:
+                            obj.append_col(sequence, title)
+
+                elif isinstance(start, int) or isinstance(stop, int):
+                    if obj and obj.shape.Col != self._dim.Col:
+                        raise SyntaxError(error_msg)
+                    obj.extend(self.__getslice__(start, stop))
+                else:
+                    raise TypeError('bad expression as [%s:%s]' % (start, stop))
+
+            elif isinstance(arg, int):
+                if obj and obj.shape.Col != self._dim.Col:
+                    raise SyntaxError(error_msg)
+                obj.append(self.__getitem__(arg))
+            else:
+                raise TypeError('bad expression as [%s:%s]' % (start, stop))
+        return obj
+
+    def __delitem__(self, key):
+        if isinstance(key, int):
+            self.pop(key)
+
+        elif isinstance(key, str) and key in self._columns:
+            self.pop_col(key)
+
+        elif isinstance(key, tuple):
+            for every in key:
+                self.__delitem__(every)
+        else:
+            raise KeyError('%s should be int, str or slice.'%key)
+
+    def __getslice__(self, start, stop, step=1):
+        if start in self._columns or stop in self._columns:
+            return self._getslice_col(*self._check_slice_pos_col(start, stop))
+        elif not (not isinstance(start, int) and not isinstance(stop, int)):
+            return self._getslice_ln(start, stop, step)
+        raise TypeError('bad expression as [%s:%s]' % (start, stop))
+
+    def __getstate__(self):
+        instance = self.__dict__.copy()
+        instance['_dim'] = tuple(self._dim)
+        if isinstance(self._data, OrderedDict):
+            instance['_data'] = dict(self._data)
+        return instance
+
+    def __datastate__(self, dict):
+        '''load this object from a stream file'''
+        self._dim = dims(*dict['_dim'])
+        self._columns = dict['_columns']
+        self._miss_value = dict['_miss_value']
+        self._miss_symbol = dict['_miss_symbol']
+        if isinstance(dict['_data'], dict):
+            self._data = OrderedDict()
+            for col in self._columns:
+                self._data[col] = dict['_data'][col]
+        else:
+            self._data = dict['_data']
+
+    def _init_col_name(self, columns):
+        if isinstance(columns, str):
+            self._columns = [columns + '_%d' % i for i in range(self._dim.Col)]
+        elif columns is None or str(columns).strip() == '':
+            self._columns = ['C_%d' % i for i in range(self._dim.Col)]
+        elif is_seq(columns):
+            self._columns = []
+            for col in columns[:self._dim.Col]:
+                self._columns.append(self._check_col_new_name(col))
+            for i in range(self._dim.Col - len(self._columns)):
+                self._columns.append(self._check_col_new_name(None))
+        else:
+            raise TypeError('Column names should be stored in a iterable, not %s' % type(columns))
+
+    def _transform_str_condition(self, cond, axis=0):
+        if axis == 0:
+            for i in get_sorted_index(self._columns, key=len, reverse=True):
+                cond = cond.replace(self._columns[i], 'record[%d]'%i)
+            record = self.__getitem__(0) # test record
+
+        elif axis == 1:
+            opeartes = {'and': 3, 'or': 2}
+            for opearte, bias in opeartes.items():
+                counts = cond.count(opearte)
+                index = 0
+                for i in range(counts):
+                    index = cond.index(opearte, index + bias) + bias
+                    cond = cond[: index] + ' value' + cond[index: ]
+            cond = 'value ' + cond
+            value = 30 # test value
+        else:
+            raise AttributeError('axis shoud be 1 or 0.')
+
+        try:
+            exec(cond)
+        except:
+            raise SyntaxError('we have some problem in transform '
+                            'your conditions, please check syntax again.')
+        return 'check = ' + cond
+
+    def _check_sequence_type(self, series, miss_symbol):
+        if is_value(series):
+            return 0, [series] * self._dim.Ln
+
+        if not is_seq(series):
+            raise TypeError("can't transfer type `%s`" % type(series) +\
+                            "SeriesSet.")
+
+        miss_symbol = self._check_miss_symbol(miss_symbol)
+        mv, series = 0, list(series)
+
+        if len(series) < self._dim.Ln:
+            series.extend([self._miss_symbol] * (self._dim.Ln - len(series)))
+
+        for i, element in enumerate(series):
+            if element in miss_symbol:
+                series[i] = self._miss_symbol
+                mv += 1
+        return mv, series
+
+    def _check_replace_condition(self, col, condition, new_value):
+        if col is all:
+            for title in self._columns:
+                self._replace_typical(title, condition, new_value)
+            return
+
+        elif is_seq(col):
+            for title in col:
+                self._replace_typical(title, condition, new_value)
+            return
+
+        elif isinstance(col, str) and col in self._columns:
+            col = self._columns.index(col)
+
+        elif not(isinstance(col, int)):
+            raise ValueError('your column symbol is not clear enough.')
+
+        if not isinstance(condition, str):
+            raise TypeError('condition should be written in a python '+\
+                            'syntax str object.')
+
+        if not is_value(new_value):
+            raise TypeError('SeriesSet does not support %s ' % type(new_value),
+                            'as a value type.')
+
+        return col, condition, new_value
+
+    def _check_col_new_name(self, new_name):
+        if not new_name:
+            return self._check_col_new_name('C_%d' % len(self._columns))
+
+        if new_name not in self._columns:
+            return new_name
+
+        start_no, titles = 1, ','.join(self._columns) + ','
+        while True:
+            if not re_search('%s_%d,' % (new_name, start_no), titles):
+                return '%s_%d' % (new_name, start_no)
+            start_no += 1
+
+    def _check_slice_pos_col(self, i, j):
+        if i in self._columns:
+            i = self._columns.index(i)
+        elif i is None:
+            i = 0
+        else:
+            raise ValueError('can not get the title of %s'%j)
+
+        if j in self._columns:
+            j =  self._columns.index(j)
+        elif j is None:
+            j = self._dim.Col - 1
+        else:
+            raise ValueError('can not get the title of %s'%j)
+        return (i, j)
+
+    def _check_area(self, *area):
+        if (len(area) == 1 and area[0].lower() == 'all') or area == tuple():
+            C1, L1 = 0, 0
+            L2, C2 = self._dim
+
+        try:
+            pos1, pos2 = area
+        except ValueError:
+            raise AttributeError('Area should be represented by two tuples, or keyword: "all".')
+
+        def _check_pos(x, y):
+            if isinstance(y, str) and y in self._columns:
+                y = self._columns.index(y)
+            elif y.lower() == 'all':
+                y = self._dim.Col
+            elif not(isinstance(y, int) and abs(y) < self._dim):
+                raise TypeError('unknow expression of %s' % y)
+
+            if x.lower() == 'all':
+                x = self._dim.Ln
+            elif not (isinstance(x, int) and abs(x) < self._dim.Ln):
+                raise IndexError('your request %s is out of dataset.' % x)
+            return x, y
+
+        L1, C1 = _check_pos(*pos1)
+        if pos2.lower() == 'all':
+            L2, C2 = self._dim
+        else:
+            L2, C2 = _check_pos(*pos2)
+
+        if C2 < C1 or L2 < L1:
+            raise ValueError('the postion in the second tuple should be larger '+\
+                             'than first tuple.')
+        return L1, C1, L2, C2
+
+    def _check_miss_symbol(self, miss_symbol):
+        if is_value(miss_symbol):
+            return (miss_symbol, self._miss_symbol)
+        return tuple(miss_symbol)
+
+    def _check_read_text(self, f, **kwrd):
+        first_line = kwrd.get('first_line', 1)
+        miss_symbol = kwrd.get('miss_symbol', 'NA')
+        miss_symbol = self._check_miss_symbol(miss_symbol)
+        self._miss_value = kwrd.get('miss_value', self._miss_value)
+        title_line = kwrd.get('title_line', 0)
+        sep = kwrd.get('sep', ',')
+        prefer_type = kwrd.get('prefer_type', None)
+
+        freader = reader(f, delimiter=sep)
+        col = max([len(line) for l_n, line in enumerate(freader)])
+        self._miss_value = [0] * col
+        self._dim = dims(l_n, col)
+        if isinstance(prefer_type, str):
+            _col_types = [str] * col
+        else:
+            _col_types = [None] * col
+        if title_line < 0:
+            self._init_col_name(None)
+
+        f.seek(0)
+        for i, lines in enumerate(freader):
+            if i >= first_line:
+                for j, item in enumerate(lines):
+                    if j in _col_types or item in miss_symbol:
+                        continue
+                    _col_types[j] = TRANS_FUN_SET[type(
+                                str2value(item, prefer_type))]
+            elif i == title_line:
+                if len(lines) < self._dim.Col:
+                    lines.extend(['C_%d' % i for i in range(len(self._columns),
+                                                col - len(self._columns))])
+                self._init_col_name(lines)
+
+            if all(_col_types):
+                break
+        f.seek(0)
+        for m, record in enumerate(freader):
+            if m >= first_line - 1 :
+                break
+        return freader, tuple(_col_types), miss_symbol, prefer_type
+
+    def _check_transform_value(self, i, item, _col_types,
+                                miss_symbol, prefer_type):
+        try:
+            if item in miss_symbol:
+                self._miss_value[i] += 1
+                return self._miss_symbol
+            return _col_types[i](item)
+        except ValueError:
+            warn('column %d has different type.' % i)
+            return str2value(item, prefer_type)
+
+
+class SeriesSet(_base_sheet):
+    '''Every variable will be stored by a sequene.
+    '''
+    def __init__(self, series=None, columns=None,
+                 miss_symbol=None, miss_value=None):
+        self._data = OrderedDict()
+        _base_sheet.__init__(self, series, columns, miss_symbol, miss_value)
 
     @property
     def info(self):
         # calculate the informations
-        mins, maxs, avgs, stds = list(), list(), list(), list()
-        for sequence in self._set.values():
+        mins, maxs, avgs, stds = [], [], [], []
+        for sequence in self._data.values():
             d = describe(sequence)
             mins.append(str(d.Min))
             maxs.append(str(d.Max))
@@ -123,17 +489,16 @@ class SeriesSet(object):
                 stds.append('%.2f'%d.S)
             except TypeError:
                 stds.append(' - ')
-        dtype = [str(t).split("'")[1] for t in self._type_column]
-        miss = map(str, self._m_value)
+
+        miss = map(str, self._miss_value)
 
         # calculate the blank size of each subject
-        blank_size = [max(len(max(self._columns, key=len)), 5) + 2, 
+        blank_size = [max(len(max(self._columns, key=len)), 5) + 2,
                       max(len(max(miss, key=len)), 4) + 2,
                       max(len(max(mins, key=len)), 3) + 2,
                       max(len(max(maxs, key=len)), 3) + 2,
                       max(len(max(avgs, key=len)), 4) + 2,
-                      max(len(max(stds, key=len)), 3) + 2,
-                      max(len(max(dtype, key=len)), 5)]
+                      max(len(max(stds, key=len)), 3)]
 
         # Draw the title line of description
         title_line = 'Title'.center(blank_size[0]) + '|' +\
@@ -141,8 +506,7 @@ class SeriesSet(object):
                      'Min'.center(blank_size[2]) + '|' +\
                      'Max'.center(blank_size[3]) + '|' +\
                      'Mean'.center(blank_size[4]) + '|' +\
-                     'Std'.center(blank_size[5]) + '|' +\
-                     'Dtype'.center(blank_size[6]) + '\n'
+                     'Std'.center(blank_size[5]) + '\n'
         for lenth in blank_size:
             title_line += '-'*lenth + '+'
 
@@ -154,179 +518,93 @@ class SeriesSet(object):
             info += mins[i].center(blank_size[2]) + '|'
             info += maxs[i].center(blank_size[3]) + '|'
             info += avgs[i].center(blank_size[4]) + '|'
-            info += stds[i].center(blank_size[5]) + '|'
-            info += dtype[i].center(blank_size[6]) + '\n'
+            info += stds[i].center(blank_size[5]) + '\n'
 
         print('1.  Structure: DaPy.SeriesSet\n' +\
               '2. Dimensions: Ln=%d | Col=%d\n'%self._dim +\
-              '3. Miss Value: %d elements\n'%sum(self._m_value) +\
+              '3. Miss Value: %d elements\n'%sum(self._miss_value) +\
               '4.   Describe: \n'+\
               title_line[:-1] + '\n' +\
               info + '='*(6 + sum(blank_size)))
 
-    def __init_empty(self):
-        self._columns = list()
-        self._dim = SeriesSet.dims(0, 0)
-        self._type_column = list()
-        
-    def __init_set(self, series):
-        self._set = deepcopy(series)
+    def _init_col(self, series):
+        self._data = deepcopy(series._data)
         self._columns = deepcopy(series._columns)
         self._dim = deepcopy(series._dim)
-        self._type_column = deepcopy(series._type_column)
-        self._m_value = deepcopy(series._m_value)
-        self._miss_value = deepcopy(series.miss_value)
-        
-    def __init_dict(self, series, miss_symbol):
-        if not self._columns:
-            self._columns = sorted(series) # Column names
-        elif len(set(self._columns)) < len(series):
-            self._columns.extend(['C%d'%i for i in range(len(series) - len(set(self._columns)))])
-        elif len(set(self._columns)) > len(series):
-            raise ValueError('the lenth of titles does not match the data size.')
+        self._miss_value = deepcopy(series._miss_value)
+        self._miss_symbol = deepcopy(series._miss_symbol)
 
-        self._type_column = list() 
-
-        # MaxSize of this Series Set
+    def _init_dict(self, series, miss_symbol, columns):
         max_Ln = max(map(len, series.itervalues()))
-        for title, sequence in series.items():
-            size = len(sequence)
-            # Check the type of each sequence
-            if isinstance(sequence, array):
-                self._type_column.append(array)
-
-            elif is_seq(sequence):
-                self._type_column.append(type(sequence))
-                mv, sequence = self.__check_sequence_type(sequence, miss_symbol)
-            else:
-                raise TypeError("unsupport type '%s' "%type(sequence)+\
-                                "in column '%s'."%title)
-            
-            if size != max_Ln:
-                if isinstance(sequence, array):
-                    sequence = list(sequence)
-                sequence.extend([self._miss_value] * (max_Ln - size))
-                
-            self._m_value.append(mv)
-            self._set[title] = sequence
-        self._dim = SeriesSet.dims(max_Ln, len(self._columns))
-
-    def __init_frame_matrix(self, series, miss_symbol):
-        self._dim = SeriesSet.dims(series._dim.Ln, series._dim.Col)         
-        self._type_column = [list] * self._dim.Col
-        if isinstance(series, Frame):
-            self._m_value = deepcopy(series._m_value)
-            if not self._columns:
-                self._columns = deepcopy(series._columns)
+        self._dim = dims(max_Ln, len(series))
+        if columns is None:
+            self._init_col_name(series.keys())
         else:
-            if not self._columns:
-                self._columns = ['C%d'%i for i in range(self._dim.Col)]
-            self._m_value = [0] * self._dim.Col
-        
-        if len(set(self._columns)) < self._dim.Col:
-            for i, value in enumerate(self._columns):
-                if self._columns.count(value) != 1 and \
-                   self._columns.index(value) != i:
-                    self._columns[i] = 'C%d'%i
-            self._columns.extend(['C%d'%i for i in \
-                                  range(len(self._columns), self._dim.Col)])
-        elif len(self._columns) > self._dim.Col:
-            self._columns = self._columns[:self._dim.Col]
+            self._init_col_name(columns)
+        for i, sequence in enumerate(series.values()):
+            mv, sequence = self._check_sequence_type(sequence, miss_symbol)
+            self._miss_value.append(mv)
+            self._data[self._columns[i]] = sequence
 
-        for sequence, title in zip(zip(*series), series.columns):
-            self._set[title] = sequence
+    def _init_frame(self, series, miss_symbol, columns):
+        self._dim = dims(series._dim.Ln, series._dim.Col)
+        self._miss_value = deepcopy(series._miss_value)
+        if columns is None:
+            columns = deepcopy(series._columns)
+        self._init_col_name(columns)
 
-    def __init_normal(self, series, miss_symbol, columns):
-        # if the input object is a sequence in sequence structure
-        if all(filter(is_seq, series)):
-            # extend the empty space
-            lenth_Col = len(max(series, key=len))
-            for pos, record in enumerate(series):
-                if len(record) < lenth_Col:
-                    new = list(record)
-                    new.extend([self._miss_value] * (lenth_Col - len(record)))
-                    series[pos] = new
-                    
-            # initalized the column titles
-            if is_iter(self._columns):
-                self._columns = map(str, self._columns)
-                if len(set(self._columns)) < lenth_Col:
-                    for i, value in enumerate(self._columns):
-                        if self._columns.count(value) != 1 and \
-                           self._columns.index(value) != i:
-                            new_title = 'C%d'%i
-                            while new_title in self._columns:
-                                new_title += '_%d'%i
-                            self._columns[i] = new_title
-                    self._columns.extend(['C%d'%i for i in \
-                                          range(len(self._columns), lenth_Col)])
-                elif len(self._columns) > lenth_Col:
-                    self._columns = self._columns[:lenth_Col]
-                                          
-            else:
-                self._columns = ['C%d'%i for i in range(lenth_Col)]
-                
-            self._dim = SeriesSet.dims(len(series), lenth_Col)
-            self._m_value = [0] * self._dim.Col
-            self._type_column = [list]*self._dim.Col
+        for sequence, title in zip(zip(*series), self._columns):
+            self._data[title] = list(sequence)
 
-            for j, sequence in enumerate(zip(*series)):
-                for i, v in enumerate(sequence):
-                    if v == miss_symbol or v == self._miss_value:
-                        sequence = list(sequence)
-                        sequence[i] = self._miss_value
-                        self._m_value[j] += 1
-                self._set[self._columns[j]] = list(sequence)      
-            return
+        if self._miss_symbol != series._miss_symbol:
+            for seq in self._data.values():
+                for i, value in enumerate(seq):
+                    if value in miss_symbol:
+                        seq[i] = self._miss_symbol
 
-        # if input object is a 1-d sequence structure
-        if all(filter(is_value, series)):
-            
-            # initalized the title names
-            if isinstance(columns, list):
-                self._columns = [str(columns[0]), ]
-            elif isinstance(columns, (str, int)):
-                self._columns = [str(columns), ]
-            else:
-                self._columns = ['C0', ]
+    def _init_like_seq(self, series, miss_symbol, columns):
+        self._dim = dims(len(series), 1)
+        self._init_col_name(columns)
+        mv, series = self._check_sequence_type(series, miss_symbol)
+        self._miss_value = [mv,]
+        self._data[self._columns[0]] = series
 
-            self._dim = SeriesSet.dims(len(series), 1)
-            self._type_column = [list]
-            self._m_value = [0, ]
-                    
-            for i, value in enumerate(series):
-                if value == miss_symbol or value == self._miss_value:
-                    series[i] = self._miss_value
-                    self._m_value[0] += 1
+    def _init_like_table(self, series, miss_symbol, columns):
+        lenth_Col = len(max(series, key=len))
+        for pos, record in enumerate(series):
+            if len(record) < lenth_Col:
+                new = list(record)
+                new.extend([self._miss_symbol] * (lenth_Col - len(record)))
+                series[pos] = new
 
-            self._set[self._columns[0]] = list(series)
-            return
-        
-        raise TypeError('records of input data do not have the same type, '+\
-                            'should be all iterable or value.')
-    
-    def __arrange_by_index(self, new_index):
-        for title, sequence in self._set.items():
-            self._set[title] = [sequence[j] for j in new_index]
-        self._type_column = [list] * self._dim.Col
-        
+        self._dim = dims(len(series), lenth_Col)
+        self._init_col_name(columns)
+        self._miss_value = [0] * self._dim.Col
+
+        for j, sequence in enumerate(zip(*series)):
+            mv, series = self._check_sequence_type(sequence, miss_symbol)
+            self._miss_value[j] += mv
+            self._data[self._columns[j]] = series
+
     def __repr__(self):
         if self._dim.Ln > 10:
             def write_Ln(i, title, blank):
-                item = self._set[title]
+                item = self._data[title]
                 msg = ' '*blank + title + ': <'
                 msg += ', '.join([str(value) for value in item[:5]])
                 msg += ', ... ,'
                 msg += ', '.join([str(value) for value in item[-5:]])
                 msg +=  '>\n'
                 return msg
-        else:
+        elif self._dim.Ln != 0:
             def write_Ln(i, title, blank):
-                item = self._set[title]
+                item = self._data[title]
                 msg = ' '*blank + title + ': <'
                 msg += ', '.join([str(value) for value in item])
                 msg += '>\n'
                 return msg
+        else:
+            return ''
 
         msg = str()
         size = len(max(self._columns, key=len))
@@ -334,220 +612,122 @@ class SeriesSet(object):
             msg += write_Ln(i, title, size - len(title))
         return msg[:-1]
 
-    def __contains__(self, e):
-        if isinstance(e, str):
-            return e in self._columns
+    def _getslice_col(self, i, j):
+        new_data = OrderedDict()
+        for title in self._columns[i: j+1]:
+            new_data[title] = self._data[title]
+        return SeriesSet(new_data, miss_value=self._miss_symbol)
 
-        if isinstance(e, (list, tuple)):
-            if len(e) == self._dim.Col:
-                for i, sequence in enumerate(self._set.values()):
-                    for v in sequence:
-                        if e[i] != v:
-                            return False
-                return True
-            elif len(e) == self._dim.Ln:
-                for seq in self._set.values():
-                    for i in range(self._dim.Ln):
-                        if seq[i] != e[i]:
-                            break
-                    else:
-                        return True
-                return False
-        return False
+    def _getslice_ln(self, i, j, k):
+        return_list = zip(*[self._data[t][i:j:k] for t in self._columns])
+        return Frame(return_list, self._columns, None, self._miss_symbol)
 
-    def __len__(self):  # OK #
-        return self._dim.Ln
+    def __getitem__(self, interval):
+        if isinstance(interval, int):
+            return [self._data[title][interval] for title in self._columns]
 
-    def __eq__(self, other):  # OK #
-        if isinstance(other, (Frame, SeriesSet)):
-            if self._dim == other._dim:
-                return True
-        return False
+        elif isinstance(interval, (tuple, list)):
+            return_obj = SeriesSet(miss_value=self._miss_symbol)
+            return self._getitem_by_tuple(interval, return_obj)
 
-    def __getslice__(self, i, j):
-        if i in self._columns or j in self._columns:
-            if i in self._columns:
-                i =  self._columns.index(i)
-            elif i is None:
-                i = 0
-            else:
-                raise ValueError('can not get the title of %s'%j)
-            
-            if j in self._columns:
-                j =  self._columns.index(j)
-            elif j is None:
-                j = self._dim.Col - 1
-            else:
-                raise ValueError('can not get the title of %s'%j)
-            
-            if i > j:
-                i, j = j, i
+        elif isinstance(interval, slice):
+            return self.__getslice__(interval.start, interval.stop)
 
-            new_set = OrderedDict()
-            for title in self._columns[i:j + 1]:
-                new_set[title] = self._set[title]
-            return SeriesSet(new_set, miss_value=self._miss_value)
+        elif isinstance(interval, str):
+            return self._data[interval]
 
-        if type(i) != int and type(j) != int:
-            raise ValueError('unrecognized symbol as [%s:%s]'%(i, j))
-
-        if i is None:
-            i = 0
-        elif i < 0:
-            i = 0
-        elif i > self._dim.Ln:
-            i = self._dim.Ln
-
-
-        if j is None:
-            j = self._dim.Ln
-        elif j < 0:
-            j = self._dim.Ln + j
-        elif j > self._dim.Ln:
-            j = self._dim.Ln
-            
-        if i > j:
-            i, j = j, i
-
-        return_list = zip(*[self._set[t][i:j] for t in self._columns])
-        return Frame(return_list, self._columns, None, self._miss_value)
-
-    def __getitem__(self, pos):  # OK #
-        if isinstance(pos, int):
-            return [self._set[title][pos] for title in self._columns]
-
-        elif isinstance(pos, slice):
-            return self.__getslice__(pos.__getattribute__('start'),
-                                     pos.__getattribute__('stop'))
-
-        elif isinstance(pos, str):
-            return self._set[pos]
-        
         else:
             raise TypeError('SeriesSet index must be int, str and slice, '+\
-                            'not %s'%str(type(pos)).split("'")[1])
-        
-    def __setitem__(self, key, value):
-        if isinstance(key, int):
-            if key <= self._dim.Ln:
-                self.__delitem__(key)
-                self.insert(key, value)
-            else:
-                self.append(value)
+                            'not %s' % str(type(interval)).split("'")[1])
 
-        elif isinstance(key, str):
-            if key in self._columns:
-                pos = self._columns.insert(key)
-                self.__delitem__(key)
-                self.insert_col(key, value, pos)
-            else:
-                self.append_col(key, value)
-
-    def __delitem__(self, key):
-        if isinstance(key, int):
-            drop_record = self.pop(key)
-
-        elif isinstance(key, str) and key in self._columns:
-            drop_record = self.pop_col(key)
-
-        else:
-            raise KeyError('unrecognized symbol as %s'%key)
-                                
     def __iter__(self):
         for i in range(self._dim.Ln):
-            yield [self._set[title][i] for title in self._columns]
+            yield [self._data[title][i] for title in self._columns]
 
     def __reversed__(self):
-        self.reverse()
+        for i in range(self._dim.Ln-1, -1, -1):
+            yield self[i]
 
-    def __check_sequence_type(self, series, miss_symbol):
-        if is_value(series):
-            return 0, [series] * self._dim.Ln
+    def __arrange_by_index(self, self_new_index=None, other_new_index=None):
+        if self_new_index:
+            for title, sequence in self._data.items():
+                self._data[title] = [sequence[j] for j in self_new_index]
+        elif other_new_index:
+            for title, sequence in self._data.items():
+                new_sequence = [None] * self._dim.Ln
+                for index, value in zip(other_new_index, sequence):
+                    new_sequence[index] = value
+                self._data[title] = new_sequence
+        else:
+            raise RuntimeError('at least one parameter should be filled in.')
 
-        mv = 0
-        if not isinstance(series, array):
-            for i, element in enumerate(series):
-                if element == miss_symbol or element == self._miss_value:
-                    series[i] = self._miss_value
-                    mv += 1
-        return mv, series
-    
+    def _replace_typical(self, col, condition, new_value):
+        col, condition, new_value = self._check_replace_condition(col, condition, new_value)
+        cond = self._transform_str_condition(condition, axis=1)
+        seq = self._data[col]
+        for i, value in enumerate(seq):
+            exec(cond)
+            if check:
+                seq[i] = new_value
+
     def append(self, item, miss_symbol=None):
         if is_value(item):
             item = [item] * self._dim.Col
-        else:
+        elif not all(map(is_value, item)):
             raise TypeError("insert item is not a support type "+\
                             "with `%s`"%type(item))
 
-        if not miss_symbol:
-            miss_symbol = self._miss_value
+        miss_symbol = self._check_miss_symbol(miss_symbol)
+        lenth_bias = len(item) - self._dim.Col
+        if lenth_bias < 0:
+            item.extend([self._miss_symbol] * abs(lenth_bias))
+        elif lenth_bias > 0:
+            for i in range(self._dim.Col, self._dim.Col + lenth_bias):
+                self.append_col([self._miss_symbol] * self._dim.Ln,
+                                miss_symbol=self._miss_symbol)
 
-        if len(item) > self._dim.Col:
-            item = item[:self._dim.Col]
-        elif len(item) < self._dim.Col:
-            item.extend([self._miss_value] * (self._dim.Col - len(item)))
-
-        for i, seq in enumerate(self._set.values()):
+        for i, seq in enumerate(self._data.values()):
             element = item[i]
-            if element == miss_symbol:
-                self._m_value[i] += 1
-                seq.append(self._miss_value)
-            else:
-                seq.append(element)
+            if element in miss_symbol:
+                self._miss_value[i] += 1
+                element = self._miss_symbol
+            seq.append(element)
 
-        self._dim = SeriesSet.dims(self._dim.Ln + 1, self._dim.Col)
-        
-    def append_col(self, variable_name, series, miss_symbol=None): # OK #
+        self._dim = dims(self._dim.Ln+1, self._dim.Col)
+
+    def append_col(self, series, variable_name=None, miss_symbol=None): # OK #
         '''append a series data to the seriesset last
         '''
-        if not isinstance(variable_name, str):
-            raise ValueError('unsupport type to set as variable name.')
-        
-        if not is_iter(series):
-            raise ValueError("unsupport type to append as values")
-        
-        if variable_name in self._columns:
-            raise ValueError("variable `%s` is already taken."%variable_name)
-
-        if not miss_symbol:
-            miss_symbol = self._miss_value
-
-        mv, series = self.__check_sequence_type(series, miss_symbol)
+        variable_name = self._check_col_new_name(variable_name)
+        miss_symbol = self._check_miss_symbol(miss_symbol)
+        mv, series = self._check_sequence_type(series, miss_symbol)
 
         # check the lenth of data
-        size_series = len(series)
-        if size_series < self._dim.Ln:
-            series = list(series)
-            mv_2 = self._dim.Ln - size_series
-            series.extend([self._miss_value] * mv_2)
-            mv += mv_2
-            size_series = self._dim.Ln
-            
-        elif size_series > self._dim.Ln:
-            for title in self._columns:
-                self._set[title] = list(self._set[title])
-                self._set[title].extend([self._miss_value] *(\
-                    size_series - self._dim.Ln))
-                              
+        size = len(series)
+        if size > self._dim.Ln:
+            for i, title in enumerate(self._columns):
+                self._miss_value[i] += size - self._dim.Ln
+                self._data[title].extend([self._miss_symbol] *(\
+                    size - self._dim.Ln))
+
         self._columns.append(variable_name)
-        self._m_value.append(mv)
-        self._type_column.append(type(series))
-        self._dim = SeriesSet.dims(size_series, self._dim.Col + 1)
-        self._set[variable_name] = series
+        self._miss_value.append(mv)
+        self._dim = dims(size, self._dim.Col+1)
+        self._data[variable_name] = series
 
     def corr(self):
         '''correlation between variables in data -> Frame object
         '''
         new_ = Frame([[0] * self._dim.Col for i in range(self._dim.Col)],
                      self._columns)
-        for i, sequence in enumerate(self._set.values()):
-            for j, next_sequence in enumerate(self._set.values()):
+        for i, sequence in enumerate(self._data.values()):
+            for j, next_sequence in enumerate(self._data.values()):
                 if i == j:
                     new_[j][i] = 1
                     continue
                 r = f_c(sequence, next_sequence)
                 new_[i][j], new_[j][i] = r, r
-        new_.insert_col('', self._columns, 0)
+        new_.insert_col(0, self._columns, '_Subjects_')
         return new_
 
     def count(self, X, *area):
@@ -555,87 +735,34 @@ class SeriesSet(object):
         '''
         counter = Counter()
         if is_value(X):
-            X = [X, ]
+            X = (X,)
+        L1, C1, L2, C2 = self._check_area(*area)
 
-        if not hasattr(X, '__contains__'):
-            raise TypeError('X should be a value or values in list')
-        
-        if area[0] == all:
-            C1, L1 = 0, 0
-            L2, C2 = self._dim
-                
-        elif len(area) == 2 and len(area[0]) == len(area[1]) == 2:
-            if area[0][1] == all:
-                C1 = 0
-            elif isinstance(area[0][1], int) and 0 <= area[0][1] <= self._dim.Col:
-                C1 = area[0][1]
-            elif area[0][1] in self._columns:
-                C1 = self._columns.index(area[0][1])
-            else:
-                raise TypeError('second position in the first tuple should a int '+\
-                                'type emblemed column number or a str emblemed'+\
-                                'column name.')
-
-            if area[1][1] == all:
-                C2 = self._dim.Col
-            elif isinstance(area[1][1], int) and 0 <= area[1][1] <= self._dim.Col:
-                C2 = area[1][1]
-            elif area[1][1] in self._columns:
-                C2 = self._columns.index(area[1][1])
-            else:
-                raise TypeError('second position in the second tuple should a int '+\
-                                'type emblemed column number or a str emblemed '+\
-                                "column name. Tip: use all to stand for all.")
-
-            if area[0][0] == all:
-                L1 = 0
-            elif isinstance(area[0][0], int) and 0 <= area[0][0] <= self._dim.Ln:
-                L1 = area[0][0]
-            else:
-                raise TypeError('first position in the first tuple should be a int '+\
-                                'type emblemed start line number. Tip: use all to '+\
-                                "stand for all.")
-
-            if area[1][0] == all:
-                L2 = self._dim.Ln
-            elif isinstance(area[1][0], int) and 0 <= area[1][0] <= self._dim.Ln:
-                L2 = area[1][0]
-            else:
-                raise TypeError('first position in the second tuple should be a int '+\
-                                'type emblemed start line number. Tip: use all to '+\
-                                "stand for all.")
-
-            if C2 <= C1 or L2 <= L1:
-                raise ValueError('the postion in the second tuple should be less than '+\
-                                 'The first tuple.')
-            
-        else:
-            raise EOFError("unrecognized expression '%s'"%str(area))
-
-        for title in self._columns[C1:C2 + 1]:
-            sequence = self._set[title]
-            for value in sequence[L1:L2 + 1]:
+        for title in self._columns[C1 : C2+1]:
+            sequence = self._data[title]
+            for value in sequence[L1 : L2+1]:
                 if value in X:
                     counter[value] += 1
+
         if not counter:
-            return None
+            return 0
         return counter
 
     def count_element(self, col=all):
         if col == all:
             col = self._columns
-            
+
         elif isinstance(col, int):
             if abs(col) < self._dim.Col:
                 col = [self._columns[col]]
             else:
                 raise TypeError("unrecognized expression '%s'"%str(col))
-            
+
         elif col in self._columns:
             col = [col, ]
-            
+
         elif is_iter(col):
-            new = list()
+            new = []
             for each in col:
                 if each in self._columns:
                     new.append(each)
@@ -649,87 +776,56 @@ class SeriesSet(object):
 
         collect_elements = dict()
         for title in col:
-            c = Counter(self._set[title])
+            c = Counter(self._data[title])
             collect_elements[title] = c
         return collect_elements
-    
+
     def extend(self, item):
         '''extend the current SeriesSet with records in set.
         '''
         if isinstance(item, SeriesSet):
-            for i, title in enumerate(item.columns):
-                sequence = item[title]
+            for title, sequence in item.items():
+                mv, sequence = self._check_sequence_type(sequence, item.miss_symbol)
                 if title not in self._columns:
-                    To = [self._miss_value for j in range(self._dim.Ln)]
-                    self._m_value.append(self._dim.Ln)
-                    self._columns.append(title)
-                    self._type_column.append(item._type_column[i])
+                    self._columns.append(self._check_col_new_name(title))
+                    self._miss_value.append(self._dim.Ln + mv)
+                    To = [self._miss_symbol] * self._dim.Ln
                 else:
-                    To = list(self._set[title])
+                    self._miss_value[self._columns.index(title)] += mv
+                    To = self._data[title]
+                To.extend(sequence)
+                self._data[title] = To
+            self._dim = dims(self._dim.Ln+item._dim.Ln, len(self._columns))
 
-                if self._miss_value != item._miss_value:
-                    for value in sequence:
-                        if valule == item.miss_value:
-                            To.append(self._miss_value)
-                        else:
-                            To.append(value)
-                else:
-                    To.extend(sequence)
-                self._set[title] = To
-                index = self._columns.index(title)
-                self._m_value[index] = self._m_value[index] + item._m_value[i]
-            self._dim = SeriesSet.dims(self._dim.Ln + item._dim.Ln,
-                                       len(self._columns))
-
-            for i, sequence in enumerate(self._set.values()):
+            for i, sequence in enumerate(self._data.values()):
                 if len(sequence) != self._dim.Ln:
                     add_miss_size = self._dim.Ln - len(sequence)
-                    sequence.extend([self._miss_value]*add_miss_size)
-                    self._m_value[i] += add_miss_size
-                    
+                    sequence.extend([self._miss_symbol]*add_miss_size)
+                    self._miss_value[i] += add_miss_size
+
         elif isinstance(item, Frame):
             self.extend(SeriesSet(item))
-            
+
         elif all(filter(is_iter, item)):
             self.extend(SeriesSet(item, self._columns))
-            
+
         else:
             raise TypeError('could not extend a single value only.')
 
     def extend_col(self, other):
         if isinstance(other, SeriesSet):
             lenth = max(self._dim.Ln, other._dim.Ln)
-            for i, (title, col) in enumerate(other.items()):
-                lenth_bias = self._dim.Ln - lenth
-                if title not in self._columns:
-                    self._columns.append(title)
-                    self._m_value.append(other._m_value[i] + lenth_bias)
-                    self._type_column.append(list)
-                    col.extend([self._miss_value] * lenth_bias)
-                    self._set[title] = col
-                else:
-                    sequence = self._set[title]
-                    if not hasattr(sequence, 'extend'):
-                        sequence = list(sequence)
-                    sequence.extend(col)
-                    self._set[title] = sequence
-                    self._m_value[self._columns.index(title)] += \
-                                                              other._m_value[i]
-            lenth = len(max(self._set.values(), key=len))
-            for j, sequence in enumerate(self._set.values()):
-                if len(sequence) < lenth:
-                    sequence.extend([self._miss_value] * (lenth - len(sequence)))
-                    self._m_value[j] += lenth - len(sequence)
-                if self._miss_value != other._miss_value:
-                    for i, value in enumerate(sequence):
-                        if value == self._miss_value:
-                            sequence[i] = value
-
-            self._dim = SeriesSet.dims(lenth, len(self._columns))
+            for title, sequence in other.items():
+                title = self._check_col_new_name(title)
+                mv, sequence = self._check_sequence_type(sequence, other._miss_symbol)
+                self._miss_value.append(mv)
+                self._data[title] = sequence
+                self._columns.append(title)
+            self._dim = dims(lenth, len(self._columns))
 
         elif isinstance(other, Frame):
             self.extend_col(SeriesSet(other))
-            
+
         elif all(filter(is_iter, other)):
             new_col = [title + '_1' for title in self._columns]
             self.extend_col(SeriesSet(other, new_col))
@@ -738,8 +834,8 @@ class SeriesSet(object):
             raise TypeError('could not extend a single value only.')
 
     def items(self):
-        return self._set.items()
-   
+        return self._data.items()
+
     def insert(self, pos, item, miss_symbol=None): # OK #
         '''insert a record to the frame, position in <index>
         '''
@@ -749,75 +845,61 @@ class SeriesSet(object):
             raise TypeError("insert item is not a support"+\
                             "type with %s"%type(item))
 
-        if not miss_symbol:
-            miss_symbol = self._miss_value
+        miss_symbol = self._check_miss_symbol(miss_symbol)
 
         for i, title in enumerate(self._columns):
             element = item[i]
-            if element == miss_symbol or element == self._miss_value:
-                if not isinstance(self._type_column[i], list):
-                    self._set[title] = list(self._set[title])
-                self._set[title].insert(pos, self._miss_value)
-                self._m_value[i] += 1
+            if element in miss_symbol:
+                self._data[title] = list(self._data[title])
+                self._data[title].insert(pos, self._miss_symbol)
+                self._miss_value[i] += 1
             else:
-                self._set[title].insert(pos, element)
-        self._dim = SeriesSet.dims(self._dim.Ln + 1, self._dim.Col)
+                self._data[title].insert(pos, element)
+        self._dim = dims(self._dim.Ln + 1, self._dim.Col)
 
-    def insert_col(self, variable_name, series, index, miss_symbol=None):
+    def insert_col(self, index, series, variable_name=None, miss_symbol=None):
         '''insert a series of data to the frame, position in <index>
         '''
-        if not isinstance(variable_name, str):
-            raise ValueError("unsupport type to append in this frame")
-        
-        # check the variable name
-        if variable_name in self._columns:
-            raise ValueError("variable name <'%s'> is already taken."%self.\
-                             variable_name)
+        variable_name = self._check_col_new_name(variable_name)
+        miss_symbol = self._check_miss_symbol(miss_symbol)
+        mv, series = self._check_sequence_type(series, miss_symbol)
 
-        if not miss_symbol:
-            miss_symbol = self._miss_value
-
-        mv, series = self.__check_sequence_type(series, miss_symbol)
-        
-        # check the lenth of data
         size_series = len(series)
         if size_series < self._dim.Ln:
             series = list(series)
-            mv_2 = self._dim.Ln - size_series 
-            series.extend([self._miss_value] * mv_2)
+            mv_2 = self._dim.Ln - size_series
+            series.extend([self._miss_symbol] * mv_2)
             mv += mv_2
             size_series = self._dim.Ln
         elif size_series > self._dim.Ln:
             for title in self._columns:
-                self._set[title] = list(self._set[title])
-                self._set[title].extend([self._miss_value for t in range(
-                    size_series - self._dim.Ln)])
+                self._data[title] = list(self._data[title])
+                self._data[title].extend([self._miss_symbol] * (
+                    size_series - self._dim.Ln))
 
         self._columns.insert(index, variable_name)
-        self._type_column.insert(index, type(series))
-        self._dim = SeriesSet.dims(size_series, self._dim.Col + 1)
-        self._m_value.insert(index, mv)
-        
-        new_set = OrderedDict()
+        self._dim = dims(size_series, self._dim.Col + 1)
+        self._miss_value.insert(index, mv)
+
+        new_data = OrderedDict()
         if index >= self._dim.Col:
-            self._set[variable_name] = series
+            self._data[variable_name] = series
             return
 
-        for i, title in enumerate(self._set):
+        for i, title in enumerate(self._data):
             if i == index:
-                new_set[variable_name] = series
-            new_set[title] = self._set[title]
-
-        self._set = new_set
+                new_data[variable_name] = series
+            new_data[title] = self._data[title]
+        self._data = new_data
 
     def keys(self):
-        return self._set.keys()
+        return self._data.keys()
 
     def normalized(self, process='NORMAL', col=all, attr=None, get_attr=None):
         if col is all:
             new_col = self._columns
         else:
-            new_col = list()
+            new_col = []
             for each in col:
                 if each in self._columns:
                     new_col.append(each)
@@ -832,13 +914,13 @@ class SeriesSet(object):
 
         if process == 'LOG':
             from math import log
-            
+
         for i, title in enumerate(new_col):
-            sequence = self._set[title]
-            
+            sequence = self._data[title]
+
             if attr:
                 A, B = attr[title]
-                
+
             elif process == 'NORMAL':
                 statis = describe(sequence)
                 A, B = statis.Min, statis.Range
@@ -866,60 +948,143 @@ class SeriesSet(object):
                         continue
                     except TypeError:
                         continue
-                self._set[title] = new
-                
+                self._data[title] = new
+
             try:
                 attrs_dic[title] = attrs_structure(A, B)
             except UnboundLocalError:
                 pass
-            
+
         if get_attr:
             return attrs_dic
         return
-        
+
+    def merge(self, other, self_key=0, other_key=0):
+        other = SeriesSet(other)
+
+        if isinstance(self_key, int):
+            self_key = self._columns[self_key]
+        elif not isinstance(self_key, str):
+            raise TypeError('self_key shoule be a string or int type, which '+\
+                            'representes the column.')
+        if self_key not in self._columns:
+            raise IndexError('`%s` is not the '%self_key +\
+                             'element in this dataset.')
+
+        if isinstance(other_key, int):
+            other_key = other._columns[other_key]
+        elif not isinstance(other_key, str):
+            raise TypeError('other_key shoule be a string or int type, which '+\
+                            'representes the column.')
+        if other_key not in other._columns:
+            raise IndexError('`%s` is not the '%other_key+\
+                             'element in other dataset.')
+
+        change_name = []
+        for i, col in enumerate(other.columns):
+            self._miss_value.append(other._miss_value[i])
+            while col in self._columns:
+                col += '_new'
+            self._columns.append(col)
+            change_name.append(col)
+
+        temp_index, new_index = [], self._dim.Ln
+        self_key_seq, other_key_seq = self[self_key], other[other_key]
+        for i, value in enumerate(other_key_seq):
+
+            self_keys  = self_key_seq.count(value)
+            other_keys = other_key_seq.count(value)
+            if self_keys == 0:
+                temp_index.append(new_index)
+                new_index += 1
+            elif self_keys == 1 and other_keys == 1:
+                temp_index.append(self_key_seq.index(value))
+            elif self_keys == 1 and other_keys > 1:
+                if other_key_seq.index(value) == i:
+                    temp_index.append(self_key_seq.index(value))
+                else:
+                    temp_index.append(new_index)
+                    new_index += 1
+            else: # self_keys > 1
+                this_index = other_key_seq.index(value)
+                number = 1
+                while i != this_index:
+                    this_index = other_key_seq.index(value, this_index + 1)
+                    number += 1
+
+                this_index = -1
+                for i in range(number):
+                    try:
+                        this_index = self_key_seq.index(value, this_index + 1)
+                    except ValueError:
+                        temp_index.append(new_index)
+                        new_index += 1
+                        break
+                else:
+                    temp_index.append(this_index)
+
+        how_many_new_index = new_index - other.shape.Ln
+        if how_many_new_index != 0:
+            other.extend([[None] * other.shape.Col for i in range(how_many_new_index)])
+
+        hash_temp_index = set(temp_index)
+        for i in range(new_index):
+            if i not in hash_temp_index:
+                temp_index.append(i)
+        other.__arrange_by_index(None, temp_index)
+
+        if other.miss_symbol != self._miss_symbol:
+            other.symbol = self._miss_symbol
+        for title, seq in zip(change_name, other.values()):
+            self._data[title] = seq
+
+        self._dim = dims(new_index, len(self._columns))
+        for seq in self._data.values():
+            seq.extend([None] * (self._dim.Ln - len(seq)))
+
     def pop_miss_value(self, axis='COL'):
         if str(axis).upper() == 'COL':
             pops = dict()
             for i in range(self._dim.Col-1, -1, -1):
-                if self._m_value[i] != 0:
-                    pops[self._columns.pop(i)] = self._set.pop(self._columns[i])
-                    self._type_column.pop(i)
-            self._dim = SeriesSet.dims(self._dim.Ln, len(self._columns))
-            self._m_value = [0 for i in xrange(self._dim.Col)]
-            return SeriesSet(pops)
-            
+                if self._miss_value[i] != 0:
+                    pops[self._columns.pop(i)] = self._data.pop(self._columns[i])
+            self._dim = dims(self._dim.Ln, len(self._columns))
+            self._miss_value = [0 for i in xrange(self._dim.Col)]
+            if pops:
+                return SeriesSet(pops)
+            return None
+
         elif str(axis).upper() == 'LINE':
-            drop_line_index = list()
-            for sequence in self._set.values():
+            drop_line_index = []
+            for sequence in self._data.values():
                 for i, v in enumerate(sequence):
-                    if v == self._miss_value:
+                    if v == self._miss_symbol:
                         drop_line_index.append(i)
             drop = sorted(set(drop_line_index), reverse=True)
-            pops = list()
-            for sequence in self._set.values():
+            pops = []
+            for sequence in self._data.values():
                 pops.append([list(sequence).pop(index) for index in drop])
-            self._dim = SeriesSet.dims(self._dim.Ln - len(drop),
+            self._dim = dims(self._dim.Ln - len(drop),
                                        len(self._columns))
-            self._m_value = [0 for i in range(self._dim.Col)]
-            return Frame(pops, self._columns)
+            self._miss_value = [0 for i in range(self._dim.Col)]
+            if pops:
+                return Frame(zip(*pops), self._columns)
+            return None
         else:
             raise IndexError("axis should be 'COL' or 'LINE'")
-        
-    def pick(self, conditions):
+
+    def select(self, conditions):
         '''pick out records that comply with conditions
         '''
-        for i, title in enumerate(self._columns):
-            conditions = conditions.replace(title, 'record[%d]'%i)
-        conditions = 'check = ' + conditions
-        pick_record_line = list()
-        
+        condition = self._transform_str_condition(conditions, axis=0)
+        pick_record_line = []
         for i, record in enumerate(self):
-            exec(conditions)
+            exec(condition)
             if check:
                 pick_record_line.append(i)
 
         return_dict = OrderedDict()
-        for title, sequence in self._set.items():
+        for title, sequence in self._data.items():
             return_dict[title] = [sequence[i] for i in pick_record_line]
 
         return SeriesSet(return_dict, self._columns)
@@ -929,17 +1094,17 @@ class SeriesSet(object):
         '''
         if not isinstance(pos, int):
             raise TypeError('an integer is required.')
-        
-        pop_item = [sequence.pop(pos) for sequence in self._set.values()]
-        
-        self._dim = SeriesSet.dims(self._dim.Ln - 1, self._dim.Col)
+
+        pop_item = [sequence.pop(pos) for sequence in self._data.values()]
+
+        self._dim = dims(self._dim.Ln - 1, self._dim.Col)
         for i, each in enumerate(pop_item):
-            if self._miss_value == each:
-                self._m_value[i] -= 1
+            if self._miss_symbol == each:
+                self._miss_value[i] -= 1
         return pop_item
 
-    def pop_col(self, *titles): 
-        pop_name = list()
+    def pop_col(self, *titles):
+        pop_name = []
         if not titles:
             titles = [self._columns[-1]]
         for item in titles:
@@ -957,157 +1122,82 @@ class SeriesSet(object):
         pop_data = dict()
         for title in pop_name:
             pos = self._columns.index(title)
-            pop_data[title] = self._set.pop(title)
+            pop_data[title] = self._data.pop(title)
             self._columns.pop(pos)
-            self._m_value.pop(pos)
-            self._type_column.pop(pos)
-        self._dim = SeriesSet.dims(self._dim.Ln, self._dim.Col-len(pop_name))
+            self._miss_value.pop(pos)
+        self._dim = dims(self._dim.Ln, self._dim.Col-len(pop_name))
         return SeriesSet(pop_data, pop_name)
 
     def reverse(self, axis='COL'):
         if axis.upper() == 'COL':
             self._columns.reverse()
-            self._type_column.reverse()
-            self._m_value.reverse()
-            new_set = OrderedDict()
-            for key in reversed(self._set):
-                new_set[key] = self._set[key]
-            del self._set
-            self._set = new_set
+            self._miss_value.reverse()
+            new_data = OrderedDict()
+            for key in reversed(self._data):
+                new_data[key] = self._data[key]
+            del self._data
+            self._data = new_data
         else:
-            for sequence in self._set.values():
+            for sequence in self._data.values():
                 sequence.reverse()
 
-    def rename_col(self, *new_names):
-        try:
-            for names in new_names:
-                if names[0] in self._columns:
-                    if names[1] not in self._columns:
-                        self._columns = names[1]
-                    else:
-                        raise ValueError("Name '%s' has already exist'"%names[1])
-                else:
-                    raise ValueError("'%s' is not exist"%names[0])
-        except:
-            raise TypeError('expects some parameters like 2-dimentions tuple')
+    def read_text(self, addr, **kwrd):
+        '''read dataset from csv or txt file.
 
-    def read_text(self, addr, first_line=1, miss_symbol='NA', 
-                  title_line=0, sep=',', prefer_type=None):
-        
-        def transform(i, item):
-            try:
-                return _col_types[i](item)
-            except ValueError:
-                if item == miss_symbol:
-                    self._m_value[i] += 1
-                    return self._miss_value
-                
-                warn('column %d has different type.'%i)
-                return str2value(item, prefer_type)
-
+        Attribute
+        ---------
+        addr, first_line, miss_symbol, title_line, sep, prefer_type
+        '''
         with open(addr, 'r') as f:
-            reader = csv.reader(f, delimiter=sep)
-            
-            col = max([len(line) for l_n, line in enumerate(reader)])
-            col = range(col)
-            datas = [[0]*l_n for i in col]
-            self._m_value = [0 for c in col]
-            
-            if isinstance(prefer_type, str):
-                _col_types = dict(zip(col, [str]*len(col)))
-            else:
-                _col_types = dict()
+            freader, _col_types, miss_symbol, prefer = self._check_read_text(f, **kwrd)
+            datas = [[0]*self._dim.Ln for i in range(self._dim.Col)]
 
-            f.seek(0)
-            for i, lines in enumerate(reader):
-                if not self._columns and i == title_line:
-                    self._columns = list()
-                    lenth_title_line = len(lines)
-                    for k in col:
-                        if k < lenth_title_line:
-                            new_title = lines[k]
-                        else:
-                            new_title = 'C%d'%k
-                        while new_title in self._columns:
-                            new_title += '_%d'%k
-    
-                        self._columns.append(new_title)
-                        continue
-                    
-                if len(_col_types) == len(col):
-                    break
-                    
-                if i >= first_line:
-                    for j, item in enumerate(lines):
-                        if j in _col_types or item == miss_symbol or item == self._miss_value:
-                            continue
-                        _col_types[j] = TRANS_FUN_SET[type(str2value(item))]
-                    
-            f.seek(0)
-            for m, record in enumerate(reader):
-                if m >= first_line - 1 :
-                    break
-                
-            for m, record in enumerate(reader):
-                for i, v in enumerate(record):
-                    try:
-                        datas[i][m] = transform(i, v)
-                    except KeyError:
-                        pass
+            try:
+                for m, record in enumerate(freader):
+                    for i, v in enumerate(record):
+                        datas[i][m] = self._check_transform_value(i, v,
+                                                 _col_types, miss_symbol, prefer)
+            except MemoryError:
+                warn('since the limit of memory, DaPy can not read the whole '+\
+                     'file, stop in the line %d' % m)
 
-        l_col, l_title = len(col), len(self._columns)
-        if not self._columns:
-            self._columns = ['C'+str(c) for c in col]
-        elif l_title < l_col:
-            self._columns.extend(['C'+str(c) for c in col[l_col:l_title]])
-        elif l_title > l_col:
-            self._columns = self._columns[:l_col]
-        
-        self._type_column = [list for c in col]
-        self._set = OrderedDict(zip(self._columns, datas))
-        self._dim = SeriesSet.dims(m+2-first_line, len(self._columns))
+        self._dim = dims(m + 1, self._dim.Col)
+        self._data = OrderedDict(zip(self._columns, datas))
 
     def values(self):
-        return self._set.values()
+        return self._data.values()
 
-    def replace(self, col=all, *arg):
-        if col == all:
-            col = self._columns
-        elif isinstance(col, int) and col < self._dim.Col:
-            col = (self._columns[col], )
-        elif isinstance(col, str) and col in self._columns:
-            col = (col, )
+    def replace(self, *arg):
+        if arg == tuple():
+            raise KeyError('argument is empty!')
+
+        elif len(arg) == 3 and is_value(arg[-1]) and isinstance(arg[1], str):
+            self._replace_typical(*arg)
+
+        elif all(map(is_iter, arg)):
+            if max(map(len, arg)) > 3 or min(map(len, arg)) < 3:
+                raise AttributeError('you should input 3 arguments as a order'+\
+                                    " which seem like .replace('C1', '> 20', 3)")
+            for obj in arg:
+                self._replace_typical(*obj)
+
         else:
-            new_col = list()
-            for c in col:
-                if isinstance(c, str):
-                    new_col.append(c)
-                elif isinstance(c, int) and abs(c) < self._dim.Col:
-                    new_col.append(self._columns[c])
-                else:
-                    raise TypeError("unrecognized symbol '%s'."%str(c))
-            col = new_col
-            
-        order = dict(arg)
-        for title in col:
-            sequence = self._set[title]
-            for i, value in enumerate(sequence):
-                if value in order:
-                    sequence[i] = order[value]
-        
+            raise TypeError(\
+                'argument should be include as a dict() or multiple'+\
+                " tuples, like: replace(('C1', '< 100', 2)," +\
+                "                       ('C2', '> 200', 3)). Use help() "+\
+                'for using details.')
+
     def sort(self, *orders): # OK #
         '''orders as tuple like (column_name, 'DESC')
-
-        See Also: numpy/core/fromnumeric.py Line:756
-        See Also: numpy/core/numeric.py Line:508
         '''
         if len(orders) > 1:
             new_ = Frame(self)
             new_.sort(*orders)
             new = SeriesSet(new_)
-            self._set = new._set
+            self._data = new._data
             return
-        
+
         if isinstance(orders[0][0], int):
             compare_title = self._columns[orders[0][0]]
         elif orders[0][0] in self._columns:
@@ -1115,420 +1205,220 @@ class SeriesSet(object):
         else:
             raise TypeError("'%s' keyword is "%orders[0][0] +\
                             "not in frame's columns.")
-        
+
         if orders[0][1] == 'DESC':
             reverse = True
         elif orders[0][1] == 'ASC':
             reverse = False
         else:
-            raise TypeError("`%s` is not a recognized symbol."%compare_symbol)
+            raise TypeError("`%s` is not a recognized symbol." % orders[0][1])
 
-        new_index = get_sorted_index(self._set[compare_title], reverse=reverse)
+        new_index = get_sorted_index(self._data[compare_title], reverse=reverse)
         self.__arrange_by_index(new_index)
-            
+
     def shuffles(self):
         new_index = range(self._dim.Ln)
         shuffle(new_index)
         self.__arrange_by_index(new_index)
 
+    def show(self, lines=all):
+        if not isinstance(lines, int) and lines is not all:
+            raise TypeError('parameter `lines` should be a integer.')
 
-class Frame(object):
+        if lines >= self._dim.Ln:
+            lines = all
+
+        if lines is all:
+            temp = Frame(self)
+
+        else:
+            temp = Frame(self[: lines // 2], self._columns)
+            temp.extend(self[-lines // 2:])
+
+        info = temp.show(all)
+        del temp
+        return info
+
+
+class Frame(_base_sheet):
     '''Maintains the data as records.
-
-    Attibutes
-    ---------
-    _columns : str in list
-        the titles in each columns.
-
-    _dim : namedtuple
-        the two dimensional span of this data set.
-
-    _Frame : tuples in list
-        the list objects contains the records of dataset.
-        
-    _miss_value : value
-        the symbol represented miss value in current seriesset.
-
-    _m_value : values
-        the number of miss value totally.
     '''
-    
-    dims = namedtuple('Frame', ['Ln', 'Col'])
 
     def __init__(self, frame=None, columns=None,
                  miss_symbol=None, miss_value=None):
-        
-        self._miss_value = miss_value
-        
-        if frame is None and columns is None:
-            self._Frame = list()
-            self._columns = list()
-            self._dim =  Frame.dims(0, 0)
-            self._m_value = list()
-            
-        elif isinstance(frame, Frame):
-            self._Frame = deepcopy(frame._Frame)
-            self._columns = deepcopy(frame._columns)
-            self._dim = deepcopy(frame._dim)
-            self._m_value = deepcopy(frame._m_value)
+        self._data = []
+        _base_sheet.__init__(self, frame, columns,
+                            miss_symbol, miss_value)
 
-        elif isinstance(frame, SeriesSet):
-            self._Frame = list()
-            for line in zip(*frame._set.values()):
-                self._Frame.append(list(line))
-            self._m_value = deepcopy(frame._m_value)
-            self._columns = deepcopy(frame._columns)
-            self._dim = Frame.dims(frame._dim.Ln, frame._dim.Col)
-
-        elif is_iter(frame) and not isinstance(frame, str):
-            if all(map(is_iter, frame)):
-                self._Frame = map(list, frame)
-                dim_Col, dim_Ln = len(max(self._Frame, key=len)), len(frame)
-            elif all(map(is_value, frame)):
-                self._Frame = [[value,] for value in frame]
-                dim_Col, dim_Ln = 1, len(frame)
-
-            self._m_value = [0] * dim_Col
-            self._dim = Frame.dims(dim_Ln, dim_Col)
-
-            for i, item in enumerate(self._Frame):
-                if len(item) < dim_Col:
-                    item.extend([self._miss_value] * (dim_Col - len(item)))
-                for j, value in enumerate(item):
-                    if value == miss_symbol:
-                        self._m_value[j] = self._m_value[j] + 1
-
-            if isinstance(columns, str):
-                self._columns = [columns + '_%d'%i for i in range(dim_Col)]
-            
-            elif is_iter(columns):
-                self._columns = [str(i) for i in columns[:dim_Col]]
-                if len(set(self._columns)) < dim_Col:
-                    for i, value in enumerate(self._columns):
-                        if self._columns.count(value) != 1 and\
-                           self._columns.index(value) != i:
-                            self._columns[i] = value + '_%d'%i
-                    self._columns.extend(['C%d'%i\
-                                          for i in range(len(self._columns),
-                                                                    dim_Col)])
-            else:
-                self._columns = ['C%d'%i for i in range(dim_Col)]
-    
-        else:
-            raise TypeError('can not transform this object while '+\
-                            'DaPy.Frame expects a list or deque contained'+\
-                            ' tuple or name tuple.')
-
-    @property
-    def data(self):
-        return self._Frame
-    
-    @property
-    def shape(self):
-        return self._dim
-
-    @property
-    def miss_value(self):
-        return self._miss_value
-
-    @property
-    def columns(self):
-        return self._columns
-    
-    @columns.setter
-    def columns(self, item):
-        if isinstance(item, str):
-            self._columns = [item] * self._dim.Col
-        elif is_iter(item):
-            self._columns = [str(i) for i in item]
-        else:
-            raise TypeError('unknow title as %s'%item)
-        
     @property
     def info(self):
-        new_m_v = map(str, self._m_value)
+        new_m_v = map(str, self._miss_value)
         max_n = len(max(self._columns, key=len))
-        
+
         info = ''
         for i in range(self._dim.Col):
             info += ' '*15
             info += self._columns[i].center(max_n) + '| '
             info += ' ' + new_m_v[i] + '\n'
-                
+
         print('1.  Structure: DaPy.Frame\n' +\
               '2. Dimensions: Ln=%d | Col=%d\n'%self._dim +\
-              '3. Miss Value: %d elements\n'%sum(self._m_value) +\
+              '3. Miss Value: %d elements\n'%sum(self._miss_value) +\
               '4.    Columns: ' + 'Title'.center(max_n) + '|'+\
                              '  Miss\n'+ info)
-        
+
+    def _init_col(self, obj):
+        self._data = [list(record) for record in zip(*obj._data.values())]
+        self._miss_value = deepcopy(obj._miss_value)
+        self._columns = deepcopy(obj._columns)
+        self._dim = dims(obj._dim.Ln, obj._dim.Col)
+
+    def _init_frame(self, frame, miss_symbol, columns):
+        self._data = deepcopy(frame._data)
+        self._columns = deepcopy(frame._columns)
+        self._dim = deepcopy(frame._dim)
+        self._miss_value = deepcopy(frame._miss_value)
+
+    def _init_dict(self, frame, miss_symbol, columns):
+        self._dim = dims(max(map(len, frame.values())), len(frame))
+        self._miss_value = [0] * self._dim.Col
+        if columns is None:
+            self._init_col_name(frame.keys())
+        else:
+            self._init_col_name(columns)
+        for i, (title, col) in enumerate(frame.items()):
+            mv, sequence = self._check_sequence_type(col, miss_symbol)
+            frame[title] = sequence
+            self._miss_value[i] += mv
+
+        self._data = [list(record) for record in zip(*frame.values())]
+
+    def _init_like_table(self, frame, miss_symbol, columns):
+        self._data = map(list, frame)
+        dim_Col, dim_Ln = len(max(self._data, key=len)), len(frame)
+        self._dim = dims(dim_Ln, dim_Col)
+        self._miss_value = [0] * self._dim.Col
+
+        for i, item in enumerate(self._data):
+            if len(item) < dim_Col:
+                item.extend([self._miss_symbol] * (dim_Col - len(item)))
+            for j, value in enumerate(item):
+                if value in miss_symbol:
+                    self._miss_value[j] = self._miss_value[j] + 1
+        self._init_col_name(columns)
+
+    def _init_like_seq(self, frame, miss_symbol, columns):
+        self._data = [[value,] for value in frame]
+        self._miss_value.append(0)
+        self._dim = dims(len(frame), 1)
+        self._init_col_name(columns)
+        for i, value in enumerate(self._data):
+            if value in miss_symbol:
+                self._data[i] = self._miss_symbol
+                self._miss_value[0] += 1
+
     def __repr__(self):
-        temporary_series = [[title, ] for title in self._columns]
-        if self._dim.Ln > 20:
-            temporary_Frame = self._Frame[:10]
-            temporary_Frame.extend(self._Frame[-10:])
-        else:
-            temporary_Frame = self._Frame
-        for line in temporary_Frame:
-            for i, value in enumerate(line):
-                temporary_series[i].append(str(value))
+        return self.show(30)
 
-        column_size = [len(max(col, key=len)) for col in temporary_series]
+    def _getslice_col(self, i, j):
+        new_data = [record[i : j+1] for record in self._data]
+        return Frame(new_data, self._columns[i : j+1],
+                     self._miss_symbol)
 
-        frame = ' ' + ' | '.join([title.center(column_size[i]) for i, title in \
-                         enumerate(self._columns)]) + '\n'
-        frame += '+'.join(['-' * (size + 2) for size in column_size]) + '\n'
+    def _getslice_ln(self, i, j, k):
+        return Frame(self._data[i:j:k], self._columns, self._miss_symbol)
 
-        if self._dim.Ln > 20:
-            for item in temporary_Frame[:10]:
-                line = ''
-                for i, value in enumerate(item):
-                    line += ' ' + str(value).center(column_size[i]) + ' ' + '|'
-                frame += line[:-1] + '\n'
-            frame += ('.. Omit %d Ln ..'%(self._dim.Ln - 20)).center(len(line)) + '\n'
-            for item in temporary_Frame[-10:]:
-                line = ''
-                for i, value in enumerate(item):
-                    line += ' ' + str(value).center(column_size[i]) + ' ' + '|'
-                frame += line[:-1] + '\n'
-                
-        else:
-            for item in temporary_Frame:
-                line = ''
-                for i, value in enumerate(item):
-                    line += ' ' + str(value).center(column_size[i]) + ' ' + '|'
-                frame += line[:-1] + '\n'
+    def __getitem__(self, interval):
+        if isinstance(interval, int):
+            return self._data[interval]
 
-        return frame[:-1]
+        elif isinstance(interval, slice):
+            return self.__getslice__(interval.start, interval.stop)
 
-    def __contains__(self, e):
-        if isinstance(e, str):
-            return e in self._columns
+        elif isinstance(interval, str):
+            col = self._columns.index(interval)
+            return [item[col] for item in self._data]
 
-        if isinstance(e, tuple):
-            for record in self._Frame:
-                if record == e:
-                    return True
-                
-        return False
-    
-    def __len__(self):
-        return self._dim.Ln
-
-    def __eq__(self, other):
-        if isinstance(other, (Frame, SeriesSet)):
-            if self._dim == other.dim:
-                return True
-            return False
-
-    def __getslice__(self, i, j):
-        if i in self._columns or j in self._columns:
-            if i in self._columns:
-                i = self._columns.index(i)
-            elif i is None:
-                i = 0
-            else:
-                raise ValueError('can not get the title of %s'%i)
-
-            if j in self._columns:
-                j = self._columns.index(j)
-            elif j is None:
-                j = self._dim.Col
-            else:
-                raise ValueError('can not get the title of %s'%j)
-
-            new_frame = list()
-            for record in self._Frame:
-                new_frame.append(record[i:j + 1])
-
-            return Frame(new_frame, self._columns[i:j + 1], self._miss_value)
-
-        if type(i) != int and type(j) != int:
-            raise ValueError('unrecognized symbol as [%s:%s]'%(i, j))
-
-        if i is None or i < 0:
-            i = 0
-        elif i > self._dim.Ln:
-            i = self._dim.Ln
-
-        if j is None:
-            j = 0
-        elif j < 0:
-            j = self._dim.Ln + j
-        elif j >= self._dim.Ln:
-            j = self._dim.Ln
-
-        return Frame(self._Frame[i:j], self._columns, self._miss_value)
-            
-    def __getitem__(self, pos):
-        if isinstance(pos, int):
-            return self._Frame[pos]
-        
-        if isinstance(pos, slice):
-            return self.__getslice__(pos.__getattribute__('start'),
-                                     pos.__getattribute__('stop'))
-
-        if isinstance(pos, str): 
-            col = self._columns.index(pos)
-            return [item[col] for item in self._Frame]
-
-    def __setitem__(self, key, value):
-        if isinstance(key, int):
-            if key <= self._dim.Ln:
-                self.__delitem__(key)
-                self.insert(key, value)
-            else:
-                self.append(value)
-
-        elif isinstance(key, str):
-            if key in self._columns:
-                pos = self._columns.insert(key)
-                self.__delitem__(key)
-                self.insert_col(key, value, pos)
-            else:
-                self.append_col(key, value)
-                
-        else:
-            raise TypeError('only can set one record or one column each time.')
-
-    def __delitem__(self, key):
-        if isinstance(key, int):
-            drop_record = self.pop(key)
-
-        elif isinstance(key, str) and key in self._columns:
-            drop_record = self.pop_col(key)
+        elif isinstance(interval, (tuple, list)):
+            return_obj = Frame()
+            return self._getitem_by_tuple(interval, return_obj)
 
         else:
-            raise KeyError('unrecognized symbol %s'%key)
-    
+            raise TypeError('item should be represented as `slice`, `int`, `str` or `tuple`.')
+
     def __iter__(self):
-        for record in self._Frame:
+        for record in self._data:
             yield record
+
+    def _replace_typical(self, col, condition, new_value):
+        col, condition, new_value = self._check_replace_condition(col, condition, new_value)
+        cond = self._transform_str_condition(condition, axis=1)
+        for record in self._data:
+            value = record[col]
+            exec(cond)
+            if check is True:
+                record[col] = new_value
 
     def append(self, item, miss_symbol=None):
         '''append a new record to the Frame tail
         '''
         if is_value(item):
             item = [item] * self._dim.Col
-            
-        elif not isinstance(item, list):
-            try:
-                item = list(item)
-            except:
-                raise TypeError("append item is not a support type "+\
+        elif not all(map(is_value, item)):
+            raise TypeError("append item is not a support type "+\
                                 "with <'%s'>"%type(item))
 
-        if not miss_symbol:
-            miss_symbol = self._miss_value
-            
+        miss_symbol = self._check_miss_symbol(miss_symbol)
         for i, element in enumerate(item):
-            if element == miss_symbol:
-                self._m_value[i] += 1
+            if element in miss_symbol:
+                self._miss_value[i] += 1
 
         lenth_bias = len(item) - self._dim.Col
         if lenth_bias < 0:
-            item.extend([self._miss_value] * abs(lenth_bias))
+            item.extend([self._miss_symbol] * abs(lenth_bias))
         elif lenth_bias > 0:
-            for record in self._Frame:
-                record.extend([self._miss_value] * lenth_bias)
-                    
-        self._Frame.append(item)
-        self._dim = Frame.dims(self._dim.Ln + 1, max(self._dim.Col, len(item)))
-        
-    def append_col(self, variable_name, series, miss_symbol=None):
+            for record in self._data:
+                record.extend([self._miss_symbol] * lenth_bias)
+
+        self._data.append(item)
+        self._dim = dims(self._dim.Ln + 1, max(self._dim.Col, len(item)))
+
+    def append_col(self, series, variable_name=None, miss_symbol=None):
         '''append a new variable to the current records tail
         '''
-        if variable_name in self._columns:
-            raise ValueError("variable name `%s` is already taken."%self.variable_name)
-            
-        if not isinstance(variable_name, str):
-            raise TypeError("variable name should be a ``str``")
-
         if not miss_symbol:
-            miss_symbol = self._miss_value
+            miss_symbol = self._miss_symbol
 
-        if is_value(series):
-            series = [series] * self._dim.Ln
+        mv, series = self._check_sequence_type(series, miss_symbol)
+        self._miss_value.append(mv)
 
-        size = len(series)
-        if size < self._dim.Ln:
-            series.extend([self._miss_value] * (self._dim.Ln - size))
-        elif size > self._dim.Ln:
-            self._Frame.extend([[self._miss_value] * self._dim.Col\
-                                for i in range(size - self._dim.Ln)])
-        
-        self._m_value.append(0)
+        size = len(series) - self._dim.Ln
+        if size > 0:
+            for i in range(self._dim.Ln):
+                self._miss_value[i] += size
+            self._data.extend([[self._miss_symbol] * self._dim.Col\
+                                for i in range(size)])
+
+        self._miss_value.append(mv)
         for i, element in enumerate(series):
-            if element == miss_symbol:
-                self._m_value[-1] += 1
-            self._Frame[i].append(element)
+            self._data[i].append(element)
+        self._columns.append(self._check_col_new_name(variable_name))
+        self._dim = dims(max(self._dim.Ln, size), self._dim.Col+1)
 
-        self._columns.append(variable_name)
-        self._dim = Frame.dims(max(self._dim.Ln, size), self._dim.Col+1)
-        
     def count(self, X, *area):
         if is_value(X):
-            X = [X, ]
-        elif not is_iter(X):
-            raise TypeError('X should be an iterable'+\
-                            " object, such as 'tuple' or 'list'")
-        
+            X = (X,)
         counter = Counter()
-        if area == all or area[0] == all:
-            C1, L1 = 0, 0
-            L2, C2 = self._dim
-                
-        elif not (len(area) == 2 and len(area[0]) == len(area[1]) == 2):
-            raise EOFError("unreccognized Expression '%s'"%str(area))
+        L1, C1, L2, C2 = self._check_area(*area)
 
-        else:        
-            if area[0][1] == all:
-                C1 = 0
-            elif isinstance(area[0][1], int) and 0 <= area[0][1] <= self._dim.Col:
-                C1 = area[0][1]
-            elif area[0][1] in self._columns:
-                C1 = self._columns.index(area[0][1])
-            else:
-                raise TypeError('second position in the first tuple should a int '+\
-                                'type emblemed column number or a str emblemed'+\
-                                'column name.')
-
-            if area[1][1] == all:
-                C2 = self._dim.Col
-            elif isinstance(area[1][1], int) and 0 <= area[1][1] <= self._dim.Col:
-                C2 = area[1][1]
-            elif area[1][1] in self._columns:
-                C2 = self._columns.index(area[1][1])
-            else:
-                raise TypeError('second position in the second tuple should a int '+\
-                                'type emblemed column number or a str emblemed '+\
-                                "column name. Tip: use all to stand for all.")
-
-            if area[0][0] == all:
-                L1 = 0
-            elif isinstance(area[0][0], int) and 0 <= area[0][0] <= self._dim.Ln:
-                L1 = area[0][0]
-            else:
-                raise TypeError('first position in the first tuple should be a int '+\
-                                'type emblemed start line number. Tip: use all to '+\
-                                "stand for all.")
-
-            if area[1][0] == all:
-                L2 = self._dim.Ln
-            elif isinstance(area[1][0], int) and 0 <= area[1][0] <= self._dim.Ln:
-                L2 = area[1][0]
-            else:
-                raise TypeError('first position in the second tuple should be a int '+\
-                                'type emblemed start line number. Tip: use all to '+\
-                                "stand for all.")
-        if C2 < C1 or L2 < L1:
-            raise ValueError('the postion in the second tuple should be larger '+\
-                             'than first tuple.')
-
-        for record in self._Frame[L1:L2 + 1]:
+        for record in self._data[L1:L2 + 1]:
             for value in record[C1:C2 + 1]:
                 if value in X:
                     counter[value] += 1
-        return counter
+
+        if not counter:
+            return 0
+        return SeriesSet(dict(counter))
 
     def extend(self, other):
         if isinstance(other, Frame):
@@ -1538,207 +1428,151 @@ class Frame(object):
                     self._columns.append(title)
                     new_title += 1
 
-            for record in self._Frame:
-                record.extend([self._miss_value] * new_title)
-                
-            extend_part = [[self._miss_value] * len(self._columns)\
+            for record in self._data:
+                record.extend([self._miss_symbol] * new_title)
+
+            extend_part = [[self._miss_symbol] * len(self._columns)\
                            for i in range(len(other))]
             new_title_index = [self._columns.index(title)
                                for title in other._columns]
-            self._dim = Frame.dims(len(self) + len(other), len(self._columns))
-            self._m_value.extend([self._dim.Ln] * new_title)
+            self._dim = dims(len(self) + len(other), len(self._columns))
+            self._miss_value.extend([self._dim.Ln] * new_title)
 
-            for i, record in enumerate(other._Frame):
+            for i, record in enumerate(other._data):
                 for j, value in zip(new_title_index, record):
-                    if value == other._miss_value:
-                        value = self._miss_value
+                    if value == other._miss_symbol:
+                        value = self._miss_symbol
                     extend_part[i][j] = value
 
-            self._Frame.extend(extend_part)
+            self._data.extend(extend_part)
 
         elif isinstance(other, SeriesSet):
             self.extend(Frame(other))
 
         elif all(map(is_seq, other)):
             self.extend(Frame(other, self._columns))
-            
+
         else:
             raise TypeError('can not extend the dataset with this object.')
 
     def extend_col(self, other):
         if isinstance(other, Frame):
-            new_title = list()
-            for i, title in enumerate(other._columns):
-                if title not in self._columns:
-                    self._columns.append(title)
-                    new_title.append(i)
-                    self._m_value.append(0)
+            for title in other._columns:
+                self._columns.append(self._check_col_new_name(title))
+            self._miss_value.extend(other._miss_value)
 
-            new_title = set(new_title)
-            for i, record in enumerate(other._Frame):
-                new_record, current_record = list(), self._Frame[i]
-                for j, value in enumerate(record):
-                    if value == other._miss_value:
+            for i, record in enumerate(other._data):
+                if i < self._dim.Ln:
+                    current_record = self._data[i]
+                else:
+                    current_record = [self._miss_symbol] * self._dim.Col
+                    self._data.append(current_record)
+                for value in record:
+                    if value == other.miss_symbol:
                         value = self._miss_value
-                        self._m_value[self._columns.index(other._columns[j])] += 1
-                        
-                    if j in new_title:
-                        current_record.append(value)
-                    else:
-                        j_ = self._columns.index(other._columns[j])
-                        new_record.extend([self._miss_value] * (j_ - len(new_record)))
-                        new_record.append(value)
-                        self._m_value[j_] += len(new_record) - j_
-                if new_record:
-                    self._Frame.append(new_record)
-            self._dim = Frame.dims(len(self._Frame), len(self._columns))
+                    current_record.append(value)
+            if i < self._dim.Ln:
+                for record in self._data[i+1:]:
+                    record.extend([self._miss_symbol] * other.shape.Col)
+            self._dim = dims(len(self._data), len(self._columns))
 
-            for record in self._Frame:
-                record.extend([self._miss_value] * (self._dim.Col - len(record)))
-            
-        elif isinstance(other, Frame):
-            self.extend_col(SeriesSet(other))
-            
-        elif all(filter(is_iter, other)):
-            new_col = [title + '_1' for title in self._columns]
-            self.extend_col(SeriesSet(other, new_col))
+        elif isinstance(other, SeriesSet) or all(filter(is_iter, other)):
+            self.extend_col(Frame(other))
 
         else:
             raise TypeError('could not extend a single value only.')
-    def pop_miss_value(self, axis='LINE'):
-        '''pop all records that maintains miss value while axis is `LINE` or
-        pop all variables that maintains miss value while axis is `COL`
-        '''
-        if axis.upper() == 'LINE':
-            pops = list()
-            for i, record in enumerate(self._Frame):
-                if self._miss_value in record:
-                    pops.append(i)
-            pops = [self._Frame.pop(i) for i in sorted(pops, reverse=True)]
-            self._dim = Frame.dims(len(pops), self._dim.Col)
-            return Frame(pops, self._columns)
 
-        if axis.upper() == 'COL':
-            pop_col = list()
-            for i, sequence in enumerate(zip(*self._Frame)):
-                if self._miss_value in sequence:
-                    pop_col.append(i)
-                    
-            pop_col.reverse()
-            new_columns = [self._columns.pop(i) for i in pop_col].reverse()
-            
-            new_frame = [0] * self._dim.Ln
-            for line, record in enumerate(self._Frame):
-                new_frame[line] = [record.pop(i) for i in pop_col]
-            for record in new_frame:
-               record.reverse() 
-            self._dim = Frame.dims(self._dim.Ln, len(self._columns))
-            return SeriesSet(new_frame, new_columns)
-
-        raise ValueError('axis should be (`LINE` or `COL`) symbols only.')
-
-    def insert(self, pos, item, miss_symbol=None):
+    def insert(self, index, item, miss_symbol=None):
         '''insert a new record to the frame with position `index`
         '''
         if is_value(item):
             item = [item] * self._dim.Col
-            
+
         elif not isinstance(item, list):
             try:
-                item = list(item)
+                index = list(index)
             except:
-                raise TypeError("append item is not a support type "+\
-                                "with <'%s'>"%type(item))
+                raise TypeError("append item should be a iterable, "+\
+                                "not <'%s'>"%type(item))
 
-        if not miss_symbol:
-            miss_symbol = self._miss_value
-            
+        miss_symbol = self._check_miss_symbol(miss_symbol)
+
         for i, element in enumerate(item):
             if element == miss_symbol:
-                self._m_value[i] += 1
+                self._miss_value[i] += 1
 
         lenth_bias = len(item) - self._dim.Col
         if lenth_bias < 0:
-            item.extend([self._miss_value] * abs(lenth_bias))
+            item.extend([self._miss_symbol] * abs(lenth_bias))
         elif lenth_bias > 0:
-            for record in self._Frame:
-                record.extend([self._miss_value] * lenth_bias)
-                    
-        self._Frame.insert(pos, index)
-        self._dim = Frame.dims(self._dim.Ln + 1, max(self._dim.Col, len(item)))
+            for record in self._data:
+                record.extend([self._miss_symbol] * lenth_bias)
 
-    def insert_col(self, variable_name, series, index, miss_symbol=None):
+        self._data.insert(index, item)
+        self._dim = dims(self._dim.Ln + 1, max(self._dim.Col, len(item)))
+
+    def insert_col(self, index, series, variable_name=None, miss_symbol=None):
         '''insert a new variable to the current records in position `index`
         '''
-        if variable_name in self._columns:
-            raise ValueError("variable name `%s` is already taken."%self.variable_name)
-            
-        if not isinstance(variable_name, str):
-            raise TypeError("variable name should be a ``str``")
+        miss_symbol = self._check_miss_symbol(miss_symbol)
+        mv, series = self._check_sequence_type(series, miss_symbol)
 
-        if not miss_symbol:
-            miss_symbol = self._miss_value
+        size = len(series) - self._dim.Ln
+        if size > 0:
+            for i in range(self._dim.Col):
+                self._miss_value[i] += size
+            self._data.extend([[self._miss_symbol] * self._dim.Col\
+                                for i in range(size)])
 
-        if is_value(series):
-            series = [series] * self._dim.Ln
-
-        size = len(series)
-        if size < self._dim.Ln:
-            series.extend([self._miss_value] * (self._dim.Ln - size))
-        elif size > self._dim.Ln:
-            self._Frame.extend([[self._miss_value] * self._dim.Col\
-                                for i in range(size - self._dim.Ln)])
-        
-        self._m_value.append(0)
+        self._miss_value.insert(index, mv)
         for i, element in enumerate(series):
-            if element == miss_symbol:
-                self._m_value[-1] += 1
-            self._Frame[i].insert(index, element)
+            self._data[i].insert(index, element)
 
-        self._columns.insert(index, variable_name)
-        self._dim = Frame.dims(max(self._dim.Ln, size), self._dim.Col+1)
-                
-    def pick(self, conditions):
+        self._columns.insert(index, self._check_col_new_name(variable_name))
+        self._dim = dims(max(self._dim.Ln, size), self._dim.Col+1)
+
+    def items(self):
+        for i, sequence in enumerate(zip(*self._data)):
+            yield self._columns[i], list(sequence)
+
+    def keys(self):
+        return self._columns
+
+    def select(self, conditions):
         '''pick out records that comply with conditions
         '''
-        conditions = str(conditions)
-        for i, title in enumerate(self._columns):
-            new = 'record[%d]'%i
-            conditions = conditions.replace(title, new)
-        conditions = 'check = ' + conditions
+        conditions = self._transform_str_condition(conditions, axis=0)
 
-        return_frame = list()
-        for record in self._Frame:
-            try:
-                exec(conditions)
-            except SyntaxError:
-                raise TypeError('can not transform some of your variable name.')
+        return_data = []
+        for record in self._data:
+            exec(conditions)
             if check:
-                return_frame.append(record)
-
-        return Frame(return_frame, self._columns)
+                return_data.append(record)
+        if not return_data:
+            return None
+        return Frame(return_data, self._columns)
 
     def pop(self, item=-1):
         '''pop(remove & return) a record from the Frame
         '''
         if isinstance(item, int):
-            pop_item = self._Frame.pop(item)
-            self._dim = Frame.dims(self._dim.Ln - 1, self._dim.Col)
+            pop_item = self._data.pop(item)
+            self._dim = dims(self._dim.Ln - 1, self._dim.Col)
             for i, value in pop_item:
-                if value == self._miss_value:
-                    self._m_value[i] -= 1
+                if value == self._miss_symbol:
+                    self._miss_value[i] -= 1
             return pop_item
-        
+
         raise TypeError('an integer is required.')
 
     def pop_col(self, *titles):
         '''pop(remove & return) a series from the Frame
         '''
-        pos = list()
-        pop_name = list()
+        pos = []
+        pop_name = []
         if not titles:
             titles = [self._columns[-1]]
-            
+
         for item in titles:
             if not isinstance(item, (int, str)):
                 raise TypeError('an integer or string, which stands for a '+\
@@ -1752,145 +1586,112 @@ class Frame(object):
                 pop_name.append(self._columns[item])
             else:
                 raise IndexError('%s is not a column name or index.'%str(item))
-        
+
         for name in pop_name:
             index = self._columns.index(name)
             self._columns.pop(index)
-            self._m_value.pop(index)
-            
-        pop_data = [list() for i in range(len(pop_name))]
+            self._miss_value.pop(index)
 
-        new_frame = [0] * self._dim.Ln
-        for j, record in enumerate(self._Frame):
-            line = list()
+        pop_data = [[] for i in range(len(pop_name))]
+
+        new_data = [0] * self._dim.Ln
+        for j, record in enumerate(self._data):
+            line = []
             for i, value in enumerate(record):
                 if i in pos:
                     pop_data[pos.index(i)].append(value)
                 else:
                     line.append(value)
-            new_frame[j] = line
+            new_data[j] = line
 
-        self._dim = Frame.dims(self._dim.Ln, self._dim.Col-len(pos))
-        self._Frame = new_frame
+        self._dim = dims(self._dim.Ln, self._dim.Col-len(pos))
+        self._data = new_data
         return SeriesSet(dict(zip(pop_name, pop_data)))
 
-    def read_text(self, addr, first_line=1, miss_symbol='NA',
-                 title_line=0, sep=',', prefer_type=None):
-        def transform(i, item):
-            try:
-                return _col_types[i](item)
-            except ValueError:
-                if item == miss_symbol:
-                    self._m_value[i] += 1
-                    return self._miss_value
-                return str2value(item, prefer_type)
-            
+    def pop_miss_value(self, axis='LINE'):
+        '''pop all records that maintains miss value while axis is `LINE` or
+        pop all variables that maintains miss value while axis is `COL`
+        '''
+        if axis.upper() == 'LINE':
+            pops = []
+            for i, record in enumerate(self._data):
+                if self._miss_symbol in record:
+                    pops.append(i)
+            pops = [self._data.pop(i) for i in sorted(pops, reverse=True)]
+            self._dim = dims(len(pops), self._dim.Col)
+            return Frame(pops, self._columns)
+
+        if axis.upper() == 'COL':
+            pop_col = []
+            for i, sequence in enumerate(zip(*self._data)):
+                if self._miss_symbol in sequence:
+                    pop_col.append(i)
+
+            pop_col.reverse()
+            new_columns = [self._columns.pop(i) for i in pop_col].reverse()
+
+            new_data = [0] * self._dim.Ln
+            for line, record in enumerate(self._data):
+                new_data[line] = [record.pop(i) for i in pop_col]
+            for record in new_data:
+               record.reverse()
+            self._dim = dims(self._dim.Ln, len(self._columns))
+            return SeriesSet(new_data, new_columns)
+
+        raise ValueError('axis should be (`LINE` or `COL`) symbols only.')
+
+    def read_text(self, addr, **kwrd):
+        '''read dataset from csv or txt file.
+        '''
         with open(addr, 'r') as f:
-            col = 0
-            for i, line in enumerate(f):
-                if line.count(sep) > col:
-                    col = line.count(sep) + 1
-            self._Frame = [0] * i
-            self._m_value = [0] * col
-            _col_types = [None] * col
-    
-            f.seek(0)
-            for i, lines in enumerate(f):
-                if i >= first_line:
-                    for j, item in enumerate(lines[:-1].split(sep)):
-                        if j in _col_types or item == miss_symbol or item == self._miss_value:
-                            continue
-                        _col_types[j] = TRANS_FUN_SET[type(str2value(item))]
-                if all(_col_types):
-                    break
-
-            _col_types = tuple(_col_types)
-
-            f.seek(0)
-            for m, record in enumerate(f):
-                if m == title_line:
-                    self._columns = record[:-1].split(sep)
-                if m >= first_line - 1 :
-                    break
-
-            for m, record in enumerate(f):
-                line = [transform(i, v) for i, v in enumerate(record.split(sep))]        
-                line.extend([self._miss_value] * (col - len(line)))
-                self._Frame[m] = line
-
-        if not self._columns:
-            self._columns = ['C%d'%i for i in range(col)]
-
-        if len(self._columns) != col:
-            self._columns.extend(['C%d'%i for i in range(len(self._columns),
-                                                            col - len(self._columns))])     
-        elif len(set(self._columns)) != col:
-            for i, title in enumerate(self._columns):
-                if self._columns.count(title) <= 1 or i == self._columns.index(title):
-                    continue
-                
-                for j in range(self._columns.count(title)):
-                    if title + '_%d'%j not in self._columns:
-                        self._columns[i] = title + '_%d'%j
-                 
-        self._dim = Frame.dims(m + 2 - first_line, col)
+            freader, _col_types, miss_symbol, prefer = self._check_read_text(f, **kwrd)
+            self._data = [0] * self._dim.Ln
+            try:
+                for m, record in enumerate(freader):
+                    line = [self._check_transform_value(
+                                i, v, _col_types, miss_symbol, prefer) \
+                                for i, v in enumerate(record)]
+                    line.extend([self._miss_symbol] * (self._dim.Col - len(line)))
+                    self._data[m] = line
+            except MemoryError:
+                warn('since the limitation of memory, DaPy can not read the whole '+\
+                     'file, stop in the line %d'%m)
+        self._dim = dims(m + 1, self._dim.Col)
 
     def reverse(self):
-        self._Frame.reverse()
+        self._data.reverse()
 
-    def rename_col(self, *new_names):
-        try:
-            for names in new_names:
-                if names[0] in self._columns:
-                    if names[1] not in self._columns:
-                        self._columns = names[1]
-                    else:
-                        raise ValueError("Name '%s' has already exist'"%names[1])
-                else:
-                    raise ValueError("'%s' is not exist"%names[0])
-        except:
-            raise TypeError('This function expects some parameters like 2-dimentions tuple')
+    def replace(self, *arg):
+        if arg == tuple():
+            raise KeyError('argument is empty!')
 
-    def replace(self, col=all, *arg):
-        if col == all:
-            col = range(self._dim[1])
-        elif isinstance(col, int) and col < self._dim.Col:
-            col = (col, )
-        elif isinstance(col, str):
-            col = (self._columns.index(col), )
+        elif len(arg) == 3 and is_value(arg[-1]) and isinstance(arg[1], str):
+            self._replace_typical(*arg)
+
+        elif all(map(is_iter, arg)):
+            if max(map(len, arg)) > 3 or min(map(len, arg)) < 3:
+                raise AttributeError('you should input 3 arguments as a order'+\
+                                    " which seem like .replace('C1', '> 20', 3)")
+            for obj in arg:
+                self._replace_typical(*obj)
+
         else:
-            new_col = list()
-            for c in col:
-                if isinstance(c, str):
-                    new_col.append(self._columns.index(c))
-                elif isinstance(c, int) and c < self._dim.Col:
-                    new_col.append(c)
-                else:
-                    raise TypeError("unrecognized symbol '%s'."%str(c))
-            col = new_col
+            raise TypeError(\
+                'argument should be include as a dict() or multiple'+\
+                " tuples, like: replace(('C1', '< 100', 2)," +\
+                "                       ('C2', '> 200', 3)). Use help() "+\
+                'for using details.')
 
-        order = dict(arg)
-
-        for i, record in enumerate(self._Frame):
-            for j in col:
-                if record[j] in order:
-                    record = list(record)
-                    record[j] = order[record[j]]
-            self._Frame[i] = tuple(record)
-                    
     def sort(self, *orders):
-        '''TODO: sort the dataframe
-        See Also: numpy/core/fromnumeric.py Line:756
-        See Also: numpy/core/numeric.py Line:508
+        '''S.sort(('A_col', 'DESC'), ('B_col', 'ASC')) --> None
+        sort the dataset in light of the conditions.
         '''
         for each in orders:
             if len(each) != 2:
                 raise TypeError("Order argument expects some 2-dimensions"+\
-                        " tuples which contains 'keyword' in the first"+\
-                        ' postion and request in the second place.')
-                
+                        " tuples like ('A_col', 'DESC')")
 
-        compare_pos = list()
+        compare_pos = []
         for order in orders:
             if isinstance(order[0], int):
                 compare_pos.append(order[0])
@@ -1910,8 +1711,7 @@ class Frame(object):
         def hash_sort(datas_, i=0):
             # initialize values
             index = compare_pos[i]
-            inside_data = list()
-            HashTable = dict()
+            inside_data, HashTable = list(), dict()
 
             # create the diction
             for item in datas_:
@@ -1927,26 +1727,70 @@ class Frame(object):
             # transform the record into Frame
             for each in sequence:
                 items = HashTable[each]
-                
                 if i < size_orders:
                     items = hash_sort(items, i+1)
-
                 inside_data.extend(items)
-                    
+
             # finally, reversed the list if necessary.
             if i != 0 and compare_symbol[i] != compare_symbol[i-1]:
                 inside_data.reverse()
-
             return inside_data
 
         if len(set(compare_symbol)) == 1:
-            self._Frame = sorted(self._Frame, key=itemgetter(*compare_pos))
+            self._data = sorted(self._data, key=itemgetter(*compare_pos))
         else:
-            self._Frame = hash_sort(self._Frame)
+            self._data = hash_sort(self._data)
 
         if compare_symbol[0] == 'DESC':
-            self._Frame.reverse()
-            
-    def shuffles(self):
-        shuffle(self._Frame)
+            self._data.reverse()
 
+    def shuffles(self):
+        shuffle(self._data)
+
+    def show(self, lines=all):
+        if not isinstance(lines, int) and lines is not all:
+            raise TypeError('parameter `lines` should be a integer.')
+
+        if lines >= self._dim.Ln:
+            lines = all
+
+        temporary_series = [[title, ] for title in self._columns]
+        if lines is all:
+            temporary_data = self._data
+        else:
+            temporary_data = self._data[:lines]
+            temporary_data.extend(self._data[-lines:])
+
+        for line in temporary_data:
+            for i, value in enumerate(line):
+                temporary_series[i].append(str(value))
+
+        column_size = [len(max(col, key=len)) for col in temporary_series]
+
+        frame = ' ' + ' | '.join([title.center(column_size[i]) for i, title in \
+                         enumerate(self._columns)]) + '\n'
+        frame += '+'.join(['-' * (size + 2) for size in column_size]) + '\n'
+
+        if lines is not all:
+            for item in temporary_data[:lines // 2]:
+                line = ''
+                for i, value in enumerate(item):
+                    line += ' ' + str(value).center(column_size[i]) + ' ' + '|'
+                frame += line[:-1] + '\n'
+            frame += ('.. Omit %d Ln ..'%(self._dim.Ln - 20)).center(len(line)) + '\n'
+            for item in temporary_data[-lines // 2:]:
+                line = ''
+                for i, value in enumerate(item):
+                    line += ' ' + str(value).center(column_size[i]) + ' ' + '|'
+                frame += line[:-1] + '\n'
+        else:
+            for item in temporary_data:
+                line = ''
+                for i, value in enumerate(item):
+                    line += ' ' + str(value).center(column_size[i]) + ' ' + '|'
+                frame += line[:-1] + '\n'
+        return frame[:-1]
+
+    def values(self):
+        for sequence in zip(*self._data):
+            yield list(sequence)
