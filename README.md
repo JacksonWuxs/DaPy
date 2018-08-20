@@ -4,16 +4,16 @@ DaPy - Enjoy the Tour in Data Mining
 
 ![](https://github.com/JacksonWuxs/DaPy/blob/master/doc/material/logo.bmp)
 
-As a data analysis and processing library based on the origion data structures in Python, **DaPy** is not only committed to saving the time of data scientists and improving the efficiency of research, but also try it best to offer you a new experience in data science.
+As a data analysis and processing library based on the original data structures in Python, **DaPy** is not only committed to save the time of data scientists and improve the efficiency of research, but also try it best to offer you a new experience in data science.
 
 [Installation](#installation) | [Features](#features) | [Quick Start](https://github.com/JacksonWuxs/DaPy/blob/master/Guide%20Book/English/Quick%20Start.md ) | [To Do List](#todo) | [Version Log](#version-log) | [License](#license) | [Guide Book](https://github.com/JacksonWuxs/DaPy/tree/master/Guide%20Book) | [中文版](https://github.com/JacksonWuxs/DaPy/blob/master/README_Chinese.md)
 
 ## Installation
-The latest version 1.3.3 had been upload to PyPi.
+The latest version 1.4.1 had been upload to PyPi.
 ```
 pip install DaPy
 ```
-Updating your last version to 1.3.3 with PyPi as follow.
+Updating your last version to 1.4.1 with PyPi as follow.
 ```
 pip install -U DaPy
 ```
@@ -101,11 +101,16 @@ has more than 4.5 million records and total size is
 If you want to follow up the latest developments, you can visit [here](https://www.teambition.com/project/5b1b7bd40b6c410019df8c41/tasks/scrum/5b1b7bd51e4661001838eb10).
 
 ## Version-Log
+* V1.4.1 (2018-08-19)
+	- Added `replace()` function for high speeded transering your data.
+	- Optimized the speed in reading .csv file;
+	- Refactored the DaPy.machine_learn.MLP, which can be form with any layers with any active functions or any cells now;
+	- Refactored the DaPy.Frame and DaPy.SeriesSet in order to improve the efficiency;
 * V1.3.3 (2018-06-20)
-	- Added more external data file: Excel, SPSS, SQLite3, CSV;
+	- Added more supported external data types: Excel, SPSS, SQLite3, CSV;
 	- Added `Linear Regression` and `ANOVA` to DaPy.Mathematical_statistics;
-	- Added `DaPy.io.encode()` for better adepted to Chinese;
-	- Expreesed SeriesSet and Frame in more beautiful way;
+	- Added `DaPy.io.encode()` for better adepting to Chinese;
+	- Optimized the presentations of SeriesSet and Frame in a more beautiful way;
 	- Optimized the DaPy.Matrix so that the speed in calculating is two times faster;
 	- Replaced read_col(), read_frame(), read_matrix() by read();
 	- Refactored the DaPy.DataSet, which can manage multiple sheets at the same time;
