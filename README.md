@@ -1,4 +1,4 @@
-![](https://github.com/JacksonWuxs/DaPy/blob/master/doc/material/logo.bmp)
+![](https://github.com/JacksonWuxs/DaPy/blob/master/doc/material/logo.bmp)   
 DaPy - Enjoy the Tour in Data Mining
 ====
 ![](https://img.shields.io/badge/Version-1.3.3-green.svg)  ![](https://img.shields.io/badge/Download-PyPi-green.svg)  ![](https://img.shields.io/badge/License-GNU-blue.svg)
