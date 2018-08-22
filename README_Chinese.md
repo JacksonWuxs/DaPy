@@ -1,3 +1,4 @@
+<img src="https://github.com/JacksonWuxs/DaPy/blob/master/doc/material/logo.bmp" width = 100% height = 100% div align=center />
 DaPy - 享受数据挖掘之旅
 ====
 ![](https://img.shields.io/badge/Version-1.3.3-green.svg)  ![](https://img.shields.io/badge/Download-PyPi-green.svg)  ![](https://img.shields.io/badge/License-GNU-blue.svg)  
@@ -7,12 +8,12 @@ DaPy - 享受数据挖掘之旅
 [安装](#安装) | [特性](#特性) | [快速开始](https://github.com/JacksonWuxs/DaPy/blob/master/快速开始.md) | [远期规划](#远期规划) | [更新日志](#更新日志) | [用户手册](https://github.com/JacksonWuxs/DaPy/blob/master/Guide%20Book/Chinese/README.md) | [版权归属](#版权归属) | [English](https://github.com/JacksonWuxs/DaPy/blob/master/README.md)
 
 ## 安装
-最新版本1.3.3已上传至PyPi。
+最新版本1.4.1已上传至PyPi。
 ```
 pip install DaPy
 ```  
 
-用下面的代码将DaPy更新至1.3.3版本。
+用下面的代码将DaPy更新至1.4.1版本。
 ```
 pip install -U DaPy
 ```
