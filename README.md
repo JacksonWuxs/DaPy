@@ -44,44 +44,13 @@ Intel i7-6560U while the Python version is 2.7.13-64Bit. The [dataset](http://ww
 has more than 4.5 million records and total size is 
 240.2 MB. 
 
-<table>
-<tr>
-	<td>Result of Testing</td>
-	<td>DaPy</td>
-	<td>Pandas</td>
-	<td>Numpy</td> 
-</tr>
-<tr>
-	<td>Loading Time</td>
-	<td>29.3s (2.4x)</td>
-	<td>12.3s (1.0x)</td>
-	<td>169.0s (13.7x)</td>
-</tr>
-<tr>
-	<td>Traverse Time</td>
-	<td>0.34s (1.6x)</td>
-	<td>3.10s (14.8x)</td>
-	<td>0.21s (1.0x)</td>
-</tr>
-<tr>
-	<td>Sort Time</td>
-	<td>1.41s (1.65x)</td>
-	<td>0.86s (1.0x)</td>
-	<td>5.37s (10.1x)</td>
-	</tr>
-<tr>
-	<td>Total Spent</td>
-	<td>31.1s (1.9x)</td>
-	<td>16.3s (1.0x)</td>
-	<td>174.6s (10.0x)</td>
-	</tr>
-<tr>
-	<td>Version</td>
-	<td>1.3.3</td>
-	<td>0.22.0</td>
-	<td>1.14.0</td>
-	</tr>
-</table>  
+| subject | DaPy | Pandas | Numpy |
+|:------:|:-------:|:------:|:------:|
+| Loading | 2.4x | 1.0x | 13.7x |
+| Traverse | 1.6x | 14.8x | 1.0x |
+| Sort | 1.65x | 1.0x | 10.1x |
+| Total | 1.9x | 1.0x | 10.1x |
+| Version | 1.3.3 | 0.22.0 | 1.14.0 |
 
 
 ## TODO  
