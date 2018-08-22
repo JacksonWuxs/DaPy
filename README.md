@@ -40,7 +40,7 @@ implement your ideas fluently.
 Even if it uses Python original data structures, 
 DaPy still has efficiency comparable to some libraries which was wrote by C.
 We have tested DaPy on the platform with
-Intel i7-6560U while the Python version is 2.7.13-64Bit. The [dataset](https://pan.baidu.com/s/1kK3_V8XbbVim4urDkKyI8A)
+Intel i7-6560U while the Python version is 2.7.13-64Bit. The [dataset](http://www.wuxsweb.cn/Library/DaPy&Examples_data/students.xlsx)
 has more than 4.5 million records and total size is 
 240.2 MB. 
 
@@ -102,10 +102,12 @@ If you want to follow up the latest developments, you can visit [here](https://w
 
 ## Version-Log
 * V1.4.1 (2018-08-19)
-	- Added `replace()` function for high speeded transering your data.
+	- Added `replace()` function for high-speed transering your data;
+	- Fixed some bugs;
 	- Optimized the speed in reading .csv file;
 	- Refactored the DaPy.machine_learn.MLP, which can be form with any layers with any active functions or any cells now;
 	- Refactored the DaPy.Frame and DaPy.SeriesSet in order to improve the efficiency;
+	- Supported to initialize Pandas and Numpy data structures;
 * V1.3.3 (2018-06-20)
 	- Added more supported external data types: Excel, SPSS, SQLite3, CSV;
 	- Added `Linear Regression` and `ANOVA` to DaPy.Mathematical_statistics;
