@@ -1,4 +1,4 @@
-<img src="https://github.com/JacksonWuxs/DaPy/blob/master/doc/material/logo.bmp" width = 100% height = 100% div align=center />
+<img src="https://github.com/JacksonWuxs/DaPy/blob/master/doc/material/logo.bmp" width = 100% height = 100% div align=center />   
 DaPy - 享受数据挖掘之旅
 ====
 ![](https://img.shields.io/badge/Version-1.3.3-green.svg)  ![](https://img.shields.io/badge/Download-PyPi-green.svg)  ![](https://img.shields.io/badge/License-GNU-blue.svg)  
