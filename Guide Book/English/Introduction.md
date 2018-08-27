@@ -1,6 +1,6 @@
 ## Introduction
 #### What is DaPy?
-DaPy is a Python package providing efficiency and readily usable data structures designed by Python native data strucutres. 
+DaPy is a Python package providing efficiency and readily usable data structures designed by Python origin data strucutres. 
 It aims to be a fundamental and friendly tools for real-world data processing in Python. Additionally, we also built some common data analysis algorithms, both in statistics and machine learning, in the library, in order to help you testify your idea as soon as posible.  
 
 #### Why use DaPy?  
@@ -14,7 +14,7 @@ A recommend way to use DaPy is that using it while you do some pre-process of yo
 
 
 #### Who use DaPy?
-DaPy is a powerful and flexible data processing tools, therefore it suitable most of users who have the demand in data mining. DaPy can help a expert develop and testify their own method quickly, can help reserachers handletheir data conviniencetly, and help a novice make their dream come true. By the way, in Shanghai University of International Business and Economics, DaPy has been widely used in some programs.
+DaPy is a powerful and flexible data processing tools, therefore it suitable most of users who have the demand in data mining. DaPy can help a expert develop and testify their own method quickly, can help reserachers handle their data conviniencetly, and help a novice complete a heavy data task in a short time. By the way, in Shanghai University of International Business and Economics, DaPy has been widely used in some programs.
 
 
 #### How to use DaPy?
