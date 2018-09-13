@@ -2,7 +2,7 @@
  
 DaPy - Enjoy the Tour in Data Mining
 ====
-![](https://img.shields.io/badge/Version-1.3.3-green.svg)  ![](https://img.shields.io/badge/Download-PyPi-green.svg)  ![](https://img.shields.io/badge/License-GNU-blue.svg)
+![](https://img.shields.io/badge/Version-1.4.1-green.svg)  ![](https://img.shields.io/badge/Download-PyPi-green.svg)  ![](https://img.shields.io/badge/License-GNU-blue.svg)
 
 As a data analysis and processing library based on the original data structures in Python, **DaPy** is not only committed to save the time of data scientists and improve the efficiency of research, but also try it best to offer you a new experience in data science.
 
@@ -74,7 +74,7 @@ If you want to follow up the latest developments, you can visit [here](https://w
 	- Added `replace()` function for high-speed transering your data;
 	- Fixed some bugs;
 	- Optimized the speed in reading .csv file;
-	- Refactored the DaPy.machine_learn.MLP, which can be form with any layers with any active functions or any cells now;
+	- Refactored the DaPy.machine_learn.MLP, which can be formed with any layers, any active functions and any cells now;
 	- Refactored the DaPy.Frame and DaPy.SeriesSet in order to improve the efficiency;
 	- Supported to initialize Pandas and Numpy data structures;
 * V1.3.3 (2018-06-20)
