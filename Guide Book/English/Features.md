@@ -1,9 +1,9 @@
 ## Features
 **Convinience** and **efficiency** are the cornerstone of DaPy. 
 Since the very beginning, we have designed DaPy to Python's 
-native data structures as much as possible and we try to make 
+native data structures as much as possible and we struggle to make 
 it supports more Python syntax habits. Therefore you can 
-adapt to DaPy quickly, if you imagine you are opearting an Excel table.
+adapt to DaPy quickly, if you imagine you are opearting an 2-dimentions table.
 In addition, we do our best to simplify
 the formulas or mathematical models in it, in order to let you 
 implement your ideas fluently.   
@@ -70,4 +70,28 @@ And now, we have a new sheet named "tuition" that needs to be added into data an
 >>> data.add(tuition, 'Tuition')
 >>> data.save("new_students.xlsx")
 ``` 
-#### 
+#### Easily insert and delete a mount of data  
+As far as we are concerned, DaPy is a kind of data manage system, therefore, we learned from the thinking as 'CRUE'(Create, Retrieve, Update and Delete). We followed some of the 'list' data structure supported functions and extended them appropriately to fit the two-dimensional data structure. In this section, we will begin with make a simple introduction and then briefly review all these functions.
+
+```DaPy.DataSet.add()``` is the hightest level data function, which is used to add a new 2-dimentional data structure into DataSet structure. With this function, DataSet can support multiple sheets inside. Following example shows how to add a new sheet.
+```Python2
+>>> data = dp.DataSet([[1, 1, 1], [1, 1, 1]], 'sheet-1')
+>>> data.add([[2, 2, 2], [2, 2, 2]], 'sheet-2')
+>>> data.toframe()
+>>> data
+sheet:sheet-1
+=============
+ C_0 | C_1 | C_2
+-----+-----+-----
+  1  |  1  |  1  
+  1  |  1  |  1  
+  
+sheet:sheet-2
+=============
+ C_0 | C_1 | C_2
+-----+-----+-----
+  2  |  2  |  2  
+  2  |  2  |  2  
+```
+
+Now, we are going to introduce two pairs of functions to you. One of a pair of functions are ```append()``` and ```append_col()```, and which is obviously to see the meanings. ```append()``` can help you append a new record at the tail of each sheet and ```append_col()``` can support you to append a new variable at the tail of each sheet in DataSet. On the other hand, ```extend()``` and ```extend_col()`` were designed to add a mount of records or a mount of variables at the tail of each sheets in dataset.
