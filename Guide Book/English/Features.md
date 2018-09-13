@@ -8,7 +8,7 @@ In addition, we do our best to simplify
 the formulas or mathematical models in it, in order to let you 
 implement your ideas fluently.   
 
-#### Visibly manage diverse data
+#### Visually manage diverse data
 Every data scientist should have at least one experience in handling the needed datas 
 with multiple sources. It is inconvenient to manage or access datas with amount of 
 variables names. In this section, we will simply introduce a data container, which 
