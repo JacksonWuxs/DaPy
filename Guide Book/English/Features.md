@@ -94,4 +94,4 @@ sheet:sheet-2
   2  |  2  |  2  
 ```
 
-Now, we are going to introduce two pairs of functions to you. One of a pair of functions are ```append()``` and ```append_col()```, and which is obviously to see the meanings. ```append()``` can help you append a new record at the tail of each sheet and ```append_col()``` can support you to append a new variable at the tail of each sheet in DataSet. On the other hand, ```extend()``` and ```extend_col()``` were designed to add amount of records or a mount of variables at the tail of each sheets in dataset.
+Now, we are going to introduce two pairs of functions to you. One of a pair of functions are ```append()``` and ```append_col()```, and which is obviously to see the meanings. ```append()``` can help you append a new record at the tail of each sheet and ```append_col()``` can support you to append a new variable at the tail of each sheet in DataSet. On the other hand, ```extend()``` and ```extend_col()``` were designed to add amount of records or amount of variables at the tail of each sheets in dataset.
