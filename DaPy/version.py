@@ -5,7 +5,7 @@ This file is a part of DaPy library.
 __title__ = 'DaPy'
 __description__ = 'Enjoy the tour in data mining !'
 __url__ = 'https://github.com/JacksonWuxs/DaPy'
-__version__ = '1.4.1.0'
+__version__ = '1.4.1.2'
 __build__ = 0x021806
 __author__ = 'Xuansheng Wu'
 __author_email__ = 'wuxsmail@163.com'

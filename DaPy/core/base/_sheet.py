@@ -48,11 +48,12 @@ class _base_sheet(object):
             self._columns = []
             self._dim = dims(0, 0)
 
-        elif not obj and columns is not None:
+        elif obj and columns is not None:
             if isinstance(columns, str):
                 columns = [columns,]
-            self._dim = dims(0, len(columns))
-            self._init_col_name(columns)
+            self._dim, self._columns = dims(0, 0), []
+            for name in columns:
+                self.append_col([], name)
 
         elif isinstance(obj, SeriesSet):
             self._init_col(obj)
@@ -423,7 +424,7 @@ class _base_sheet(object):
         freader = reader(f, delimiter=sep)
         col = max([len(line) for l_n, line in enumerate(freader)])
         self._miss_value = [0] * col
-        self._dim = dims(l_n, col)
+        self._dim = dims(l_n+1, col)
         if isinstance(prefer_type, str):
             _col_types = [str] * col
         else:
@@ -448,9 +449,10 @@ class _base_sheet(object):
             if all(_col_types):
                 break
         f.seek(0)
-        for m, record in enumerate(freader):
-            if m >= first_line - 1 :
-                break
+        if first_line != 0:
+            for m, record in enumerate(freader):
+                if m >= first_line - 1 :
+                    break
         return freader, tuple(_col_types), miss_symbol, prefer_type
 
     def _check_transform_value(self, i, item, _col_types,
@@ -1646,6 +1648,7 @@ class Frame(_base_sheet):
         with open(addr, 'r') as f:
             freader, _col_types, miss_symbol, prefer = self._check_read_text(f, **kwrd)
             self._data = [0] * self._dim.Ln
+
             try:
                 for m, record in enumerate(freader):
                     line = [self._check_transform_value(
