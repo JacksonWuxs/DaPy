@@ -2,7 +2,7 @@ from os import path
 from string import atof, atoi, strip
 from distutils.util import strtobool
 
-__all__ = ['read', 'encode', 'str2value', 'parse_addr']
+__all__ = ['read', 'save', 'encode']
 
 TRANS_FUN_SET = {float: atof,
                  int: atoi,

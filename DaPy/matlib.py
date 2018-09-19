@@ -1,20 +1,24 @@
-from .core import Matrix, is_math, is_iter
+from core import Matrix, is_math, is_seq, is_iter
+from collections import namedtuple, deque, Iterable, deque
+from datetime import datetime
+from time import struct_time
+from array import array
 import math
+
+__all__ = ['describe']
 
 def multiply(m1, m2):
     if is_math(m1) and is_math(m2):
         return m1 * m2
-    
     if isinstance(m1, Matrix) or isinstance(m2, Matrix):
         return m1 * m2
-
     return Matrix(m1) * m2
     
-
 def dot(matrix_1, matrix_2):
-    try:
+    if hasattr(matrix_1, 'dot'):
         return matrix_1.dot(matrix_2)
-    except AttributeError:
+
+    try:
         col_size_1 = len(matrix_1[0])
         col_size_2 = len(matrix_2[0])
         line_size_1 = len(matrix_1)
@@ -56,4 +60,3 @@ def exp(other):
         return new_
 
     raise TypeError('expects an iterable or numeric for exp(), got %s'%type(other))
-

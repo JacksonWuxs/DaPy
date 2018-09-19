@@ -7,7 +7,6 @@ from _numeric import describe, mean, _sum, log
 from _function import is_seq, is_iter, is_math, is_value, get_sorted_index
 from _numeric import corr as f_c
 from DaPy.io import str2value, TRANS_FUN_SET
-from warnings import warn
 from operator import itemgetter
 from os import path
 from random import random, shuffle
@@ -44,11 +43,11 @@ class _base_sheet(object):
         self._miss_value = []
         miss_symbol = self._check_miss_symbol(miss_symbol)
 
-        if not obj and columns is None:
+        if not obj and not columns:
             self._columns = []
             self._dim = dims(0, 0)
 
-        elif obj and columns is not None:
+        elif not obj and columns is not None:
             if isinstance(columns, str):
                 columns = [columns,]
             self._dim, self._columns = dims(0, 0), []
@@ -346,7 +345,6 @@ class _base_sheet(object):
     def _check_col_new_name(self, new_name):
         if not new_name:
             return self._check_col_new_name('C_%d' % len(self._columns))
-
         if new_name not in self._columns:
             return new_name
 
@@ -380,7 +378,8 @@ class _base_sheet(object):
         try:
             pos1, pos2 = area
         except ValueError:
-            raise AttributeError('Area should be represented by two tuples, or keyword: "all".')
+            raise AttributeError('Area should be represented by two tuples, '+\
+                                 'or keyword: "all".')
 
         def _check_pos(x, y):
             if isinstance(y, str) and y in self._columns:
@@ -463,7 +462,6 @@ class _base_sheet(object):
                 return self._miss_symbol
             return _col_types[i](item)
         except ValueError:
-            warn('column %d has different type.' % i)
             return str2value(item, prefer_type)
 
 
@@ -1752,21 +1750,20 @@ class Frame(_base_sheet):
 
     def show(self, lines=all):
         if not isinstance(lines, int) and lines is not all:
-            raise TypeError('parameter `lines` should be a integer.')
+            raise TypeError('parameter `lines` should be an int() or keyword `all`.')
 
         if lines >= self._dim.Ln:
             lines = all
 
-        temporary_series = [[title, ] for title in self._columns]
         if lines is all:
             temporary_data = self._data
         else:
             temporary_data = self._data[:lines]
             temporary_data.extend(self._data[-lines:])
 
-        for line in temporary_data:
-            for i, value in enumerate(line):
-                temporary_series[i].append(str(value))
+        temporary_series = [[title, ] for title in self._columns]
+        for i, col in enumerate(zip(*temporary_data)):
+            temporary_series[i].extend(map(str, col))
 
         column_size = [len(max(col, key=len)) for col in temporary_series]
 

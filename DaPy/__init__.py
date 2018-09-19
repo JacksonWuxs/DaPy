@@ -21,15 +21,15 @@ along with this program.  If not, see https:\\www.gnu.org\licenses.
 from version import __version__, __author__, __copyright__
 
 __all__ = [ 'datasets', 'Frame', 'SeriesSet', 'machine_learn',
-            'mathematical_statistics', 'ones', 'zeros', 
+            'statis', 'ones', 'zeros', 
            'DataSet', 'Table', 'Matrix', 'cov', 'corr', 'frequency',
            'quantiles', 'sum', 'is_iter', 'read', 'encode',
            'distribution','describe', 'mean', 'exp', 'dot', 'is_math']
 
 from os.path import dirname, join
-from core import (cov, corr, distribution, describe, sum,
-                  Frame, SeriesSet, DataSet, 
-                  frequency, quantiles, mean, is_math, is_iter)
+from core import (#cov, corr, distribution, describe, sum,
+                  Frame, SeriesSet, DataSet, )
+                 # frequency, quantiles, mean, is_math, is_iter)
 from core import Matrix as mat
 from matlib import exp, dot, multiply
 from io import read

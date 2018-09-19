@@ -10,6 +10,8 @@ __all__ = ['cov', 'corr', 'frequency', 'quantiles', '_sum',
 
 def log(data):
     if is_seq(data):
+        if is_seq(data[0]):
+            return [map(math.log, record) for record in data]
         return map(math.log, data)
     return math.log(data)
 
@@ -20,7 +22,13 @@ def _sum(data, axis=None):
     Parameters
     ----------
     data : array_like
-        Elements to sum.
+        elements to sum.
+
+    axis : None, 0, 1
+        determine how to summary this data.
+        None - summary all elements into one value,
+        0 - summary the elements in each variable,
+        1 - summary the elements in each record.
 
     Return
     ------
@@ -31,11 +39,14 @@ def _sum(data, axis=None):
     --------
     >>> dp.sum([0.5, 1.5])
     2.0
-    >>> dp.sum([[0.5, 0.7], [0.2, 1.5]])
+    >>> dp.sum([[0.5, 0.7],
+                [0.2, 1.5]])
     2.9
-    >>> dp.sum([[0, 1], [0, 5]], axis=1)
+    >>> dp.sum([[0, 1],
+                [0, 5]], axis=1) # sum of each record
     [1, 5]
-    >>> dp.sum([[0, 1], [0, 5]], axis=0)
+    >>> dp.sum([[0, 1],
+                [0, 5]], axis=0) # sum of each variable
     [0, 6]
     '''
     if axis is None:
@@ -49,15 +60,55 @@ def _sum(data, axis=None):
     if axis == 0:
         return _sum([line for line in zip(*data)], axis=1)
 
-def mean(data):
-    summary = _sum(data)
-    if hasattr(data, 'dim'):
-        size = data.dim.Ln * data.dim.Col
-    elif is_iter(data[0]):
-            size = len(data) * len(data[0])
+def mean(data, axis=None):
+    '''average of sequence elements.
+
+    Parameters
+    ----------
+    data : array_like
+        elements to average.
+
+    axis : None, 0, 1
+        determine how to summary this data.
+        None - average value of all elements into one value,
+        0 - average value of the elements in each variable,
+        1 - average value of the elements in each record.
+
+    Return
+    ------
+    number : number or numbers in list
+        the mean of data
+
+    Examples
+    --------
+    >>> a = [[1, 2], [3, 4]]
+    >>> dp.mean(a)
+    2.5
+    >>> dp.mean([[0.5, 0.7],
+                 [0.2, 1.5]])
+    0.725
+    >>> dp.sum([[0, 1],
+                [0, 5]], axis=1) # mean of each record
+    [0.5, 2.5]
+    >>> dp.sum([[0, 1],
+                [0, 5]], axis=0) # mean of each variable
+    [0.0, 3.0]
+    '''
+    if axis is None:
+        if hasattr(data, 'shape'):
+            return float(_sum(data, axis)) / _sum(data.shape)
+        if is_seq(data):
+            if is_seq(data[0]):
+                return float(_sum(data, axis)) / (len(data[0]) + len(data))
+            return float(_sum(data, axis)) / len(data)
+
+    if hasattr(data, 'shape'):
+        size = float(data.shape[axis])
+    elif axis == 1:
+        size = float(len(data))
     else:
-        size = len(data)
-    return summary/float(size)
+        size = float(len(data[0]))
+    return [value / size for value in _sum(data, axis)]
 
 def cov(data_1, data_2):
     '''
