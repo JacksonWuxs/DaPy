@@ -30,7 +30,7 @@ implement your ideas fluently.
 
 * Here are just a few of the things that DaPy does well:  
 	- [Efficiently manage diverse data with clearly perceiving approach](https://github.com/JacksonWuxs/DaPy/blob/master/Guide%20Book/English/Features.md#visibly-manage-diverse-data)
-	- [Quick insert and delete a mount of new records or new variables]
+	- [Quick insert and delete a mount of new records or new variables](https://github.com/JacksonWuxs/DaPy/blob/master/Guide%20Book/English/Features.md#easily-insert-and-delete-a-large-number-of-data)
 	- [Make it easy to access a part of your dataset, not only by index or variable names, but also by specefic conditions]
 	- [Functional IO tools for loading data from CSV files, Excel files, database and even SPSS files]
 	- [Sort your records by multiple conditions]
