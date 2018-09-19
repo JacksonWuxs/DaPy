@@ -29,7 +29,7 @@ data = dp.Frame([
 Now, our task is picking out following columns: 'B_col', 'C_col', 'D_col', and 'F_col'. We find that 'B_col', 'C_col' and 'D_col' are connected together. Think about the `slice` using in native Python structures such as list. Here is what we do.
 ```Python
 >>> data['B_col': 'D_col', 'F_col']
-
+```
 
 ## Contents  
 [Features]
