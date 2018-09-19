@@ -95,3 +95,26 @@ sheet:sheet-2
 ```
 
 Now, we are going to introduce two pairs of functions to you. One of a pair of functions are ```append()``` and ```append_col()```, and which is obviously to see the meanings. ```append()``` can help you append a new record at the tail of each sheet and ```append_col()``` can support you to append a new variable at the tail of each sheet in DataSet. On the other hand, ```extend()``` and ```extend_col()``` were designed to add amount of records or amount of variables at the tail of each sheets in dataset.
+```Python2
+>>> from DaPy import datasets
+>>> example = datasets.example()
+>>> example.append([None, None, None, None])
+>>> example.append_col(range(example.shape[0].Ln), 'New_col')
+>>> example.show()
+sheet:sample
+============
+ A_col | B_col | C_col | D_col | New_col
+-------+-------+-------+-------+---------
+   3   |   2   |   1   |   4   |    0    
+   4   |   3   |   2   |   2   |    1    
+   1   |   3   |   4   |   2   |    2    
+   3   |   3   |   1   |   2   |    3    
+   4   |   5   |   4   |   3   |    4    
+   2   |   1   |   1   |   5   |    5    
+   6   |   4   |   3   |   2   |    6    
+   4   |   7   |   8   |   3   |    7    
+   1   |   9   |   8   |   3   |    8    
+   3   |   2   |   6   |   5   |    9    
+   2   |   9   |   1   |   5   |    10   
+   3   |   4   |   1   |   6   |    11   
+  None |  None |  None |  None |    12   
