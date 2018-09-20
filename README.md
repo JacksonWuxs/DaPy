@@ -1,4 +1,4 @@
-<img src="https://github.com/JacksonWuxs/DaPy/blob/master/doc/material/logo.bmp" width = 100% height = 100% div align=center />
+<img src="https://github.com/JacksonWuxs/DaPy/blob/master/doc/material/logo.bmp" width = 100% height = 100%>
  
 DaPy - Enjoy the Tour in Data Mining
 ====

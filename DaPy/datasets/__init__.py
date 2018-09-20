@@ -19,6 +19,11 @@ def iris():
     return data, DESC
 
 def example():
-    file_path = join(module_path, 'sample.csv')
-    data = read(file_path)
+    file_path = join(module_path, 'example')
+    data = read(join(file_path, 'sample.csv'))
+    return data
+
+def adult():
+    file_path = join(module_path, 'adult')
+    data = read(join(file_path, 'data.csv'))
     return data

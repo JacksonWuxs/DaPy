@@ -1051,7 +1051,7 @@ class DataSet(object):
                          'because %s'%e)
 
     def merge(self, other, self_key=0, other_key=0):
-        '''merge another data to exist one.
+        '''laterally merge another data to exist sheet. 
 
         In this function, people could use this function to combind two
         datasets into one in light of two keywords. It will try to match the
@@ -1524,7 +1524,7 @@ class DataSet(object):
                 warn('sheet:%s can not transform to Matrix.'%self._sheets[i])
             self._types[i] = Matrix
 
-    def show(self, lines=all):
+    def show(self, lines='all'):
         for i, data in enumerate(self._data):
             print('sheet:' + self._sheets[i])
             print('=' * (len(self._sheets[i]) + 6))

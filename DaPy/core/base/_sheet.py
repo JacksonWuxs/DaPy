@@ -423,7 +423,9 @@ class _base_sheet(object):
         freader = reader(f, delimiter=sep)
         col = max([len(line) for l_n, line in enumerate(freader)])
         self._miss_value = [0] * col
-        self._dim = dims(l_n+1, col)
+        if title_line < 0:
+            l_n -= 1
+        self._dim = dims(l_n, col)
         if isinstance(prefer_type, str):
             _col_types = [str] * col
         else:
@@ -463,6 +465,40 @@ class _base_sheet(object):
             return _col_types[i](item)
         except ValueError:
             return str2value(item, prefer_type)
+
+    def show(self, lines='all'):
+        if not isinstance(lines, int) and not isinstance(lines, str):
+            raise TypeError('parameter `lines` should be an int() or keyword `all`.')
+
+        if lines == 'all' or 2*lines >= self._dim.Ln:
+            lines, omit = -1, 0
+            if isinstance(self._data, list):
+                temporary_data = self._data
+            else:
+                temporary_data = zip(*[sequence for sequence in self.values()])
+        elif lines <= 0:
+            raise ValueError('parameter `lines` should be greater than 0.')
+        else:
+            omit = self._dim.Ln - 2 * lines
+            temporary_data = self[:lines]
+            temporary_data.extend(self[-lines:])
+        temporary_series = [[title, ] for title in self._columns]
+        for i, col in enumerate(zip(*temporary_data)):
+            temporary_series[i].extend(map(str, col))
+
+        column_size = [len(max(col, key=len)) for col in temporary_series]
+        frame = ' ' + ' | '.join([title.center(column_size[i]) for i, title in \
+                         enumerate(self._columns)]) + '\n'
+        frame += '+'.join(['-' * (size + 2) for size in column_size]) + '\n'
+
+        for i, item in enumerate(temporary_data):
+            if i == lines:
+                frame += ('.. Omit %d Ln ..'%omit).center(len(line)) + '\n'
+            line = ''
+            for i, value in enumerate(item):
+                line += ' ' + str(value).center(column_size[i]) + ' ' + '|'
+            frame += line[:-1] + '\n'
+        return frame[:-1]
 
 
 class SeriesSet(_base_sheet):
@@ -785,7 +821,7 @@ class SeriesSet(_base_sheet):
         '''
         if isinstance(item, SeriesSet):
             for title, sequence in item.items():
-                mv, sequence = self._check_sequence_type(sequence, item.miss_symbol)
+                mv = sequence.count(item.miss_symbol)
                 if title not in self._columns:
                     self._columns.append(self._check_col_new_name(title))
                     self._miss_value.append(self._dim.Ln + mv)
@@ -1161,7 +1197,7 @@ class SeriesSet(_base_sheet):
                 warn('since the limit of memory, DaPy can not read the whole '+\
                      'file, stop in the line %d' % m)
 
-        self._dim = dims(m + 1, self._dim.Col)
+        self._dim = dims(m+1, self._dim.Col)
         self._data = OrderedDict(zip(self._columns, datas))
 
     def values(self):
@@ -1220,24 +1256,6 @@ class SeriesSet(_base_sheet):
         new_index = range(self._dim.Ln)
         shuffle(new_index)
         self.__arrange_by_index(new_index)
-
-    def show(self, lines=all):
-        if not isinstance(lines, int) and lines is not all:
-            raise TypeError('parameter `lines` should be a integer.')
-
-        if lines >= self._dim.Ln:
-            lines = all
-
-        if lines is all:
-            temp = Frame(self)
-
-        else:
-            temp = Frame(self[: lines // 2], self._columns)
-            temp.extend(self[-lines // 2:])
-
-        info = temp.show(all)
-        del temp
-        return info
 
 
 class Frame(_base_sheet):
@@ -1684,7 +1702,7 @@ class Frame(_base_sheet):
                 'for using details.')
 
     def sort(self, *orders):
-        '''S.sort(('A_col', 'DESC'), ('B_col', 'ASC')) --> None
+        '''S.sort(('A_col', 'DESC'), ('B_col', 'ASC')) --> sort your records.
         sort the dataset in light of the conditions.
         '''
         for each in orders:
@@ -1747,49 +1765,6 @@ class Frame(_base_sheet):
 
     def shuffles(self):
         shuffle(self._data)
-
-    def show(self, lines=all):
-        if not isinstance(lines, int) and lines is not all:
-            raise TypeError('parameter `lines` should be an int() or keyword `all`.')
-
-        if lines >= self._dim.Ln:
-            lines = all
-
-        if lines is all:
-            temporary_data = self._data
-        else:
-            temporary_data = self._data[:lines]
-            temporary_data.extend(self._data[-lines:])
-
-        temporary_series = [[title, ] for title in self._columns]
-        for i, col in enumerate(zip(*temporary_data)):
-            temporary_series[i].extend(map(str, col))
-
-        column_size = [len(max(col, key=len)) for col in temporary_series]
-
-        frame = ' ' + ' | '.join([title.center(column_size[i]) for i, title in \
-                         enumerate(self._columns)]) + '\n'
-        frame += '+'.join(['-' * (size + 2) for size in column_size]) + '\n'
-
-        if lines is not all:
-            for item in temporary_data[:lines // 2]:
-                line = ''
-                for i, value in enumerate(item):
-                    line += ' ' + str(value).center(column_size[i]) + ' ' + '|'
-                frame += line[:-1] + '\n'
-            frame += ('.. Omit %d Ln ..'%(self._dim.Ln - 20)).center(len(line)) + '\n'
-            for item in temporary_data[-lines // 2:]:
-                line = ''
-                for i, value in enumerate(item):
-                    line += ' ' + str(value).center(column_size[i]) + ' ' + '|'
-                frame += line[:-1] + '\n'
-        else:
-            for item in temporary_data:
-                line = ''
-                for i, value in enumerate(item):
-                    line += ' ' + str(value).center(column_size[i]) + ' ' + '|'
-                frame += line[:-1] + '\n'
-        return frame[:-1]
 
     def values(self):
         for sequence in zip(*self._data):
