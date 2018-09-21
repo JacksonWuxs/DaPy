@@ -127,6 +127,9 @@ class _base_sheet(object):
     def miss_value(self):
         return sum(self._miss_value)
 
+    def __getattr__(self, name):
+        return self.__getitem__(name)
+
     def __len__(self):
         return self._dim.Ln
 

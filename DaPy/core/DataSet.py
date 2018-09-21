@@ -55,7 +55,7 @@ class DataSet(object):
      Col_2 |  0   |  3  |  4  | 3.50 | 0.71 | list
     ==============================================
     '''
-    __all__ = ['data', 'columns', 'sheets','info', 'dim', 'append', 'append_col',
+    __all__ = ['data', 'columns', 'sheets','info', 'append', 'append_col',
                'count', 'count_element', 'drop_miss_value',
                'extend', 'insert', 'insert_col', 'pick', 'pop', 'pop_col',
                'normalized', 'read', 'reverse', 'replace', 'shuffles','corr',
@@ -175,6 +175,9 @@ class DataSet(object):
                 print('%s has no info() function'%type(data))
         return None
 
+    def __getattr__(self, name):
+        return self.__getitem__(name)
+
     def __trans_str(self, sheet):
         if sheet not in self._sheets:
             raise IndexError("'%s' is not a sheet name"%sheet)
@@ -288,7 +291,7 @@ class DataSet(object):
                          'represented titles or integer which is less than the ' +\
                          'DataSet size.')
 
-    def __slice2int(self, i, j):
+    def _slice2int(self, i, j):
         if i in self._sheets:
             i = self._sheets.index(i)
         elif i is None:
@@ -318,7 +321,7 @@ class DataSet(object):
         if len(self._data) == 1:
             return DataSet(self._data[0][i:j], self._sheets[0])
         
-        i, j = self.__slice2int(i, j)
+        i, j = self._slice2int(i, j)
         return DataSet(self._data[i: j + 1], self._sheets[i: j + 1])
 
     def __setitem__(self, key, value):
@@ -352,7 +355,7 @@ class DataSet(object):
                 del data[start: stop]
             return
         
-        start, stop = self.__slice2int(start, stop)
+        start, stop = self._slice2int(start, stop)
         del self._data[start: stop + 1]
 
     def __delitem__(self, key):
