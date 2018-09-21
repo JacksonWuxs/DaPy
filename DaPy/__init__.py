@@ -32,7 +32,7 @@ from core import (#cov, corr, distribution, describe, sum,
                  # frequency, quantiles, mean, is_math, is_iter)
 from core import Matrix as mat
 from matlib import exp, dot, multiply
-from io import read
+from io import read, encode
 from copy import deepcopy
 
 try:

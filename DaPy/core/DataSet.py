@@ -5,9 +5,10 @@ try:
 except IOError:
     import Pickle as pickle
 from base import is_value, is_iter, is_seq, SeriesSet, Frame, Matrix
-from DaPy.io import parse_addr
+from io import parse_addr, parse_sql, parse_excel, parse_sav
 from warnings import warn
-from os import path
+from os.path import isfile
+from re import search as re_search
 
 __all__ = ['DataSet']
 
@@ -55,11 +56,11 @@ class DataSet(object):
      Col_2 |  0   |  3  |  4  | 3.50 | 0.71 | list
     ==============================================
     '''
-    __all__ = ['data', 'columns', 'sheets','info', 'append', 'append_col',
-               'count', 'count_element', 'drop_miss_value',
+    __all__ = ['data', 'columns', 'sheets','info', 'add', 'append', 'append_col', 'info',
+               'count', 'count_element', 'drop_miss_value', 'size', 'shape',
                'extend', 'insert', 'insert_col', 'pick', 'pop', 'pop_col',
                'normalized', 'read', 'reverse', 'replace', 'shuffles','corr',
-               'sort', 'save', 'tomat', 'toframe', 'tocol', 'show']
+               'sort', 'save', 'tomat', 'toframe', 'tocol', 'show', ]
 
     def __init__(self, obj=None, sheet='sheet0'):
         '''
@@ -143,11 +144,11 @@ class DataSet(object):
     @sheets.setter
     def sheets(self, other):
         if isinstance(other, str):
-            self._sheets = [other + '%d'%i for i in range(1, len(self._data) + 1)]
+            self._sheets = [self._check_sheet_new_name(other) for i in range(len(self._sheets))]
 
         elif is_iter(other):
             if len(set(other)) == len(self._sheets):
-                self._sheets = [str(item) for item in other]
+                self._sheets = [self._check_sheet_new_name(item) for item in other]
             else:
                 raise ValueError('the names size does not match the size of '+\
                                  'sheets inside the DataSet')
@@ -386,6 +387,18 @@ class DataSet(object):
         else:
             self._data.reverse()
 
+    def _check_sheet_new_name(self, new_name):
+        if not new_name:
+            return self._check_sheet_new_name('sheet%d'%len(self._sheets))
+        if new_name not in self._sheets:
+            return new_name
+
+        start_no, titles = 1, ','.join(self._sheets) + ','
+        while True:
+            if not re_search('%s_%d,' % (new_name, start_no), titles):
+                return '%s_%d' % (new_name, start_no)
+            start_no += 1
+
     def add(self, item, sheet=None):
         ''' add a new sheet to this dataset
 
@@ -425,37 +438,18 @@ class DataSet(object):
         ''' 
         if isinstance(item, DataSet):
             if sheet and len(sheet) == len(item._sheets):
-                uncheck_new_sheets = sheet
+                new_sheets = [self._check_sheet_new_name(sheet)]
             else:
-                uncheck_new_sheets = item._sheets
-                
-            new_sheets = list()
-            for sheet_name in uncheck_new_sheets:
-                while sheet_name in self._sheets:
-                    sheet_name += '_new'
-                new_sheets.append(sheet_name)
-                
+                new_sheets = [self._check_sheet_new_name(sheet_name) \
+                          for sheet_name in item._sheets]
             self._data.extend(item._data)
             self._sheets.extend(new_sheets)
             self._types.extend(item._types)
             
-        elif isinstance(item, (Frame, Matrix, SeriesSet)):
-            self._data.append(item)
-            self._types.append(type(item))
-            if not sheet:
-                sheet = 'sheet%d'%len(self._sheets)
-            while sheet in self._sheets:
-                sheet += '_%d'%len(self._sheets)
-            self._sheets.append(sheet)
-
         else:
             self._data.append(item)
-            if not sheet:
-                sheet = 'sheet%d'%len(self._sheets)
-            while sheet in self._sheets:
-                sheet += '_%d'%len(self._sheets)
-            self._sheets.append(sheet)
-            self._types.append(list)
+            self._types.append(type(item))
+            self._sheets.append(self._check_sheet_new_name(sheet))
 
     def append(self, item, miss_symbol=None):
         '''Append a new record ``item`` at the tail of each sheet.
@@ -1133,110 +1127,31 @@ class DataSet(object):
         >>> data = dp.read('your_data_file.csv')
         >>> data.read('another_data_file.xlsx')
         '''
+        if not isfile(addr):
+            raise IOError('can not find the local file %s.'%fname)
         miss_symbol = kward.get('miss_symbol', 'NA')
         miss_value = kward.get('miss_value', None)
         sheet_name = kward.get('sheet_name', None)
-
-        def create_dataset(data, titles, miss_symbol, miss_value):
-            if dtype.upper() == 'COL' or dtype.upper() == 'SERIESSET':
-                self._data.append(SeriesSet(data, titles,
-                                            miss_symbol, miss_value))
-                self._types.append(SeriesSet)
-
-            elif dtype.upper() == 'FRAME':
-                self._data.append(Frame(data, titles,
-                                        miss_symbol, miss_value))
-                self._types.append(Frame)
-                
-            elif dtype.upper() == 'MATRIX':
-                self._data.append(Matrix(data, titles))
-                self._types.append(Matrix)
-            else:
-                raise RuntimeError('unrecognized symbol of data type')
-            
         fpath, fname, fbase, ftype = parse_addr(addr)
+        if sheet_name is None:
+            sheet_name = fbase
+        
         if ftype == 'db':
-            try:
-                import sqlite3 as sql3
-            except ImportError:
-                raise ImportError('DaPy uses `sqlite3` to access a database.')
-
-            if not path.isfile(addr):
-                raise IOError('can not find the database %s'%fname)
-            
-            with sql3.connect(addr) as conn:
-                cur = conn.cursor()
-                cur.execute('SELECT name FROM sqlite_master WHERE type="table"')
-                table_list = cur.fetchall()
-                
-                for table in table_list:
-                    table = str(table[0])
-                    cur.execute('SELECT * FROM %s'%table)
-                    data = cur.fetchall()
-
-                    cur.execute('PRAGMA table_info(%s)'%table)
-                    titles = [title[1] for title in cur.fetchall()]
-                    try:
-                        create_dataset(data, titles, miss_symbol, miss_value)
-                    except ValueError:
-                        warn('%s is empty.'%titles)
-                    
-                    while table in self._sheets:
-                        table += '_d'%len(self._sheets)
-                    self._sheets.append(table)
+            for sheet, name in parse_sql(addr, fname, dtype, miss_symbol, miss_value):
+                self.add(sheet, name)
 
         elif ftype == 'sav':
-            try:
-                import savReaderWriter
-            except ImportError:
-                raise ImportError('DaPy uses `savReaderWriter` to open a .sav file')
-
-            with savReaderWriter.SavReader(addr) as reader:
-                titles = reader.getSavFileInfo()[2]
-                data = list(reader)
-                create_dataset(data, titles, miss_symbol, miss_value)
-                if sheet_name:
-                    table = sheet_name
-                else:
-                    table = fbase
-                while table in self._sheets:
-                    table += '_%d'%len(self._sheets)
-                self._sheets.append(table)
+            if sheet_name:
+                fbase = sheet_name
+            self.add(parse_sav(addr, fname, dtype, miss_symbol, miss_value),
+                     sheet_name)
                 
         elif ftype == 'xls' or ftype == 'xlsx':
-            try:
-                import xlrd
-            except ImportError:
-                raise ImportError('DaPy uses `xlrd` to parse a %s file' % ftype)
-
             first_line = kward.get('first_line', 1)
             title_line = kward.get('title_line', 0)
-            book = xlrd.open_workbook(addr)
-            for sheet in book.sheets():
-                data = [0] * (sheet.nrows - first_line)
-                for index, i in enumerate(range(first_line, sheet.nrows)):
-                    data[index] = [cell.value for cell in sheet.row(i)]
-
-                if title_line >= 0:
-                    try:
-                        titles = [cell.value for cell in sheet.row(title_line)]
-                    except IndexError:
-                        titles = None
-                else:
-                    titles = None
-                    
-                try:
-                    create_dataset(data, titles, miss_symbol, miss_value)
-                except ValueError:
-                    warn('%s is empty.'%sheet)
-                
-                if sheet_name:
-                    table = str(sheet_name) + sheet.name
-                else:
-                    table = sheet.name
-                while table in self._sheets:
-                    table += '_%d'%len(self._sheets)
-                self._sheets.append(table)
+            for sheet, name in parse_excel(dtype, addr, first_line, title_line,
+                                           miss_symbol, miss_value):
+                self.add(sheet, name)
 
         elif ftype == 'txt' or ftype == 'csv':
             sep = kward.get('sep', ',')
@@ -1272,7 +1187,7 @@ class DataSet(object):
             self._sheets.append(table)
 
         elif ftype == 'pkl':
-            self.add(pickle.load(open(addr, 'rb')))
+            self.add(pickle.load(open(addr, 'rb')), sheet_name)
             
         else:
             raise ValueError('DaPy singly supports file types as'+\
