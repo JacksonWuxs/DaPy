@@ -117,4 +117,28 @@ sheet:sample
    3   |   2   |   6   |   5   |    9    
    2   |   9   |   1   |   5   |    10   
    3   |   4   |   1   |   6   |    11   
+  None |  None |  None |  None |    12  
+>>>
+>>> # we will add 3 new records at the same time, and especially the third record has miss values.
+>>> example.extend([ 
+	['A', 'A', 'A', 'A', 'A'],
+	['B', 'B', 'B', 'B', 'B'],
+	['C', 'C', 'C']])
+>>> example.show(5)
+sheet:sample
+============
+ A_col | B_col | C_col | D_col | New_col
+-------+-------+-------+-------+---------
+   3   |   2   |   1   |   4   |    0    
+   4   |   3   |   2   |   2   |    1    
+   1   |   3   |   4   |   2   |    2    
+   3   |   3   |   1   |   2   |    3    
+   4   |   5   |   4   |   3   |    4    
+             .. Omit 6 Ln ..              
+   3   |   4   |   1   |   6   |    11   
   None |  None |  None |  None |    12   
+   A   |   A   |   A   |   A   |    A    
+   B   |   B   |   B   |   B   |    B    
+   C   |   C   |   C   |  None |   None  
+ ```
+>>>
