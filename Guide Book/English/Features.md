@@ -75,8 +75,8 @@ As far as we are concerned, DaPy is a kind of data manage system, therefore, we 
 
 ```DaPy.DataSet.add()``` is the hightest level data function, which is used to add a new 2-dimentional data structure into DataSet structure. With this function, DataSet can support multiple sheets inside. Following example shows how to add a new sheet.
 ```Python2
->>> data = dp.DataSet([[1, 1, 1], [1, 1, 1]], 'sheet-1')
->>> data.add([[2, 2, 2], [2, 2, 2]], 'sheet-2')
+>>> data = dp.DataSet(obj=[[1, 1, 1], [1, 1, 1]], sheet='sheet-1')
+>>> data.add(item=[[2, 2, 2], [2, 2, 2]], sheet='sheet-2')
 >>> data.toframe()
 >>> data
 sheet:sheet-1
@@ -101,7 +101,8 @@ One of the pairs of functions are ```append()``` and ```append_col()```, and whi
 >>> from DaPy import datasets
 >>> example = datasets.example()
 >>> example.append([None, None, None, None])
->>> example.append_col(range(example.shape[0].Ln), 'New_col')
+>>> example.append_col(series=range(example.shape[0].Ln), 
+		       variable_name='New_col')
 >>> example.show()
 sheet:sample
 ============
