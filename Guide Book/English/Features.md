@@ -22,8 +22,8 @@ that is *DataSet*.
 Here is a example how does DaPy work basically to manage diverse dataset. We have prepared a [students.xlsx](http://www.wuxsweb.cn/Library/DaPy&Examples_data/students.xlsx) file as a example, which has 3 sheets insides, named "Info", "Course", and "Scholarship". Now, we will use DaPy to read this file into a DataSet object and access the data.
 ```Python2
 >>> import DaPy as dp
->>> data = dp.read('students.xlsx', 'frame')
->>> data
+>>> data = dp.read('students.xlsx')
+>>> data.show()
 sheet:Info
 ==========
    ID   |   Name  | Gender | Age 
