@@ -71,7 +71,7 @@ And now, we have a new sheet named "tuition" that needs to be added into data an
 >>> data.save("new_students.xlsx")
 ``` 
 #### Easily insert and delete a large number of data  
-As far as we are concerned, DaPy is a kind of data manage system, therefore, we learned from the thinking as 'CRUE'(Create, Retrieve, Update and Delete). We followed some of the 'list' data structure supported functions and extended them appropriately to fit the two-dimensional data structure. In this section, we will begin with briefly review all these functions.
+As far as we are concerned, DaPy is a kind of data manage system, therefore, we learned from the thinking as 'CRUE'(Create, Retrieve, Update and Delete). We followed some of the 'list()' structure supported functions and extended them appropriately to fit the two-dimensional data structure. In this section, we would briefly review all these functions.
 
 ```DaPy.DataSet.add()``` is the hightest level data function, which is used to add a new 2-dimentional data structure into DataSet structure. With this function, DataSet can support multiple sheets inside. Following example shows how to add a new sheet.
 ```Python2
@@ -94,7 +94,9 @@ sheet:sheet-2
   2  |  2  |  2  
 ```
 
-Now, we are going to introduce two pairs of functions to you. One of a pair of functions are ```append()``` and ```append_col()```, and which is obviously to see the meanings. ```append()``` can help you append a new record at the tail of each sheet and ```append_col()``` can support you to append a new variable at the tail of each sheet in DataSet. On the other hand, ```extend()``` and ```extend_col()``` were designed to add amount of records or amount of variables at the tail of each sheets in dataset.
+First of all, we are going to introduce two pairs of functions to you. 
+
+One of the pairs of functions are ```append()``` and ```append_col()```, and which are obviously to see the meanings. ```append()``` can help you append a new record at the tail of each sheet and ```append_col()``` can support you to append a new variable at the tail of each sheet in DataSet.
 ```Python2
 >>> from DaPy import datasets
 >>> example = datasets.example()
@@ -118,8 +120,9 @@ sheet:sample
    2   |   9   |   1   |   5   |    10   
    3   |   4   |   1   |   6   |    11   
   None |  None |  None |  None |    12  
->>>
->>> # we will add 3 new records at the same time, and especially the third record has miss values.
+```
+On the other hand, ```extend()``` and ```extend_col()``` were designed to add amount of records or amount of variables at the tail of each sheets in dataset. We added 3 new records at the same time, and especially the third record had miss values.
+```Python2
 >>> example.extend([ 
 	['A', 'A', 'A', 'A', 'A'],
 	['B', 'B', 'B', 'B', 'B'],
@@ -141,4 +144,3 @@ sheet:sample
    B   |   B   |   B   |   B   |    B    
    C   |   C   |   C   |  None |   None  
  ```
->>>
