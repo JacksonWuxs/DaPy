@@ -122,13 +122,12 @@ sheet:sample
    3   |   4   |   1   |   6   |    11   
   None |  None |  None |  None |    12  
 ```
-On the other hand, ```extend()``` and ```extend_col()``` were designed to add amount of records or amount of variables at the tail of each sheets in dataset. We added 3 new records at the same time, and especially the third record had miss values.
+On the other hand, ```extend()``` and ```extend_col()``` were designed to add amount of records or amount of variables at the tail of each sheets in dataset. We added 2 new records at the same time, and especially the second record had miss values. After that, we used ```extend_col()``` function to extend the exist dataset.
 ```Python2
 >>> example.extend([ 
 	['A', 'A', 'A', 'A', 'A'],
-	['B', 'B', 'B', 'B', 'B'],
 	['C', 'C', 'C']])
->>> example.show(5)
+>>> example.show(3)
 sheet:sample
 ============
  A_col | B_col | C_col | D_col | New_col
@@ -136,12 +135,56 @@ sheet:sample
    3   |   2   |   1   |   4   |    0    
    4   |   3   |   2   |   2   |    1    
    1   |   3   |   4   |   2   |    2    
-   3   |   3   |   1   |   2   |    3    
-   4   |   5   |   4   |   3   |    4    
-             .. Omit 6 Ln ..              
-   3   |   4   |   1   |   6   |    11   
+             .. Omit 9 Ln ..              
   None |  None |  None |  None |    12   
    A   |   A   |   A   |   A   |    A    
-   B   |   B   |   B   |   B   |    B    
    C   |   C   |   C   |  None |   None  
+>>> 
+>>> example2 = datasets.example()
+>>> example.extend_col(other=example2)
+>>> example.show(4)
+sheet:sample
+============
+ A_col | B_col | C_col | D_col | New_col | A_col_1 | B_col_1 | C_col_1 | D_col_1
+-------+-------+-------+-------+---------+---------+---------+---------+---------
+   3   |   2   |   1   |   4   |    0    |    3    |    2    |    1    |    4    
+   4   |   3   |   2   |   2   |    1    |    4    |    3    |    2    |    2    
+   1   |   3   |   4   |   2   |    2    |    1    |    3    |    4    |    2    
+   3   |   3   |   1   |   2   |    3    |    3    |    3    |    1    |    2    
+                                 .. Omit 7 Ln ..                                  
+   3   |   4   |   1   |   6   |    11   |    3    |    4    |    1    |    6    
+  None |  None |  None |  None |    12   |   None  |   None  |   None  |   None  
+   A   |   A   |   A   |   A   |    A    |   None  |   None  |   None  |   None  
+   C   |   C   |   C   |  None |   None  |   None  |   None  |   None  |   None  
  ```
+ Next, let me introduce some functions for dropping the data. The normalist way is to use keyword ```del``` in Python. 
+ ```Python3
+ >>> del example['A_col', 'B_col', 'A_col_1', 'B_col_1', 'C_col_1']
+ >>> example
+sheet:sample
+============
+  C_col: <1, 2, 4, 1, 4, ... ,1, 1, None, A, C>
+  D_col: <4, 2, 2, 2, 3, ... ,5, 6, None, A, None>
+New_col: <0, 1, 2, 3, 4, ... ,10, 11, 12, A, None>
+D_col_1: <4, 2, 2, 2, 3, ... ,5, 6, None, None, None>
+>>> example[5]  # the 6th record in the dataset
+[1, 5, 5, 5]
+>>> del example[3, 4]
+>>> example[5]
+[8, 3, 7, 3]
+>>>
+```
+Anyway, we have some other functions so that you not only can delete the data, but also catch the data. The system will return the data into a new dataset object.
+```
+>>> example.add(example.pop_col('C_col', 'D_col'))
+>>> example
+sheet:sample
+============
+New_col: <0, 1, 2, 4, 6, ... ,10, 11, 12, A, None>
+D_col_1: <4, 2, 2, 3, 2, ... ,5, 6, None, None, None>
+
+sheet:sample_1
+==============
+C_col: <4, 2, 2, 3, 2, ... ,5, 6, None, A, None>
+D_col: <1, 2, 4, 4, 3, ... ,1, 1, None, A, C>
+```
