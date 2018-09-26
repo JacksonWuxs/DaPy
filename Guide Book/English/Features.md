@@ -22,8 +22,8 @@ that is *DataSet*.
 Here is a example how does DaPy work basically to manage diverse dataset. We have prepared a [students.xlsx](http://www.wuxsweb.cn/Library/DaPy&Examples_data/students.xlsx) file as a example, which has 3 sheets insides, named "Info", "Course", and "Scholarship". Now, we will use DaPy to read this file into a DataSet object and access the data.
 ```Python2
 >>> import DaPy as dp
->>> data = dp.read('students.xlsx', 'frame')
->>> data
+>>> data = dp.read('students.xlsx')
+>>> data.show()
 sheet:Info
 ==========
    ID   |   Name  | Gender | Age 
@@ -71,12 +71,12 @@ And now, we have a new sheet named "tuition" that needs to be added into data an
 >>> data.save("new_students.xlsx")
 ``` 
 #### Easily insert and delete a large number of data  
-As far as we are concerned, DaPy is a kind of data manage system, therefore, we learned from the thinking as 'CRUE'(Create, Retrieve, Update and Delete). We followed some of the 'list' data structure supported functions and extended them appropriately to fit the two-dimensional data structure. In this section, we will begin with briefly review all these functions.
+As far as we are concerned, DaPy is a kind of data manage system, therefore, we learned from the thinking as 'CRUE'(Create, Retrieve, Update and Delete). We followed some of the 'list()' structure supported functions and extended them appropriately to fit the two-dimensional data structure. In this section, we would briefly review all these functions.
 
 ```DaPy.DataSet.add()``` is the hightest level data function, which is used to add a new 2-dimentional data structure into DataSet structure. With this function, DataSet can support multiple sheets inside. Following example shows how to add a new sheet.
 ```Python2
->>> data = dp.DataSet([[1, 1, 1], [1, 1, 1]], 'sheet-1')
->>> data.add([[2, 2, 2], [2, 2, 2]], 'sheet-2')
+>>> data = dp.DataSet(obj=[[1, 1, 1], [1, 1, 1]], sheet='sheet-1')
+>>> data.add(item=[[2, 2, 2], [2, 2, 2]], sheet='sheet-2')
 >>> data.toframe()
 >>> data
 sheet:sheet-1
@@ -94,12 +94,15 @@ sheet:sheet-2
   2  |  2  |  2  
 ```
 
-Now, we are going to introduce two pairs of functions to you. One of a pair of functions are ```append()``` and ```append_col()```, and which is obviously to see the meanings. ```append()``` can help you append a new record at the tail of each sheet and ```append_col()``` can support you to append a new variable at the tail of each sheet in DataSet. On the other hand, ```extend()``` and ```extend_col()``` were designed to add amount of records or amount of variables at the tail of each sheets in dataset.
+First of all, we are going to introduce two pairs of functions to you. 
+
+One of the pairs of functions are ```append()``` and ```append_col()```, and which are obviously to see the meanings. ```append()``` can help you append a new record at the tail of each sheet and ```append_col()``` can support you to append a new variable at the tail of each sheet in DataSet.
 ```Python2
 >>> from DaPy import datasets
 >>> example = datasets.example()
 >>> example.append([None, None, None, None])
->>> example.append_col(range(example.shape[0].Ln), 'New_col')
+>>> example.append_col(series=range(example.shape[0].Ln), 
+		       variable_name='New_col')
 >>> example.show()
 sheet:sample
 ============
@@ -118,13 +121,13 @@ sheet:sample
    2   |   9   |   1   |   5   |    10   
    3   |   4   |   1   |   6   |    11   
   None |  None |  None |  None |    12  
->>>
->>> # we will add 3 new records at the same time, and especially the third record has miss values.
+```
+On the other hand, ```extend()``` and ```extend_col()``` were designed to add amount of records or amount of variables at the tail of each sheets in dataset. We added 2 new records at the same time, and especially the second record had miss values. After that, we used ```extend_col()``` function to extend the exist dataset.
+```Python2
 >>> example.extend([ 
 	['A', 'A', 'A', 'A', 'A'],
-	['B', 'B', 'B', 'B', 'B'],
 	['C', 'C', 'C']])
->>> example.show(5)
+>>> example.show(3)
 sheet:sample
 ============
  A_col | B_col | C_col | D_col | New_col
@@ -132,13 +135,56 @@ sheet:sample
    3   |   2   |   1   |   4   |    0    
    4   |   3   |   2   |   2   |    1    
    1   |   3   |   4   |   2   |    2    
-   3   |   3   |   1   |   2   |    3    
-   4   |   5   |   4   |   3   |    4    
-             .. Omit 6 Ln ..              
-   3   |   4   |   1   |   6   |    11   
+             .. Omit 9 Ln ..              
   None |  None |  None |  None |    12   
    A   |   A   |   A   |   A   |    A    
-   B   |   B   |   B   |   B   |    B    
    C   |   C   |   C   |  None |   None  
+>>> 
+>>> example2 = datasets.example()
+>>> example.extend_col(other=example2)
+>>> example.show(4)
+sheet:sample
+============
+ A_col | B_col | C_col | D_col | New_col | A_col_1 | B_col_1 | C_col_1 | D_col_1
+-------+-------+-------+-------+---------+---------+---------+---------+---------
+   3   |   2   |   1   |   4   |    0    |    3    |    2    |    1    |    4    
+   4   |   3   |   2   |   2   |    1    |    4    |    3    |    2    |    2    
+   1   |   3   |   4   |   2   |    2    |    1    |    3    |    4    |    2    
+   3   |   3   |   1   |   2   |    3    |    3    |    3    |    1    |    2    
+                                 .. Omit 7 Ln ..                                  
+   3   |   4   |   1   |   6   |    11   |    3    |    4    |    1    |    6    
+  None |  None |  None |  None |    12   |   None  |   None  |   None  |   None  
+   A   |   A   |   A   |   A   |    A    |   None  |   None  |   None  |   None  
+   C   |   C   |   C   |  None |   None  |   None  |   None  |   None  |   None  
  ```
+ Next, let me introduce some functions for dropping the data. The normalist way is to use keyword ```del``` in Python. 
+ ```Python3
+ >>> del example['A_col', 'B_col', 'A_col_1', 'B_col_1', 'C_col_1']
+ >>> example
+sheet:sample
+============
+  C_col: <1, 2, 4, 1, 4, ... ,1, 1, None, A, C>
+  D_col: <4, 2, 2, 2, 3, ... ,5, 6, None, A, None>
+New_col: <0, 1, 2, 3, 4, ... ,10, 11, 12, A, None>
+D_col_1: <4, 2, 2, 2, 3, ... ,5, 6, None, None, None>
+>>> example[5]  # the 6th record in the dataset
+[1, 5, 5, 5]
+>>> del example[3, 4]
+>>> example[5]
+[8, 3, 7, 3]
 >>>
+```
+Anyway, we have some other functions so that you not only can delete the data, but also catch the data. The system will return the data into a new dataset object.
+```python3
+>>> example.add(example.pop_col('C_col', 'D_col'))
+>>> example
+sheet:sample
+============
+New_col: <0, 1, 2, 4, 6, ... ,10, 11, 12, A, None>
+D_col_1: <4, 2, 2, 3, 2, ... ,5, 6, None, None, None>
+
+sheet:sample_1
+==============
+C_col: <4, 2, 2, 3, 2, ... ,5, 6, None, A, None>
+D_col: <1, 2, 4, 4, 3, ... ,1, 1, None, A, C>
+```
