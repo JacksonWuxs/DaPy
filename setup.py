@@ -1,6 +1,8 @@
 from setuptools import setup, find_packages
 from DaPy import __version__
- 
+
+pkg = find_packages()
+
 setup(
     name='DaPy',
     version=__version__,
@@ -21,11 +23,9 @@ setup(
     platforms=['all'],
     url='https://github.com/JacksonWoo/DaPy',
     license='GPL v3',
-    packages=['datasets', 'machine_learn', 'statis'],
-    package_dir={'datasets': 'DaPy/datasets',
-                 'machine_learn': 'DaPy/machine_learn',
-                 'statis': 'DaPy/statis'},
-    package_data={'datasets': ['adult/*.*', 'example/*.*', 'iris/*.*', 'wine/*.*']},
+    packages=pkg,
+    package_dir={'DaPy.datasets': 'DaPy/datasets'},
+    package_data={'DaPy.datasets': ['adult/*.*', 'example/*.*', 'iris/*.*', 'wine/*.*']},
     zip_safe=True,
     install_requires=[
         'savReaderWriter>=3.4.1',

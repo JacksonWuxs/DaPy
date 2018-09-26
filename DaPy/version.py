@@ -6,7 +6,7 @@ from datetime import datetime
 __title__ = 'DaPy'
 __description__ = 'Enjoy the tour in data mining !'
 __url__ = 'https://github.com/JacksonWuxs/DaPy'
-__version__ = '1.4.1.2'
+__version__ = '1.4.2.2'
 __build__ = 0x021809
 __author__ = 'Xuansheng Wu'
 __author_email__ = 'wuxsmail@163.com'

@@ -27,9 +27,9 @@ __all__ = [ 'datasets', 'Frame', 'SeriesSet', 'machine_learn',
            'distribution','describe', 'mean', 'exp', 'dot', 'is_math']
 
 from os.path import dirname, join
-from core import (#cov, corr, distribution, describe, sum,
-                  Frame, SeriesSet, DataSet, )
-                 # frequency, quantiles, mean, is_math, is_iter)
+from core import (cov, corr, distribution, describe, sum,
+                  Frame, SeriesSet, DataSet,
+                  frequency, quantiles, mean, is_math, is_iter)
 from core import Matrix as mat
 from matlib import exp, dot, multiply
 from io import read, encode
