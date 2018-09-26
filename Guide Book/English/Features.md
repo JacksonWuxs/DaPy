@@ -175,7 +175,7 @@ D_col_1: <4, 2, 2, 2, 3, ... ,5, 6, None, None, None>
 >>>
 ```
 Anyway, we have some other functions so that you not only can delete the data, but also catch the data. The system will return the data into a new dataset object.
-```
+```python3
 >>> example.add(example.pop_col('C_col', 'D_col'))
 >>> example
 sheet:sample
