@@ -1,7 +1,7 @@
 from DaPy import read
 from os.path import dirname, join
 
-__all__ = ['wine', 'iris', 'example']
+__all__ = ['wine', 'iris', 'adult', 'example']
 module_path = dirname(__file__)
 
 def wine():

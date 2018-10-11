@@ -437,8 +437,9 @@ class DataSet(object):
            1   |   1   |   1 
         ''' 
         if isinstance(item, DataSet):
-            if sheet and len(sheet) == len(item._sheets):
-                new_sheets = [self._check_sheet_new_name(sheet)]
+            if sheet and 1 == len(item._sheets):
+                new_sheets = [self._check_sheet_new_name(sheet)
+                              for sheet_name in item.sheets]
             else:
                 new_sheets = [self._check_sheet_new_name(sheet_name) \
                           for sheet_name in item._sheets]
@@ -545,7 +546,7 @@ class DataSet(object):
                     
         return DataSet(corrs, new_title)
 
-    def count(self, x, area=all):
+    def count(self, x, point1=None, point2=None):
         '''Find one or more set of identification data in the specified area.
 
         Parameter
@@ -553,11 +554,15 @@ class DataSet(object):
         x : value or iterable object
             the value that you expect to statistic.
 
-        area : two tuples in tuple (default=all)
+        point1 : tuple (default=None)
             the area you expect to statistic. The first tuple in the main tuple
             represents the coordinates of the point in the upper left corner of
             the area. The second tuple represents the coordinates of the point
             in the lower right corner of the area.
+
+        point2 : tuple (default=None)
+            the area you expect to statistic. The second tuple represents the
+            coordinates of the point in the lower right corner of the area.
 
         Return
         ------
@@ -565,33 +570,27 @@ class DataSet(object):
 
         Examples
         --------
-        >>> data = dp.DataSet([[1, 2, 3, 4],
-                               [2, None, 3, 4],
-                               [3, 3, None, 5],
-                               [7, 8, 9, 10]])
+        >>> data = dp.DataSet([[1, 2,    3,    4],
+                               [2, None, 3,    4],
+                               [3, 3,    None, 5],
+                               [7, 8,    9,    10]])
         >>> data.toframe()
-        >>> data.count(3, all)
+        >>> data.count(3)
         sheet:sheet0
         ============
-        DataSet(Counter({3: 4}))  # There are a total of four 3 in the entire data set.
-        >>> data.count([3, None], ((0, 1), (2, 2)))
+        4  # There are 4 of element 3 in the entire data set.
+        >>> data.count([3, None], point1=(0, 1), point2=(2, 2))
         sheet:sheet0
         ============
-        DataSet(Counter({3: 3, None: 2}))
+        {3: 3, None: 2}
         '''
-        if is_value(x):
-            x = (x,)
-            
-        if area is all:
-            area = (area, )
-
         counter = list()
         counter_sheet = list()
         for i, data in enumerate(self._data):
             if hasattr(data, 'count'):
                 try:
                     try:
-                        counter.append(data.count(x, *area))
+                        counter.append(data.count(x, point1, point2))
                     except TypeError:
                         counter.append(data.count(x))
                     counter_sheet.append(self._sheets[i])
@@ -806,10 +805,10 @@ class DataSet(object):
         new_sheets = list()
         for i, (sheet, data) in enumerate(zip(self._sheets, self._data)):
             if hasattr(data, 'select'):
-                try:
+                if True:
                     new_data.append(data.select(conditions))
                     new_sheets.append(sheet)
-                except Exception, e:
+                else:#xcept Exception, e:
                     warn('sheet:%s.select() failed, '%self._sheets[i] +\
                          'because %s'%e)
         return DataSet(new_data, new_sheets)
@@ -1128,7 +1127,7 @@ class DataSet(object):
         >>> data.read('another_data_file.xlsx')
         '''
         if not isfile(addr):
-            raise IOError('can not find the local file %s.'%fname)
+            raise IOError('can not find the target file.')
         miss_symbol = kward.get('miss_symbol', 'NA')
         miss_value = kward.get('miss_value', None)
         sheet_name = kward.get('sheet_name', None)

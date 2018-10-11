@@ -3,21 +3,20 @@ from collections import namedtuple, deque, OrderedDict, Counter, Iterable
 from copy import deepcopy
 from csv import reader
 from datetime import date, datetime
-from _numeric import describe, mean, _sum, log
-from _function import is_seq, is_iter, is_math, is_value, get_sorted_index
-from _numeric import corr as f_c
-from DaPy.io import str2value, TRANS_FUN_SET
+from numeric import describe, mean, _sum, log
+from tools import is_seq, is_iter, is_math, is_value, get_sorted_index
+from numeric import corr as f_c
+from tools import str2value, transfer_funcs
 from operator import itemgetter
 from os import path
 from random import random, shuffle
-from distutils.util import strtobool
 from re import search as re_search
 
 __all__ = ['SeriesSet', 'Frame']
 
 dims = namedtuple('sheet', ['Ln', 'Col'])
 
-class _base_sheet(object):
+class BaseSheet(object):
     '''
     Attributes
     ----------
@@ -208,14 +207,14 @@ class _base_sheet(object):
                         raise SyntaxError(error_msg)
                     obj.extend(self.__getslice__(start, stop))
                 else:
-                    raise TypeError('bad expression as [%s:%s]' % (start, stop))
+                    raise TypeError('bad statement as [%s:%s]' % (start, stop))
 
             elif isinstance(arg, int):
                 if obj and obj.shape.Col != self._dim.Col:
                     raise SyntaxError(error_msg)
                 obj.append(self.__getitem__(arg))
             else:
-                raise TypeError('bad expression as [%s:%s]' % (start, stop))
+                raise TypeError('bad statement as [%s:%s]' % (start, stop))
         return obj
 
     def __delitem__(self, key):
@@ -287,16 +286,16 @@ class _base_sheet(object):
                     index = cond.index(opearte, index + bias) + bias
                     cond = cond[: index] + ' value' + cond[index: ]
             cond = 'value ' + cond
-            value = 30 # test value
+            value = 30
         else:
             raise AttributeError('axis shoud be 1 or 0.')
-
+        eval(cond)
         try:
-            exec(cond)
+            eval(cond)
         except:
-            raise SyntaxError('we have some problem in transform '
-                            'your conditions, please check syntax again.')
-        return 'check = ' + cond
+            raise SyntaxError('we have some problem in transforming '
+                            'your statement, please check syntax again.')
+        return cond
 
     def _check_sequence_type(self, series, miss_symbol):
         if is_value(series):
@@ -320,20 +319,23 @@ class _base_sheet(object):
 
     def _check_replace_condition(self, col, condition, new_value):
         if col is all:
-            for title in self._columns:
-                self._replace_typical(title, condition, new_value)
-            return
+            col == self._columns
 
-        elif is_seq(col):
+        if is_seq(col):
             for title in col:
                 self._replace_typical(title, condition, new_value)
             return
 
-        elif isinstance(col, str) and col in self._columns:
-            col = self._columns.index(col)
+        elif isinstance(col, str):
+            if isinstance(self._data, list):
+                col = self._columns.index(col)
 
-        elif not(isinstance(col, int)):
-            raise ValueError('your column symbol is not clear enough.')
+        elif isinstance(col, int):
+            if isinstance(self._data, OrderedDict):
+                col = self._columns[col]
+
+        else:
+            raise ValueError('your column name can not be found in dataset.')
 
         if not isinstance(condition, str):
             raise TypeError('condition should be written in a python '+\
@@ -342,7 +344,6 @@ class _base_sheet(object):
         if not is_value(new_value):
             raise TypeError('SeriesSet does not support %s ' % type(new_value),
                             'as a value type.')
-
         return col, condition, new_value
 
     def _check_col_new_name(self, new_name):
@@ -373,40 +374,37 @@ class _base_sheet(object):
             raise ValueError('can not get the title of %s'%j)
         return (i, j)
 
-    def _check_area(self, *area):
-        if (len(area) == 1 and area[0].lower() == 'all') or area == tuple():
-            C1, L1 = 0, 0
-            L2, C2 = self._dim
-
-        try:
-            pos1, pos2 = area
-        except ValueError:
-            raise AttributeError('Area should be represented by two tuples, '+\
-                                 'or keyword: "all".')
-
-        def _check_pos(x, y):
+    def _check_area(self, point1, point2):
+        def _check_pos(point, left=True):
+            if left is True and point is None:
+                x, y = 0, 0
+            elif left is False and point is None:
+                x, y = None, None
+            else:
+                x, y = point
+                
             if isinstance(y, str) and y in self._columns:
                 y = self._columns.index(y)
-            elif y.lower() == 'all':
+            elif y is None and left is True:
+                y = 0
+            elif y is None and left is False:
                 y = self._dim.Col
             elif not(isinstance(y, int) and abs(y) < self._dim):
-                raise TypeError('unknow expression of %s' % y)
+                raise IndexError('your request col=`%s` is out of dataset.' % y)
 
-            if x.lower() == 'all':
+            if x is None and left is True:
+                x = 0
+            elif x is None and left is False:
                 x = self._dim.Ln
             elif not (isinstance(x, int) and abs(x) < self._dim.Ln):
-                raise IndexError('your request %s is out of dataset.' % x)
+                raise IndexError('your request ln=`%s` is out of dataset.' % x)
             return x, y
 
-        L1, C1 = _check_pos(*pos1)
-        if pos2.lower() == 'all':
-            L2, C2 = self._dim
-        else:
-            L2, C2 = _check_pos(*pos2)
+        L1, C1 = _check_pos(point1, left=True)
+        L2, C2 = _check_pos(point2, left=False)
 
         if C2 < C1 or L2 < L1:
-            raise ValueError('the postion in the second tuple should be larger '+\
-                             'than first tuple.')
+            raise ValueError('point2 should be larger than point1.')
         return L1, C1, L2, C2
 
     def _check_miss_symbol(self, miss_symbol):
@@ -442,7 +440,7 @@ class _base_sheet(object):
                 for j, item in enumerate(lines):
                     if j in _col_types or item in miss_symbol:
                         continue
-                    _col_types[j] = TRANS_FUN_SET[type(
+                    _col_types[j] = transfer_funcs[type(
                                 str2value(item, prefer_type))]
             elif i == title_line:
                 if len(lines) < self._dim.Col:
@@ -504,13 +502,13 @@ class _base_sheet(object):
         return frame[:-1]
 
 
-class SeriesSet(_base_sheet):
+class SeriesSet(BaseSheet):
     '''Every variable will be stored by a sequene.
     '''
     def __init__(self, series=None, columns=None,
                  miss_symbol=None, miss_value=None):
         self._data = OrderedDict()
-        _base_sheet.__init__(self, series, columns, miss_symbol, miss_value)
+        BaseSheet.__init__(self, series, columns, miss_symbol, miss_value)
 
     @property
     def info(self):
@@ -545,7 +543,7 @@ class SeriesSet(_base_sheet):
                      'Min'.center(blank_size[2]) + '|' +\
                      'Max'.center(blank_size[3]) + '|' +\
                      'Mean'.center(blank_size[4]) + '|' +\
-                     'Std'.center(blank_size[5]) + '\n'
+                     'Stdev'.center(blank_size[5]) + '\n'
         for lenth in blank_size:
             title_line += '-'*lenth + '+'
 
@@ -705,8 +703,7 @@ class SeriesSet(_base_sheet):
         cond = self._transform_str_condition(condition, axis=1)
         seq = self._data[col]
         for i, value in enumerate(seq):
-            exec(cond)
-            if check:
+            if eval(cond) is True:
                 seq[i] = new_value
 
     def append(self, item, miss_symbol=None):
@@ -769,23 +766,22 @@ class SeriesSet(_base_sheet):
         new_.insert_col(0, self._columns, '_Subjects_')
         return new_
 
-    def count(self, X, *area):
+    def count(self, X, point1=None, point2=None):
         '''count X in area (point1, point2)-> Counter object
         '''
         counter = Counter()
         if is_value(X):
             X = (X,)
-        L1, C1, L2, C2 = self._check_area(*area)
-
+        L1, C1, L2, C2 = self._check_area(point1, point2)
+        
         for title in self._columns[C1 : C2+1]:
             sequence = self._data[title]
             for value in sequence[L1 : L2+1]:
                 if value in X:
                     counter[value] += 1
-
-        if not counter:
-            return 0
-        return counter
+        if len(X) == 1:
+            return counter[X[0]]
+        return dict(counter)
 
     def count_element(self, col=all):
         if col == all:
@@ -1118,8 +1114,7 @@ class SeriesSet(_base_sheet):
         condition = self._transform_str_condition(conditions, axis=0)
         pick_record_line = []
         for i, record in enumerate(self):
-            exec(condition)
-            if check:
+            if eval(condition) is True:
                 pick_record_line.append(i)
 
         return_dict = OrderedDict()
@@ -1261,14 +1256,14 @@ class SeriesSet(_base_sheet):
         self.__arrange_by_index(new_index)
 
 
-class Frame(_base_sheet):
+class Frame(BaseSheet):
     '''Maintains the data as records.
     '''
 
     def __init__(self, frame=None, columns=None,
                  miss_symbol=None, miss_value=None):
         self._data = []
-        _base_sheet.__init__(self, frame, columns,
+        BaseSheet.__init__(self, frame, columns,
                             miss_symbol, miss_value)
 
     @property
@@ -1376,8 +1371,7 @@ class Frame(_base_sheet):
         cond = self._transform_str_condition(condition, axis=1)
         for record in self._data:
             value = record[col]
-            exec(cond)
-            if check is True:
+            if eval(cond) is True:
                 record[col] = new_value
 
     def append(self, item, miss_symbol=None):
@@ -1426,20 +1420,20 @@ class Frame(_base_sheet):
         self._columns.append(self._check_col_new_name(variable_name))
         self._dim = dims(max(self._dim.Ln, size), self._dim.Col+1)
 
-    def count(self, X, *area):
+    def count(self, X, point1=None, point2=None):
         if is_value(X):
             X = (X,)
         counter = Counter()
-        L1, C1, L2, C2 = self._check_area(*area)
+        L1, C1, L2, C2 = self._check_area(point1, point2)
 
         for record in self._data[L1:L2 + 1]:
             for value in record[C1:C2 + 1]:
                 if value in X:
                     counter[value] += 1
 
-        if not counter:
-            return 0
-        return SeriesSet(dict(counter))
+        if len(X) == 1:
+            return counter[X[0]]
+        return dict(counter)
 
     def extend(self, other):
         if isinstance(other, Frame):
@@ -1566,8 +1560,7 @@ class Frame(_base_sheet):
 
         return_data = []
         for record in self._data:
-            exec(conditions)
-            if check:
+            if eval(conditions) is True:
                 return_data.append(record)
         if not return_data:
             return None
@@ -1706,7 +1699,6 @@ class Frame(_base_sheet):
 
     def sort(self, *orders):
         '''S.sort(('A_col', 'DESC'), ('B_col', 'ASC')) --> sort your records.
-        sort the dataset in light of the conditions.
         '''
         for each in orders:
             if len(each) != 2:

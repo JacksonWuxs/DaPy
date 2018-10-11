@@ -2,7 +2,7 @@ from collections import namedtuple, deque, Iterable, deque
 from datetime import datetime
 from time import struct_time
 from array import array
-from _function import is_math, is_iter, is_seq
+from tools import is_math, is_iter, is_seq
 import math
 
 __all__ = ['cov', 'corr', 'frequency', 'quantiles', '_sum',

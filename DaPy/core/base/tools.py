@@ -2,8 +2,10 @@ from collections import namedtuple, deque, Iterable, deque
 from datetime import datetime
 from time import struct_time
 from array import array
+from string import atof, atoi, strip
+from distutils.util import strtobool
 
-__all__ = ['_value_types', '_sequence_types', 'get_sorted_index',
+__all__ = ['str2value', 'get_sorted_index',
            'is_value', 'is_math', 'is_iter', 'is_seq']
 
 _value_types = (type(None), int, float, str, long, complex,
@@ -25,6 +27,27 @@ else:
     _sequence_types.append(Series)
 
 _sequence_types = tuple(_sequence_types)
+
+transfer_funcs = {float: atof,
+                  int: atoi,
+                  bool: strtobool,
+                  str: strip}
+
+def str2value(value, prefer_type=None):
+    if prefer_type is str:
+        return value
+    elif value.isdigit() or value[1:].isdigit():
+        if prefer_type is float:
+            return atof(value.replace(',', ''))
+        return atoi(value)
+    elif value.count('.') == 1:
+        return atof(value.replace(',', ''))
+    elif prefer_type is bool:
+        try:
+            return strtobool(value)
+        except ValueError:
+            pass
+    return strip(value)
     
 def get_sorted_index(seq, cmp=None, key=None, reverse=False):
     index_dict = dict()

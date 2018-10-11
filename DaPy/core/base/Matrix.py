@@ -1,6 +1,6 @@
 from collections import namedtuple
 from copy import deepcopy, copy
-from _function import is_seq, is_math, is_iter
+from tools import is_seq, is_math, is_iter
 from random import random
 import csv
 
