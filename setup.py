@@ -1,11 +1,10 @@
 from setuptools import setup, find_packages
-from DaPy import __version__
-
+from DaPy import version
 pkg = find_packages()
 
 setup(
     name='DaPy',
-    version=__version__,
+    version=version.__version__,
     description='Enjoy your tour in data minning',
     classifiers=[
         'Development Status :: 4 - Beta',

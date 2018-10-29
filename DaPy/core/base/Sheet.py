@@ -97,6 +97,8 @@ class BaseSheet(object):
         new_data = OrderedDict()
         for i, value in enumerate(self._data.values()):
             new_data[self._columns[i]] = value
+        del self._data
+        self._data = new_data
 
     @property
     def miss_symbol(self):
@@ -127,7 +129,9 @@ class BaseSheet(object):
         return sum(self._miss_value)
 
     def __getattr__(self, name):
-        return self.__getitem__(name)
+        if name in self._columns:
+            return self.__getitem__(name)
+        raise AttributeError("'sheet' object has no attribute '%'" % name)
 
     def __len__(self):
         return self._dim.Ln
@@ -244,13 +248,13 @@ class BaseSheet(object):
             instance['_data'] = dict(self._data)
         return instance
 
-    def __datastate__(self, dict):
+    def __setstate__(self, dict):
         '''load this object from a stream file'''
         self._dim = dims(*dict['_dim'])
         self._columns = dict['_columns']
         self._miss_value = dict['_miss_value']
         self._miss_symbol = dict['_miss_symbol']
-        if isinstance(dict['_data'], dict):
+        if isinstance(dict['_data'], type(dict)):
             self._data = OrderedDict()
             for col in self._columns:
                 self._data[col] = dict['_data'][col]
@@ -349,8 +353,9 @@ class BaseSheet(object):
     def _check_col_new_name(self, new_name):
         if not new_name:
             return self._check_col_new_name('C_%d' % len(self._columns))
-        if new_name not in self._columns:
-            return new_name
+        
+        if str(new_name) not in self._columns:
+            return str(new_name)
 
         start_no, titles = 1, ','.join(self._columns) + ','
         while True:

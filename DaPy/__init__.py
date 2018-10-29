@@ -20,10 +20,10 @@ along with this program.  If not, see https:\\www.gnu.org\licenses.
 
 from version import __version__, __author__, __copyright__
 
-__all__ = [ 'datasets', 'Frame', 'SeriesSet', 'machine_learn',
-            'statis', 'ones', 'zeros', 
+__all__ = [ 'datasets', 'Frame', 'SeriesSet', 'MachineLearn',
+            'stats', 'ones', 'zeros', 
            'DataSet', 'Table', 'Matrix', 'cov', 'corr', 'frequency',
-           'quantiles', 'sum', 'is_iter', 'read', 'encode',
+           'quantiles', 'sum', 'is_iter', 'read', 'encode', 'save',
            'distribution','describe', 'mean', 'exp', 'dot', 'is_math']
 
 from os.path import dirname, join
@@ -31,8 +31,8 @@ from core import (cov, corr, distribution, describe, sum,
                   Frame, SeriesSet, DataSet,
                   frequency, quantiles, mean, is_math, is_iter)
 from core import Matrix as mat
-from matlib import exp, dot, multiply
-from io import read, encode
+from matlib import exp, dot, multiply, zeros, ones, C, P
+from io import read, encode, save
 from copy import deepcopy
 
 try:
@@ -40,26 +40,15 @@ try:
     with open(join(module_path, 'doc/README.md'),'r') as f:
         __doc__ = f.read()
 except IOError:
-    __doc__ = 'DaPy - A readily data processing and analysing library for Python.\n' +\
+    __doc__ = 'DaPy - Enjoy the tour in data mining.\n' +\
            '===============================================================\n'+\
            '\n-----------------------------\n'+\
            'Name: DaPy\n'+\
            'Author: Jackson Woo\n'+\
            'Version: %s'%__version__ +\
-           '\nUpdata: Jun. 13th, 2018\n'+\
+           '\nUpdata: Oct. 26th, 2018\n'+\
            'E-Mail:Wuxsmail@163.com\n'+\
            '-----------------------------\n\n' 
-
-
-def ones(shape):
-    matrix = mat()
-    matrix.make(shape[0], shape[1], 1)
-    return matrix
-
-def zeros(shape):
-    matrix = mat()
-    matrix.make(shape[0], shape[1], 0)
-    return matrix
 
 def column_stack(lis):
     if not isinstance(lis[0], mat):

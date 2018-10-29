@@ -5,7 +5,43 @@ from time import struct_time
 from array import array
 import math
 
-__all__ = ['describe']
+__all__ = ['dot', 'multiply', 'exp', 'zeros', 'ones', 'C', 'P']
+
+def P(n, k):
+    '''"k" is for permutation numbers.
+    A permutation is an ordered sequence of elements selected from a given
+    finite set, without repetitions, and not necessarily using all elements 
+    of the given set.
+
+    Formula
+    -------
+                  n!
+    P(n, k) = ----------
+               (n - k)!
+    '''
+    if k == 0:
+        return 1
+    upper = reduce(multiply, range(1, 1+n))
+    down = reduce(multiply, range(1, 1+ n - k))
+    return float(upper / down)
+
+def C(n, k):
+    '''"C" is for combination numbers.
+    A combination number is an un-ordered collection of distinct elements,
+    usually of a prescribed size and taken from a given set.
+
+    Formula
+    -------
+                   n!
+    C(n, k) = -----------
+               k!(n - k)!
+    '''
+    if k == 0:
+        return 1
+    upper = reduce(multiply, range(1, 1+n))
+    left = reduce(multiply, range(1, 1+k))
+    right = reduce(multiply, range(1, 1+ n - k))
+    return float(upper / (left * right))
 
 def multiply(m1, m2):
     if is_math(m1) and is_math(m2):
@@ -60,3 +96,14 @@ def exp(other):
         return new_
 
     raise TypeError('expects an iterable or numeric for exp(), got %s'%type(other))
+
+def create_mat(shape, num):
+    matrix = mat()
+    matrix.make(shape[0], shape[1], num)
+    return matrix
+
+def zeros(shape):
+    return create_mat(shape, 0)
+
+def ones(shape):
+    return create_mat(shape, 1)

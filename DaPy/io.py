@@ -11,11 +11,11 @@ def read(addr, dtype='col', **kward):
     data.read(addr, dtype, **kward)
     return data
 
-def save(addr, data, encode='utf-8'):
+def save(addr, data, sheet='sheet0', encode='utf-8'):
     '''dp.save('file.xlsx', [1,2,3,4]) -> save dataset into file
     '''
     from core import DataSet
-    data = DataSet(data)
+    data = DataSet(data, sheet=sheet)
     data.save(addr, encode)
 
 def encode(code='cp936'):

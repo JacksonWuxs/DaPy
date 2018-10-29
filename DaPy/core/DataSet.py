@@ -177,7 +177,9 @@ class DataSet(object):
         return None
 
     def __getattr__(self, name):
-        return self.__getitem__(name)
+        if name in self._sheets:
+            return self.__getitem__(name)
+        raise AttributeError("'DataSet' object has no sheet or attribute %s'" % name)
 
     def __trans_str(self, sheet):
         if sheet not in self._sheets:
@@ -331,13 +333,12 @@ class DataSet(object):
             return
         
         if isinstance(key, str):
+            if isinstance(value, DataSet):
+                raise TypeError('can not set a DataSet object as a sheet.')
             if key not in self._sheets:
                 self._data.append(value)
                 self._types.append(type(value))
-                name = key
-                while name in self._sheets:
-                    name += '_new'
-                self._sheets.append(name)
+                self._sheets.append(self._check_sheet_new_name(key))
                 return
             key = self._sheets.index(key)
         
@@ -1136,14 +1137,13 @@ class DataSet(object):
             sheet_name = fbase
         
         if ftype == 'db':
-            for sheet, name in parse_sql(addr, fname, dtype, miss_symbol, miss_value):
+            for sheet, name in parse_sql(addr, dtype, miss_symbol, miss_value):
                 self.add(sheet, name)
 
         elif ftype == 'sav':
             if sheet_name:
                 fbase = sheet_name
-            self.add(parse_sav(addr, fname, dtype, miss_symbol, miss_value),
-                     sheet_name)
+            self.add(parse_sav(addr, dtype, miss_symbol, miss_value), fbase)
                 
         elif ftype == 'xls' or ftype == 'xlsx':
             first_line = kward.get('first_line', 1)

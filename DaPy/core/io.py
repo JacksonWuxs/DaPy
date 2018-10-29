@@ -1,5 +1,6 @@
 from base import SeriesSet, Frame, Matrix
 from os.path import split
+from warnings import warn
 
 def create_sheet(dtype, data, titles, miss_symbol, miss_value):
     if dtype.upper() == 'COL' or dtype.upper() == 'SERIESSET':
@@ -20,10 +21,14 @@ def parse_addr(addr):
         file_base = '.'.join(file_name.split('.')[:-1])
         file_type = file_name.split('.')[-1]
     else:
-        file_base, file_type = file_name.split('.')
+        try:
+            file_base, file_type = file_name.split('.')
+        except ValueError:
+            raise ValueError('your address can not be parsed, addr seems like '+\
+                             'test.xls')
     return file_path, file_name, file_base, file_type
 
-def parse_sql(addr, fname, dtype, miss_symbol, miss_value):
+def parse_sql(addr, dtype, miss_symbol, miss_value):
     try:
         import sqlite3 as sql3
     except ImportError:
@@ -44,10 +49,10 @@ def parse_sql(addr, fname, dtype, miss_symbol, miss_value):
             try:
                 yield (create_sheet(dtype, data, titles, miss_symbol, miss_value),
                        table)
-            except ValueError:
-                warn('%s is empty.' % titles)
+            except UnicodeEncodeError:
+                warn("'ascii' can not encode characters, use dp.io.encode to fix.")
 
-def parse_sav(addr, fname, dtype, miss_symbol, miss_value, fbase):
+def parse_sav(addr, dtype, miss_symbol, miss_value):
     try:
         import savReaderWriter
     except ImportError:
@@ -56,7 +61,7 @@ def parse_sav(addr, fname, dtype, miss_symbol, miss_value, fbase):
     with savReaderWriter.SavReader(addr) as reader:
         titles = reader.getSavFileInfo()[2]
         data = list(reader)
-        return (create_sheet(dtype, data, titles, miss_symbol, miss_value), fbase)
+        return create_sheet(dtype, data, titles, miss_symbol, miss_value)
 
 def parse_excel(dtype, addr, first_line, title_line, miss_symbol, miss_value):
     try:
@@ -77,9 +82,8 @@ def parse_excel(dtype, addr, first_line, title_line, miss_symbol, miss_value):
                 titles = None
         else:
             titles = None
-            
-        try:
+        try: 
             yield (create_sheet(dtype, data, titles, miss_symbol, miss_value), sheet.name)
-        except ValueError:
-            warn('%s is empty.'%sheet)
+        except UnicodeEncodeError:
+            warn("'ascii' can not encode characters, use dp.io.encode to fix.")
             
