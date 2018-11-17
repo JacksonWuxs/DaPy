@@ -26,8 +26,8 @@ pip install -U DaPy
 极力简化调用DaPy的API接口，以便让你流畅地实现你的想法。
 
 * 以下是DaPy做得不错的一些事情：
-    - 使用`DataSet`结构高效管理各种数据。
-    - 快速完成数据的"增删改查"操作。
+    - [使用`DataSet`结构高效管理各种数据](https://github.com/JacksonWuxs/DaPy/blob/master/doc/Guide%20Book/English/Features.md#visually-manage-diverse-data)
+    - [快速完成数据的"增删改查"操作](https://github.com/JacksonWuxs/DaPy/blob/master/doc/Guide%20Book/English/Features.md#easily-insert-and-delete-a-large-number-of-data)
     - 轻松访问数据集的一部分，不仅可以通过索引或变量名称，还可以通过特定条件访问。
     - 支持从CSV，Excel，SQLite3，SPSS或者html文件存取数据的强大I/O工具。
     - 支持多变量及多条件的排序。
