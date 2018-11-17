@@ -1,17 +1,17 @@
 <img src="https://github.com/JacksonWuxs/DaPy/blob/master/doc/material/logo.bmp" width = 100% height = 100% div align=center />   
 DaPy - 享受数据挖掘之旅
 ====
-![](https://img.shields.io/badge/Version-1.3.3-green.svg)  ![](https://img.shields.io/badge/Download-PyPi-green.svg)  ![](https://img.shields.io/badge/License-GNU-blue.svg)  
+![](https://img.shields.io/badge/Version-1.4.4-green.svg)  ![](https://img.shields.io/badge/Download-PyPi-green.svg)  ![](https://img.shields.io/badge/License-GNU-blue.svg)  
 
-作为一个基于Python原生数据结构搭建的数据分析和数据挖掘库，**DaPy**致力于节约数据科学家的时间并提高他们的研究效率，同时它也在尽其所能为他们提供更舒适和流畅的操作体验。
+作为一个基于Python原生数据结构搭建的数据分析库，**DaPy**致力于节约数据科学家的时间并提高他们的研究效率，同时它也在尽其所能为他们提供更舒适和流畅的操作体验。
 
 [安装](#安装) | [特性](#特性) | [快速开始](https://github.com/JacksonWuxs/DaPy/blob/master/快速开始.md) | [远期规划](#远期规划) | [更新日志](#更新日志) | [用户手册](https://github.com/JacksonWuxs/DaPy/blob/master/Guide%20Book/Chinese/README.md) | [版权归属](#版权归属) | [English](https://github.com/JacksonWuxs/DaPy/blob/master/README.md)
 
 ## 安装
-最新版本1.4.1已上传至PyPi。
+最新版本1.4.4已上传至PyPi。
 ```
 pip install DaPy
-```  
+```
 
 用下面的代码将DaPy更新至1.4.1版本。
 ```
@@ -21,66 +21,62 @@ pip install -U DaPy
 ## 特性
 **便捷**和**高效**是DaPy的基石。
 从一开始，我们就让DaPy使用尽可能多的Python原生数据结构，且试图让
-它支持更多的Python语法习惯，因此你可以快速地适应DaPy。
-此外，我们极力简化内置的模型，以便让你流畅地实现你的想法。
+它支持更多的Python语法习惯，因此你可以快速地适应DaPy。此外，我们
 
-* 以下是DaPy做得很好的一些事情：
-    - 使用`DataSet`结构高效管理各种数据文件。
+极力简化调用DaPy的API接口，以便让你流畅地实现你的想法。
+
+* 以下是DaPy做得不错的一些事情：
+    - 使用`DataSet`结构高效管理各种数据。
     - 快速完成数据的"增删改查"操作。
-    - 轻松访问数据集的一部分，不仅可以通过索引或变量名称，还可以通过特殊条件访问。
-    - 从CSV文件，Excel文件，数据库甚至SPSS文件加载数据的强大I/O工具。
-    - 按多种条件对记录进行排序。
+    - 轻松访问数据集的一部分，不仅可以通过索引或变量名称，还可以通过特定条件访问。
+    - 支持从CSV，Excel，db，SPSS或者html存取数据的强大I/O工具。
+    - 支持多变量及多条件的排序。
     - 使用内置分析模型快速验证您的想法（例如“方差分析”，“多层感知机”，“线性回归”）。
     - 多种方法可帮助您轻松感知数据集。
-    
-    
+
 即使它使用Python原生数据结构，
 DaPy的效率仍然与C写的一些库相当。
-我们在平台上测试了DaPy
-Intel i7-6560U虽然Python版本是2.7.13-64Bit。
+我们在Intel i7-8550U平台上的
+2.7.15-64Bit版本的Python原生IDLE中进行了测试。
 （[数据集](https://pan.baidu.com/s/1kK3_V8XbbVim4urDkKyI8A)）
-有超过450万条记录，文件大小
-240.2 MB。
+有超过200万条记录，文件大小约119 MB。
 
 如果您想跟进最新进展，可以访问[这里](https://www.teambition.com/project/5b1b7bd40b6c410019df8c41/tasks/scrum/5b1b7bd51e4661001838eb10)。
 <table>
-<tr>
-	<td>测试结果</td>
-	<td>DaPy</td>
-	<td>Pandas</td>
-	<td>Numpy</td> 
-</tr>
+<thead>
+    <th>测试结果</th>
+    <th>DaPy(V1.4.4)</th>
+    <th>Pandas(V0.23.4)</th>
+    <th>Numpy(V1.15.1)</th>
+</thead>
+<tbody>
 <tr>
 	<td>加载数据</td>
-	<td> 29.3s (2.4x)</td>
-	<td> 12.3s (1.0x)</td>
-  <td>169.0s (13.7x)</td>
+	<td>29.64s (3.5x)</td>
+	<td>9.72s (1.0x)</td>
+  	<td>59.38s (6.1x)</td>
 </tr>
 <tr>
 	<td>遍历数据</td>
-	<td>0.34s (1.6x)</td>
-<td>3.10s (14.8x)</td>
-	<td>0.21s (1.0x)</td>
+	<td>0.70s (1.6x)</td>
+	<td>2.90s (14.8x)</td>
+	<td>0.28s (1.0x)</td>
 </tr>
 <tr>
 	<td>排序数据</td>
-	<td>1.41s (1.65x)</td>
-	<td>0.86s (1.0x)</td>
+	<td>0.69s (1.65x)</td>
+	<td>0.75s (1.0x)</td>
 	<td>5.37s (10.1x)</td>
 	</tr>
 <tr>
 	<td>总耗时</td>
-	<td>31.1s (1.8x)</td>
-	<td>17.4s (1.0x)</td>
-	<td>174.6s (10.0x)</td>
-	</tr>
-<tr>
-	<td>版本信息</td>
-	<td>1.3.3</td>
-	<td>0.22.0</td>
-	<td>1.14.0</td>
-	</tr>
+	<td>93.81s (1.8x)</td>
+	<td>33.66s (1.0x)</td>
+	<td>59.82s (10.0x)</td>
+</tr>
+</tbody>
 </table>  
+
 
 
 ## 远期规划  

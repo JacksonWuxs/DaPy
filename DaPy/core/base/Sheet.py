@@ -1,5 +1,4 @@
-from array import array
-from collections import namedtuple, deque, OrderedDict, Counter, Iterable
+from collections import namedtuple, OrderedDict, Counter
 from copy import deepcopy
 from csv import reader
 from datetime import date, datetime
@@ -7,9 +6,7 @@ from numeric import describe, mean, _sum, log
 from tools import is_seq, is_iter, is_math, is_value, get_sorted_index
 from numeric import corr as f_c
 from tools import str2value, transfer_funcs
-from operator import itemgetter
-from os import path
-from random import random, shuffle
+from random import random, shuffle as shuffles
 from re import search as re_search
 
 __all__ = ['SeriesSet', 'Frame']
@@ -42,11 +39,11 @@ class BaseSheet(object):
         self._miss_value = []
         miss_symbol = self._check_miss_symbol(miss_symbol)
 
-        if not obj and not columns:
+        if obj is None and columns is None:
             self._columns = []
             self._dim = dims(0, 0)
 
-        elif not obj and columns is not None:
+        elif obj is None and columns is not None:
             if isinstance(columns, str):
                 columns = [columns,]
             self._dim, self._columns = dims(0, 0), []
@@ -131,7 +128,7 @@ class BaseSheet(object):
     def __getattr__(self, name):
         if name in self._columns:
             return self.__getitem__(name)
-        raise AttributeError("'sheet' object has no attribute '%'" % name)
+        raise AttributeError("'sheet' object has no attribute '%s'" % name)
 
     def __len__(self):
         return self._dim.Ln
@@ -429,9 +426,7 @@ class BaseSheet(object):
         freader = reader(f, delimiter=sep)
         col = max([len(line) for l_n, line in enumerate(freader)])
         self._miss_value = [0] * col
-        if title_line < 0:
-            l_n -= 1
-        self._dim = dims(l_n, col)
+        self._dim = dims(l_n+1-first_line, col)
         if isinstance(prefer_type, str):
             _col_types = [str] * col
         else:
@@ -886,7 +881,13 @@ class SeriesSet(BaseSheet):
                             "type with %s"%type(item))
 
         miss_symbol = self._check_miss_symbol(miss_symbol)
-
+        lenth_bias = len(item) - self._dim.Col
+        if lenth_bias < 0:
+            item.extend([self._miss_symbol] * abs(lenth_bias))
+        elif lenth_bias > 0:
+            for i in range(self._dim.Col, self._dim.Col + lenth_bias):
+                self.append_col([self._miss_symbol] * self._dim.Ln,
+                                miss_symbol=self._miss_symbol)
         for i, title in enumerate(self._columns):
             element = item[i]
             if element in miss_symbol:
@@ -999,7 +1000,7 @@ class SeriesSet(BaseSheet):
             return attrs_dic
         return
 
-    def merge(self, other, self_key=0, other_key=0):
+    def merge(self, other, self_key=0, other_key=0, keep=True):
         other = SeriesSet(other)
 
         if isinstance(self_key, int):
@@ -1020,11 +1021,13 @@ class SeriesSet(BaseSheet):
             raise IndexError('`%s` is not the '%other_key+\
                              'element in other dataset.')
 
+        if keep not in (True, False, 'other', 'self'):
+            raise ValueError('keep should be in (True, False, "other", "self").')
+
         change_name = []
         for i, col in enumerate(other.columns):
             self._miss_value.append(other._miss_value[i])
-            while col in self._columns:
-                col += '_new'
+            col = self._check_col_new_name(col)
             self._columns.append(col)
             change_name.append(col)
 
@@ -1188,19 +1191,18 @@ class SeriesSet(BaseSheet):
         addr, first_line, miss_symbol, title_line, sep, prefer_type
         '''
         with open(addr, 'r') as f:
-            freader, _col_types, miss_symbol, prefer = self._check_read_text(f, **kwrd)
-            datas = [[0]*self._dim.Ln for i in range(self._dim.Col)]
-
+            freader, col_types, miss_symbol, prefer = self._check_read_text(f, **kwrd)
+            datas = [[self._miss_symbol] * self._dim.Ln\
+                     for i in range(self._dim.Col)]
             try:
                 for m, record in enumerate(freader):
                     for i, v in enumerate(record):
                         datas[i][m] = self._check_transform_value(i, v,
-                                                 _col_types, miss_symbol, prefer)
+                                    col_types, miss_symbol, prefer)
             except MemoryError:
+                self._dim = dims(m+1, self._dim.Col)
                 warn('since the limit of memory, DaPy can not read the whole '+\
-                     'file, stop in the line %d' % m)
-
-        self._dim = dims(m+1, self._dim.Col)
+                     'file.')
         self._data = OrderedDict(zip(self._columns, datas))
 
     def values(self):
@@ -1227,7 +1229,7 @@ class SeriesSet(BaseSheet):
                 "                       ('C2', '> 200', 3)). Use help() "+\
                 'for using details.')
 
-    def sort(self, *orders): # OK #
+    def sort(self, *orders): 
         '''orders as tuple like (column_name, 'DESC')
         '''
         if len(orders) > 1:
@@ -1255,9 +1257,9 @@ class SeriesSet(BaseSheet):
         new_index = get_sorted_index(self._data[compare_title], reverse=reverse)
         self.__arrange_by_index(new_index)
 
-    def shuffles(self):
+    def shuffle(self):
         new_index = range(self._dim.Ln)
-        shuffle(new_index)
+        shuffles(new_index)
         self.__arrange_by_index(new_index)
 
 
@@ -1406,16 +1408,14 @@ class Frame(BaseSheet):
     def append_col(self, series, variable_name=None, miss_symbol=None):
         '''append a new variable to the current records tail
         '''
-        if not miss_symbol:
+        if miss_symbol is not None:
             miss_symbol = self._miss_symbol
 
         mv, series = self._check_sequence_type(series, miss_symbol)
-        self._miss_value.append(mv)
 
         size = len(series) - self._dim.Ln
         if size > 0:
-            for i in range(self._dim.Ln):
-                self._miss_value[i] += size
+            self._miss_value = [m+size for m in self._miss_value]
             self._data.extend([[self._miss_symbol] * self._dim.Col\
                                 for i in range(size)])
 
@@ -1423,7 +1423,7 @@ class Frame(BaseSheet):
         for i, element in enumerate(series):
             self._data[i].append(element)
         self._columns.append(self._check_col_new_name(variable_name))
-        self._dim = dims(max(self._dim.Ln, size), self._dim.Col+1)
+        self._dim = dims(max(self._dim.Ln, len(series)), self._dim.Col+1)
 
     def count(self, X, point1=None, point2=None):
         if is_value(X):
@@ -1577,7 +1577,7 @@ class Frame(BaseSheet):
         if isinstance(item, int):
             pop_item = self._data.pop(item)
             self._dim = dims(self._dim.Ln - 1, self._dim.Col)
-            for i, value in pop_item:
+            for i, value in enumerate(pop_item):
                 if value == self._miss_symbol:
                     self._miss_value[i] -= 1
             return pop_item
@@ -1663,20 +1663,21 @@ class Frame(BaseSheet):
         '''read dataset from csv or txt file.
         '''
         with open(addr, 'r') as f:
-            freader, _col_types, miss_symbol, prefer = self._check_read_text(f, **kwrd)
-            self._data = [0] * self._dim.Ln
-
+            freader, col_types, miss_symbol, prefer = self._check_read_text(f, **kwrd)
+            self._data = []
             try:
-                for m, record in enumerate(freader):
+                for record in freader:
                     line = [self._check_transform_value(
-                                i, v, _col_types, miss_symbol, prefer) \
-                                for i, v in enumerate(record)]
-                    line.extend([self._miss_symbol] * (self._dim.Col - len(line)))
-                    self._data[m] = line
+                            i, v, col_types, miss_symbol, prefer) \
+                            for i, v in enumerate(record)]
+                    if len(line) != self._dim.Col:
+                        line.extend([self._miss_symbol] * \
+                                (self._dim.Col - len(line)))
+                    self._data.append(line)
             except MemoryError:
-                warn('since the limitation of memory, DaPy can not read the whole '+\
-                     'file, stop in the line %d'%m)
-        self._dim = dims(m + 1, self._dim.Col)
+                self._dim = dims(len(self._data), self._dim.Col)
+                warn('since the limitation of memory, DaPy can not read the'+\
+                     ' whole file.')
 
     def reverse(self):
         self._data.reverse()
@@ -1713,6 +1714,8 @@ class Frame(BaseSheet):
         compare_pos = []
         for order in orders:
             if isinstance(order[0], int):
+                if abs(order[0]) >= self.shape[1]:
+                    raise IndexError("'%d' is out of range" % order[0])
                 compare_pos.append(order[0])
             elif order[0] in self._columns:
                 compare_pos.append(self._columns.index(order[0]))
@@ -1755,16 +1758,12 @@ class Frame(BaseSheet):
                 inside_data.reverse()
             return inside_data
 
-        if len(set(compare_symbol)) == 1:
-            self._data = sorted(self._data, key=itemgetter(*compare_pos))
-        else:
-            self._data = hash_sort(self._data)
-
+        self._data = hash_sort(self._data)
         if compare_symbol[0] == 'DESC':
             self._data.reverse()
 
-    def shuffles(self):
-        shuffle(self._data)
+    def shuffle(self):
+        shuffles(self._data)
 
     def values(self):
         for sequence in zip(*self._data):

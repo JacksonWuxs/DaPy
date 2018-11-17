@@ -5,7 +5,8 @@ try:
 except IOError:
     import Pickle as pickle
 from base import is_value, is_iter, is_seq, SeriesSet, Frame, Matrix
-from io import parse_addr, parse_sql, parse_excel, parse_sav
+from io import parse_addr, parse_sql, parse_excel, parse_sav, parse_html
+from io import write_txt, write_xls, write_html, write_db
 from warnings import warn
 from os.path import isfile
 from re import search as re_search
@@ -57,7 +58,7 @@ class DataSet(object):
     ==============================================
     '''
     __all__ = ['data', 'columns', 'sheets','info', 'add', 'append', 'append_col', 'info',
-               'count', 'count_element', 'drop_miss_value', 'size', 'shape',
+               'count', 'count_element', 'pop_miss_value', 'size', 'shape',
                'extend', 'insert', 'insert_col', 'pick', 'pop', 'pop_col',
                'normalized', 'read', 'reverse', 'replace', 'shuffles','corr',
                'sort', 'save', 'tomat', 'toframe', 'tocol', 'show', ]
@@ -148,6 +149,7 @@ class DataSet(object):
 
         elif is_iter(other):
             if len(set(other)) == len(self._sheets):
+                self._sheets = []
                 self._sheets = [self._check_sheet_new_name(item) for item in other]
             else:
                 raise ValueError('the names size does not match the size of '+\
@@ -390,7 +392,8 @@ class DataSet(object):
 
     def _check_sheet_new_name(self, new_name):
         if not new_name:
-            return self._check_sheet_new_name('sheet%d'%len(self._sheets))
+            return self._check_sheet_new_name('sheet_%d'%len(self._sheets))
+        
         if new_name not in self._sheets:
             return new_name
 
@@ -1063,7 +1066,7 @@ class DataSet(object):
             the same value in the keywords.
         <2> It will add the new data as new variables behind the exist records.
         <3> If there is more than one record that matches the keywords of the
-            two data sets, it will correspond to the order of the records.
+            two data sets, it will correspond to the sequence of the records.
 
         Parameter
         ---------
@@ -1071,16 +1074,38 @@ class DataSet(object):
             the other dataset which is used to extend this one.
 
         self_key : int, str (default=0)
-            choose a column as the keyword in this data, it is similar to
+            choose a column as the keyword in this sheet, it is similar to
             the Index. 
 
         other_key : int, str(default=0)
-            choose a column as the keyword in the other data.
+            choose a column as the keyword in the other sheet.
 
         Return
         ------
         None
 
+        Example
+        -------
+        >>> sheet_left = dp.SeriesSet([
+                ['Alan', 35],
+                ['Bob', 27],
+                ['Charlie', 30],
+                ['Daniel', 29]],
+                ['Name', 'Age'])
+        >>> sheet_left.merge(
+                [['Alan', 'M'],
+                ['Bob', 'M'],
+                ['Charlie', 'F'],
+                ['Janny', 'F']],
+                self_key='Name', other_key=0)
+        >>> sheet_left.show()
+           Name  | Age  |   C_0   | C_1 
+        ---------+------+---------+------
+           Alan  |  35  |   Alan  |  M   
+           Bob   |  27  |   Bob   |  M   
+         Charlie |  30  | Charlie |  F   
+          Daniel |  29  |   None  | None 
+           None  | None |  Janny  |  F   
         '''
         for i, data in enumerate(self._data):
             if hasattr(data, 'merge'):
@@ -1121,6 +1146,8 @@ class DataSet(object):
 
         prefer_type : type-object (default=0)
 
+        ftype : str (default
+
         Examples
         --------
         >>> import DaPy as dp
@@ -1133,6 +1160,7 @@ class DataSet(object):
         miss_value = kward.get('miss_value', None)
         sheet_name = kward.get('sheet_name', None)
         fpath, fname, fbase, ftype = parse_addr(addr)
+        ftype = kward.get('ftype', ftype)
         if sheet_name is None:
             sheet_name = fbase
         
@@ -1187,10 +1215,24 @@ class DataSet(object):
 
         elif ftype == 'pkl':
             self.add(pickle.load(open(addr, 'rb')), sheet_name)
+
+        elif ftype in ('html', 'htm'):
+            with open(addr) as f:
+                text = f.read()
+
+            if '<table' not in text:
+                raise ValueError('there is no tag <table> in the html file.')
+            
+            if sheet_name:
+                fbase = sheet_name
+                
+            for sheet, name in parse_html(\
+                            text, dtype, miss_symbol, miss_value, fbase):
+                self.add(sheet, name)
             
         else:
             raise ValueError('DaPy singly supports file types as'+\
-                             '(xls, xlsx, csv, txt, pkl, db, sav).')
+                             '(xls, xlsx, csv, txt, pkl, db, sav, html, htm).')
 
     def reverse(self, axis='sheet'):
         '''Reverse your data set.
@@ -1274,7 +1316,7 @@ class DataSet(object):
             if hasattr(data, 'replace'):
                 data.replace(*arg)
 
-    def shuffles(self):
+    def shuffle(self):
         ''' Mess up your data
         '''
         for data in self._data:
@@ -1312,80 +1354,58 @@ class DataSet(object):
             if hasattr(data, 'sort'):
                 data.sort(*orders)
 
-    def save(self, addr, code='utf-8'):
+    def save(self, addr, **kwrds):
         '''Save the DataSet to a file.
         '''
         fpath, fname, fbase, ftype = parse_addr(addr)
+        encode = kwrds.get('encode', 'utf-8')
+        decode = kwrds.get('decode', 'utf-8')
+        ftype = kwrds.get('ftype', ftype)
+        
         if ftype == 'csv' or ftype == 'txt':
+            newline = kwrds.get('newline', '\n')
+            delimiter = kwrds.get('delimiter', ',')
             for data, sheet in zip(self._data, self._sheets):
+                if not data:
+                    continue
                 if len(self._data) > 1:
-                    addr_ = fpath + fbase + '_' + sheet + '.' + ftype
-                else:
-                    addr_ = addr
-                    
-                with open(addr_, 'w') as f:
-                    if hasattr(data, 'columns'):
-                        f.write(','.join(data.columns).encode(code) + u'\n')
+                    addr = fpath + fbase + '_' + sheet + '.' + ftype
+                with open(addr, 'w') as f:
+                    write_txt(f, data, newline, delimiter, encode, decode)
 
-                    if isinstance(self._data, (Frame, Matrix, SeriesSet)):
-                        for line in data:
-                            f.write(','.join(map(str, line)).encode(code))
-                            f.write(u'\n')
-
-                    elif is_iter(data[0]):
-                        for line in data:
-                            f.write(','.join(map(str, line)).encode(code) + '\n')
-
-                    else:
-                        for record in data:
-                            f.write(str(record).encode(code) + u'\n')
-                        
-        elif ftype == 'xls' or ftype == 'xlsx':
+        elif ftype in ('xls', 'xlsx'):
             try:
                 import xlwt
             except ImportError:
                 raise ImportError('DaPy uses xlwt library to save a `xls/xlsx` file.')
 
-            workbook = xlwt.Workbook(encoding=code)
+            workbook = xlwt.Workbook(encoding=encode)
             for sheet, data in zip(self._sheets, self._data):
+                if not data:
+                    continue
                 worksheet = workbook.add_sheet(sheet)
-                if hasattr(data, 'columns'):
-                    for i, value in enumerate(data.columns):
-                        worksheet.write(0, i, value.encode(code))
-
-                if isinstance(data, (Frame, Matrix, SeriesSet)) or\
-                   is_iter(data[0]):
-                    for i, row in enumerate(data, 1):
-                        for j, value in enumerate(row):
-                            worksheet.write(i, j, value)
-                else:
-                    for i, value in enumerate(self._data):
-                        worksheet.write(i, 1, value)
+                write_xls(worksheet, data, decode, encode)
             workbook.save(addr)
 
         elif ftype == 'pkl':
             pickle.dump(self, open(addr, 'wb'))
         
         elif ftype == 'db':
-            raise NotImplementedError('This function will be added in the next version.')
-            '''
             import sqlite3 as sql
             with sql.connect(addr) as conn:
-                cur = conn.cursor()
-                cur.execute("SELECT name FROM sqlite_master WHERE type='table' ORDER BY name")
-                tables = cur.fetchall()
+                for data, sheet in zip(self._data, self._sheets):
+                    write_db(conn, sheet, data, kwrds.get('if_exists', 'fail'))
+                
 
-                for sheet, sheet_name in zip(self._data, self._sheets):
-                    if sheet_name in tables:
-                        sheet_name += '_'
-                        index = 1
-                        while sheet_name + str(index) in tables:
-                            index += 1
-                        sheet_name += str(index)
-                    
-                    if not isinstance(sheet, (Frame, SeriesSet)):
-                        sheet = SeriesSet(sheet)
-            '''
+        elif ftype == 'html':
+            with open(addr, 'w') as f:
+                for data, sheet in zip(self._data, self._sheets):
+                    if not data:
+                        continue
+                    f.write('<table border="1" class="%s">' % sheet)
+                    write_html(f, data, encode, decode)
+                    f.write('</table>')
+            
         else:
             raise ValueError('unrecognized file type')
         

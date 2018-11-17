@@ -1,10 +1,9 @@
 from setuptools import setup, find_packages
-from DaPy import version
 pkg = find_packages()
 
 setup(
     name='DaPy',
-    version=version.__version__,
+    version='1.5.1.2',
     description='Enjoy your tour in data minning',
     classifiers=[
         'Development Status :: 4 - Beta',
@@ -20,7 +19,7 @@ setup(
     maintainer='Xuansheng Wu',
     maintainer_email='wuxsmail@163.com',
     platforms=['all'],
-    url='https://github.com/JacksonWoo/DaPy',
+    url='http://dapy.kitgram.cn',
     license='GPL v3',
     packages=pkg,
     package_dir={'DaPy.datasets': 'DaPy/datasets'},

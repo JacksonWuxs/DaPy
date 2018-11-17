@@ -11,8 +11,7 @@ class LinearRegression:
 
     Return
     ------
-    LR_Model
-        use LR_Model to do prediction.
+    LR_Model : use LR_Model to do prediction.
 
     Examples
     --------
@@ -42,9 +41,10 @@ class LinearRegression:
     Reference
     ---------
     Xiaoling Xu, Ronghua Wang. (2013). Probability Theory & Mathematical Statistics.
-        Shanghai: Shanghai Jiaotong University Press
+        Shanghai: Shanghai Jiaotong University Press.
     '''
-    def __init__(self, beta_=None, alpha_=None):
+    def __init__(self, beta_=None, alpha_=None, solve='MSE'):
+        self._solve = solve
         self._beta = beta_
         self._alpha = alpha_
         self._mode = None
@@ -83,13 +83,12 @@ class LinearRegression:
         Y : numbers in sequence
             A sequence stores some targets of the records.
         '''
-        len_x, len_y = len(X), len(Y)
+        len_x, len_y = float(len(X)), float(len(Y))
         if len_x != len_y:
             raise ValueError('size of two sequences are not match.')
-        lxx = sum(map(lambda x: pow(x, 2), X)) - pow(sum(X), 2)/float(len_x)
-        lyy = sum(map(lambda x: pow(x, 2), Y)) - pow(sum(Y), 2)/float(len_y)
-        lxy = sum([X[i] * Y[i] for i in range(len_x)]) -\
-              sum(X)*sum(Y)/float(len_y)
+        lxx = sum(map(lambda x: pow(x, 2), X)) - pow(sum(X), 2)/len_x
+        lyy = sum(map(lambda x: pow(x, 2), Y)) - pow(sum(Y), 2)/len_y
+        lxy = sum([x * y for x, y in zip(X, Y)]) - sum(X)*sum(Y)/len_y
 
         self._beta = lxy / lxx
         self._alpha = mean(Y) - self._beta * mean(X)

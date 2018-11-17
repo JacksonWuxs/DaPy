@@ -8,6 +8,7 @@ import math
 __all__ = ['cov', 'corr', 'frequency', 'quantiles', '_sum',
            'distribution','describe', 'mean']
 
+
 def log(data):
     if is_seq(data):
         if is_seq(data[0]):
@@ -115,15 +116,13 @@ def cov(data_1, data_2):
     formula:  cov(x,y) = E(xy) - E(x)E(y) 
     '''
     try:
-        size = min(float(len(data_1)), float(len(data_2)))
-        xy = [data_1[i] * data_2[i] for i in range(int(size))]
+        if len(data_1) != len(data_2):
+            raise ValueError('two variables have different lenth.')
+        size = float(len(data_1))
+        xy = [x*y for x, y in zip(data_1, data_2) if is_math(x) and is_math(y)]
         Exy = sum(xy)/size
-        Ex = sum(data_1)/size
-        Ey = sum(data_2)/size
-    except TypeError:
-        data_1 = [v for v in data_1 if is_math(v)]
-        data_2 = [v for v in data_2 if is_math(v)]
-        return cov(data_1, data_2)
+        Ex = sum(filter(is_math, x))/size
+        Ey = sum(filter(is_math, x))/size
     except ZeroDivisionError:
         return None
     return Exy - Ex * Ey
@@ -219,33 +218,40 @@ def describe(data):
 
     Formulas
     --------
-    <1> E(x) = sum(x)/n          # Average of samples
-    <2> D(x) = E(x^2) - E(x)^2   # Sample Variance
-    <3> D(x)' = n/(n-1) * D(x)   # Modified Sample Variance
+    <1> E(x) = sum(x)/n                             # Average of samples
+    <2> D(x) = E(x^2) - E(x)^2                      # Sample Variance
+    <3> D(x)' = n/(n-1) * D(x)                      # Modified Sample Variance
+    <4> CV = D(x) / E(x)                            # Coefficient of Variation
+                E(x^3) - 3*E(x)*D(x) - E(x)^3
+    <5> S(x) = ------------------------------------ # Skewness of samples
+                            D(x)^1.5
+    <6> K(x) = E(x)^4 / D(x)^2 - 3                  # Excess Kurtosis of samples
+                
+    
     '''
     statistic = namedtuple('STAT',
-                           ['Mean', 'S', 'Sn',
-                            'CV', 'Min', 'Max', 'Range'])
+                           ['Mean', 'S', 'Sn', 'CV', 
+                            'Min', 'Max', 'Skew', 'Kurt'])
+    data = filter(is_math, data)
     size = len(data)
 
     try:
-        try:
-            Ex = sum(data)/float(size)
-            Ex2 = sum([i**2 for i in data])/float(size)
-        except TypeError:
-            data = filter(is_math, data)
-            return describe(data)
+        Ex = sum(data) / float(size)
+        Ex2 = sum(map(pow, data, [2]*size)) / float(size)
+        Ex3 = sum(map(pow, data, [3]*size)) / float(size)
+        Ex4 = sum(map(pow, data, [4]*size)) / float(size)
     except ZeroDivisionError:
         return statistic(None, None, None, None, None, None, None)
     
-    std_n = (Ex2 - Ex**2)**0.5
+    std = (Ex2 - Ex**2)**0.5
     if size > 1:
-        std = (size/(size-1.0)*(Ex2 - Ex**2))**0.5
+        std_n = n / (n - 1.0) * std
     else:
-        std = std_n
+        std_n = std
+
+    S = (Ex3 - 3*Ex*std**2 - Ex**3) / std ** 1.5
+    K = Ex4 / std ** 4 - 3
     
     if Ex == 0:
-        return statistic(Ex, std, std_n, None, min(data),
-                         max(data), max(data)-min(data))
-    return statistic(Ex, std, std_n, std/Ex, min(data),
-                     max(data), max(data)-min(data))
+        return statistic(Ex, std, std_n, None, min(data), max(data), S, K)
+    return statistic(Ex, std, std_n, std/Ex, min(data), max(data), S, K)

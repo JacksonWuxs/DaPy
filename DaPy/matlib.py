@@ -19,7 +19,7 @@ def P(n, k):
     P(n, k) = ----------
                (n - k)!
     '''
-    if k == 0:
+    if k == 0 or n == k:
         return 1
     upper = reduce(multiply, range(1, 1+n))
     down = reduce(multiply, range(1, 1+ n - k))
@@ -36,7 +36,7 @@ def C(n, k):
     C(n, k) = -----------
                k!(n - k)!
     '''
-    if k == 0:
+    if k == 0 or n == k:
         return 1
     upper = reduce(multiply, range(1, 1+n))
     left = reduce(multiply, range(1, 1+k))
@@ -61,9 +61,9 @@ def dot(matrix_1, matrix_2):
         line_size_2 = len(matrix_2)
         columns = None
     except TypeError:
-        raise TypeError('unsupported operation dot, with type'+\
-                        ' %s and ,'%str(type(matrix_1)) +\
-                        '%s and '%str(type(matrix_2)))
+        raise TypeError('unsupported operation dot(), with type'+\
+                        ' %s and ,' % type(matrix_1) +\
+                        '%s.' % type(matrix_2))
     
     if col_size_1 != line_size_2:
         raise ValueError('shapes (%d, %d) '%(line_size_1, col_size_1)+\

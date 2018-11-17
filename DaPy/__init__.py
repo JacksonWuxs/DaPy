@@ -1,88 +1,43 @@
-
+# user/bin/python
+#########################################
+# Author         : Xuansheng Wu           
+# Email          : wuxsmail@163.com 
+# created        : 2017-11-01 00:00 
+# Last modified  : 2018-11-14 11:09
+# Filename       : DaPy.__init__.py
+# Description    : initial file for DaPy                     
+#########################################
 '''
-DaPy module is a fundemantal data process tool, which help you readily process and analysis data.
+Data Analysis Library for Human.
 
-Copyright (C) 2018  Xuansheng Wu
+DaPy module is a fundemantal data processing tool, which helps you
+readily process and analysis data. DaPy offers a series of humane data
+structures, including but not limit in SeriesSet, Frame and DataSet. Moreover,
+it implements some basic data analysis algorithms, such as Multilayer
+Perceptrons, One way ANOVA and Linear Regression. With DaPy help,
+data scientists can handle their data and complete the analysis task easily.
 
-This program is free software: you can redistribute it and/or modify
-it under the terms of the GNU General Public License as published by
-the Free Software Foundation, either version 3 of the License, or
-(at your option) any later version.
+Enjoy the tour in data mining!
 
-This program is distributed in the hope that it will be useful,
-but WITHOUT ANY WARRANTY; without even the implied warranty of
-MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-GNU General Public License for more details.
-
-You should have received a copy of the GNU General Public License
-along with this program.  If not, see https:\\www.gnu.org\licenses.
+:Copyright (C) 2018  Xuansheng Wu.
+:License: GNU 3.0, see LICENSE for more details.
 '''
-
-from version import __version__, __author__, __copyright__
 
 __all__ = [ 'datasets', 'Frame', 'SeriesSet', 'MachineLearn',
-            'stats', 'ones', 'zeros', 
+            'stats', 'ones', 'zeros', 'delete',
            'DataSet', 'Table', 'Matrix', 'cov', 'corr', 'frequency',
            'quantiles', 'sum', 'is_iter', 'read', 'encode', 'save',
            'distribution','describe', 'mean', 'exp', 'dot', 'is_math']
 
-from os.path import dirname, join
+from __version__ import __version__, __author__, __copyright__
 from core import (cov, corr, distribution, describe, sum,
                   Frame, SeriesSet, DataSet,
                   frequency, quantiles, mean, is_math, is_iter)
 from core import Matrix as mat
 from matlib import exp, dot, multiply, zeros, ones, C, P
 from io import read, encode, save
-from copy import deepcopy
+from operation import delete, column_stack
 
-try:
-    module_path = dirname(__file__)
-    with open(join(module_path, 'doc/README.md'),'r') as f:
-        __doc__ = f.read()
-except IOError:
-    __doc__ = 'DaPy - Enjoy the tour in data mining.\n' +\
-           '===============================================================\n'+\
-           '\n-----------------------------\n'+\
-           'Name: DaPy\n'+\
-           'Author: Jackson Woo\n'+\
-           'Version: %s'%__version__ +\
-           '\nUpdata: Oct. 26th, 2018\n'+\
-           'E-Mail:Wuxsmail@163.com\n'+\
-           '-----------------------------\n\n' 
-
-def column_stack(lis):
-    if not isinstance(lis[0], mat):
-        lis[0] = mat(deepcopy(lis[0]), False)
-        return column_stack(lis)
-    
-    new = lis[0]
-    for i, line in enumerate(new):
-        for current in lis[1:]:
-            line.extend(list(current[1]))
-    return mat(new)
-
-def delete(data, index, axis=0):
-    if isinstance(index, int):
-        index = [index, ]
-        
-    if not isinstance(data, mat):
-        return delete(mat(deepcopy(data)), index, axis)
-    
-    if axis == 1:
-        new = [0] * len(data)
-        for i, line in enumerate(data):
-            for i in index:
-                del line[i]
-            new[i] = line
-        return mat(new, False)
-    
-    if axis == 0:
-        index = sorted(index, reverse=True)
-        new = list()
-        for i, line in data:
-            if i not in index:
-                new.append(line)
-        return mat(new, False)
         
     
 

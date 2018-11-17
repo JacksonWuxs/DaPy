@@ -13,6 +13,14 @@ class Series(BaseSeries):
     def __init__(self):
         BaseSeries.__init__(self)
 
+    @property
+    def index(self):
+        pass
+
+    @index.setter
+    def index(self, other):
+        pass
+
     def __add__(self, right):
         '''[1, 2, 3] + 3 -> [4, 5, 6]
         '''

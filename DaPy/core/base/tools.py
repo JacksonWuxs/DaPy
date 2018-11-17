@@ -9,7 +9,8 @@ __all__ = ['str2value', 'get_sorted_index',
            'is_value', 'is_math', 'is_iter', 'is_seq']
 
 _value_types = (type(None), int, float, str, long, complex,
-                unicode, datetime, struct_time)
+                unicode, datetime, struct_time, bool)
+_math_types = (int, float, long, complex)
 _sequence_types = [list, tuple, deque, array, set, frozenset]
 
 try:
@@ -85,16 +86,12 @@ def is_math(n):
         True - 'n' is a number
         False - 'n' is not a number
     '''
-    if isinstance(n, (int, float, long)):
+    if isinstance(n, _math_types):
         return True
     return False
 
 def is_iter(obj):
     '''Determine that if a variable is a iterable
-
-    Return
-    ------
-    Bool
     '''
     try:
         if isinstance(obj, Iterable):
