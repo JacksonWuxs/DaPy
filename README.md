@@ -2,18 +2,18 @@
 
 DaPy - Enjoy the Tour in Data Mining
 ====
-![](https://img.shields.io/badge/Version-1.4.1-green.svg)  ![](https://img.shields.io/badge/Download-PyPi-green.svg)  ![](https://img.shields.io/badge/License-GNU-blue.svg)
+![](https://img.shields.io/badge/Version-1.5.3-green.svg)  ![](https://img.shields.io/badge/Download-PyPi-green.svg)  ![](https://img.shields.io/badge/License-GNU-blue.svg)
 
 As a data analysis and processing library based on the original data structures in Python, **DaPy** is not only committed to save the time of data scientists and improve the efficiency of research, but also try it best to offer you a new experience in data science.
 
-[Installation](#installation) | [Features](#features) | [Quick Start](https://github.com/JacksonWuxs/DaPy/blob/master/Guide%20Book/English/Quick%20Start.md ) | [To Do List](#todo) | [Version Log](#version-log) | [License](#license) | [Guide Book](https://github.com/JacksonWuxs/DaPy/tree/master/Guide%20Book) | [中文版](https://github.com/JacksonWuxs/DaPy/blob/master/README_Chinese.md)
+[Installation](#installation) | [Features](#features) | [Quick Start](https://github.com/JacksonWuxs/DaPy/blob/master/doc/Quick%20Start/English.md ) | [To Do List](#todo) | [Version Log](#version-log) | [License](#license) | [Guide Book](https://github.com/JacksonWuxs/DaPy/tree/master/doc/Guide%20Book/README.md) | [中文版](https://github.com/JacksonWuxs/DaPy/blob/master/README_Chinese.md)
 
 ## Installation
-The latest version 1.5.1 had been upload to PyPi.
+The latest version 1.5.3 had been upload to PyPi.
 ```
 pip install DaPy
 ```
-Updating your last version to 1.5.1 with PyPi as follow.
+Updating your last version to 1.5.3 with PyPi as follow.
 ```
 pip install -U DaPy
 ```
@@ -38,13 +38,52 @@ implement your ideas fluently.
 	- A variety of ways to help you easily perceive your dataset.
   
 Even if it uses Python original data structures, 
-DaPy still has efficiency comparable to some libraries which were written by C.
+DaPy still has efficiency comparable to some libraries which are written by C.
 We have tested DaPy on the platform with
-Intel i7-6560U while the Python version is 2.7.15-64Bit. The [dataset](http://www.wuxsweb.cn/Library/DaPy&Test_data/read_csv.csv)
+Intel i7-8550U while the Python version is 2.7.15-64Bit. The [dataset](http://www.wuxsweb.cn/Library/DaPy&Test_data/read_csv.csv)
 has more than 2 million records and total size is 
 119 MB.  
 
-<table><thead>    <th>测试结果</th>    <th>DaPy(V1.5.1)</th>    <th>Pandas(V0.23.4)</th>    <th>Numpy(V1.15.1)</th></thead><tbody><tr>    <td>加载数据</td>    <td>28.70s (3.0x)</td>    <td style='color:red'> 9.72s (1.0x)</td>    <td>55.38s (5.7x)</td></tr><tr>    <td>遍历数据</td>    <td style='color:red'>0.13s (1.0x)</td>    <td>2.90s (22.3x)</td>    <td>0.17s (1.3x)</td></tr><tr>    <td>排序数据</td>    <td>0.88s (1.7x)</td>    <td style='color:red'>0.53s (1.0x)</td>    <td>4.90s (9.2x)</td>    </tr><tr>    <td>总耗时</td>    <td>29.71s (2.3x)</td>    <td style='color:red'>13.15s (1.0x)</td>    <td>60.45s (4.6x)</td></tr></tbody></table>  
+<table style='text-align:center'>
+<thead>
+    <th>Programs</th>
+    <th>DaPy(V1.5.3)</th>
+    <th>Pandas(V0.23.4)</th>
+    <th>Numpy(V1.15.1)</th>
+</thead>
+<tbody>
+<tr>
+	<td>Loading</td>
+	<td>12.85s (3.2x)</td>
+	<td> 4.02s (1.0x)</td>
+  	<td>22.63s (5.6x)</td>
+</tr>
+<tr>
+	<td>Traversing</td>
+	<td>0.09s (1.9x)</td>
+	<td>1.15s (14.4x)</td>
+	<td>0.08s (1.0x)</td>
+</tr>
+<tr>
+	<td>Sorting</td>
+	<td>0.97s (1.7x)</td>
+	<td>0.25s (1.0x)</td>
+	<td>3.03s (9.2x)</td>
+</tr>
+<tr>
+	<td>Saving</td>
+	<td>7.20s (3.5x)</td>
+	<td>7.60s (3.7x)</td>
+	<td>2.05s (1.0x)</td>
+</tr>
+<tr>
+	<td>Total</td>
+	<td>21.11s (1.6x)</td>
+	<td>13.02s (1.0x)</td>
+	<td>27.79s (2.1x)</td>
+</tr>
+</tbody>
+</table>   
 
 
 ## TODO  
@@ -65,7 +104,7 @@ has more than 2 million records and total size is
 If you want to follow up the latest developments, you can visit [here](https://www.teambition.com/project/5b1b7bd40b6c410019df8c41/tasks/scrum/5b1b7bd51e4661001838eb10).
 
 ## Version-Log
-* V1.5.1 (2018-11-17)
+* V1.5.3 (2018-11-17)
   * Added `select()` function for quickly access partial data with some conditions;
   * Added more supported external data types: html and SQLite3 for saving data;
   * Added `DaPy.delete()` and `DaPy.column_stack()` for deleting and merging a un-DaPy object;

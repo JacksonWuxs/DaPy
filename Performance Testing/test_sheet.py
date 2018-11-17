@@ -1,5 +1,5 @@
 import unittest
-from sheets import Frame, SeriesSet
+from DaPy import Frame, SeriesSet
 
 class TestFrameMethods(unittest.TestCase):
     def test_init_records(self):

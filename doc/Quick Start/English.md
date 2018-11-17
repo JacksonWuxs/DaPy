@@ -1,71 +1,19 @@
-# DaPy - enjoy the tour of data mining
-
-## Introduction
-#### What is DaPy?
-DaPy is a Python package providing efficiency and readily usable data structures designed by Python native data strucutres. 
-It aims to be a fundamental and friendly tools for real-world data processing in Python. Additionally, we also built some common data analysis algorithms, both in statistics and machine learning, in the library, in order to help you testify your idea as soon as posible.  
-
-#### Why use DaPy?  
-A large number of high quality libraries are now available to efficiently support scientific computing and data analysis. However, these kind of libraries are not friendly to a freshman in Python, because they have to spend a lot of time getting familiar with these data structures. 
-
-Traversing the data set for example, most people would use ``for`` syntax as their first idea. But Pandas would iterate the column names only, not the records. Moreover, when users try to select some of the records with conditions, Pandas needs a Bool set at first. It is not visible for user to know how the data opearted. 
-
-There is no doubt that these libraries play major roles in the data science filed. However, it would need some complementary products at the same time. In contrast with these data processing or computing libraries, DaPy focus on a specific aspect, which is defined as rapid development. In a simple word, DaPy is suitable for the users who are in the begining of a new research. With the DaPy help, scientists can quickly implements their ideas without limitation of complex syntax.  
-
-A recommend way to use DaPy is that using it while you do some pre-process of your data set in a new research. After you testify your demo, you can use numpy or tensorflow data structures to rewrite your idea. But it doesn't means that DaPy is not up to the processing of big data. On the contrary, he also has strong operational efficiency in some aspects.
-
-#### How to use DaPy?
-While you using DaPy as a data processing tool in your programe, you just need to imagine it as a Excel file. And in the most of time, the first idea which jumped out from your mind is the correct syntax while you processing the data. Here is a simple example to testify if the syntax matches your idea. 
-
-First of all, we make a `Frame` structure as follow. Frame is a kind of `sheet` in DaPy, the another `sheet` structure is `SeriesSet`.
-```Python
->>> import DaPy as dp
-data = dp.Frame([
-	[1, 2, 3, 4, 5, 6],
-	[1, 3, 5, 7, 9, 11],
-	[2, 4, 6, 8, 10, 12]], 
-   ['A_col', 'B_col', 'C_col', 'D_col', 'E_col', 'F_col'])
-```
-Now, our task is picking out following columns: 'B_col', 'C_col', 'D_col', and 'F_col'. We find that 'B_col', 'C_col' and 'D_col' are connected together. Think about the `slice` using in native Python structures such as list. Here is what we do.
-```Python
->>> data['B_col': 'D_col', 'F_col']
-```
-
-## Contents  
-[Features]
-   
-[Quick Start](https://github.com/JacksonWuxs/DaPy/blob/master/doc/GuideBook.md#quick-start)
-  - load a dataset
-  - pre-process data
-  - Build up your model
-  - Show the result  
-  
-[Data Structures]
-  - Introduction
-  - DataSet
-  - Sheets
-  - Matrix  
-  
-[Inside Methods]
-  - Machine Learn
-  - Mathematical Statistics
-
 ## Quick Start
 #### Ⅰ. Loading a dataset
 DaPy comes with a few famous datasets, for examples the **iris** 
 and **wine** datasets for classification.   
-  
+
 In the following, we will start a Python shell and then 
 load the wine datasets as an example: 
 ```Python
->>> from DaPy import machine_learn
+>>> from DaPy import MachineLearn
 >>> from DaPy import datasets
 >>> wine, info = datasets.wine()
 ```
 This function will return a *DaPy.SeriesSet* structure that holds 
 all the data while a description of data will be returned at the 
 same time. 
-  
+
 In general, to load from an external dataset, you can use these 
 statements, please refer to GuideBook for more details:
 ```Python
@@ -104,37 +52,37 @@ sheet:data
 2. Dimensions: Ln=178 | Col=16
 3. Miss Value: 0 elements
 4.   Describe: 
-        Title         | Miss | Min | Max | Mean | Std  |Dtype
-----------------------+------+-----+-----+------+------+-----
-       Alcohol        |  0   | 0.0 | 1.0 | 0.52 | 0.21 | list
-      Malic acid      |  0   | 0.0 | 1.0 | 0.32 | 0.22 | list
-         Ash          |  0   | 0.0 | 1.0 | 0.54 | 0.15 | list
-  Alcalinity of ash   |  0   | 0.0 | 1.0 | 0.46 | 0.17 | list
-      Magnesium       |  0   |  0  |  1  | 0.01 | 0.07 | list
-    Total phenols     |  0   | 0.0 | 1.0 | 0.45 | 0.22 | list
-      Flavanoids      |  0   | 0.0 | 1.0 | 0.36 | 0.21 | list
- Nonflavanoid phenols |  0   | 0.0 | 1.0 | 0.44 | 0.23 | list
-   Proanthocyanins    |  0   | 0.0 | 1.0 | 0.37 | 0.18 | list
-   Color intensity    |  0   | 0.0 | 1.0 | 0.32 | 0.20 | list
-         Hue          |  0   | 0.0 | 1.0 | 0.39 | 0.19 | list
-        OD280         |  0   | 0.0 | 1.0 | 0.49 | 0.26 | list
-       Proline        |  0   |  0  |  1  | 0.01 | 0.07 | list
-       class_1        |  0   |  0  |  1  | 0.33 | 0.47 | list
-       class_2        |  0   |  0  |  1  | 0.40 | 0.49 | list
-       class_3        |  0   |  0  |  1  | 0.27 | 0.45 | list
-=============================================================
+        Title         | Miss |  Min  |  Max  |  Mean  |Stdev 
+----------------------+------+-------+-------+--------+------
+       Alcohol        |  0   | 11.03 | 14.83 | 13.00  | 0.81 
+      Malic acid      |  0   |  0.74 |  5.8  |  2.34  | 1.11 
+         Ash          |  0   |  1.36 |  3.23 |  2.37  | 0.27 
+  Alcalinity of ash   |  0   |  10.6 |  30.0 | 19.49  | 3.33 
+      Magnesium       |  0   |   70  |  162  | 99.74  |14.24 
+    Total phenols     |  0   |  0.98 |  3.88 |  2.30  | 0.62 
+      Flavanoids      |  0   |  0.34 |  5.08 |  2.03  | 1.00 
+ Nonflavanoid phenols |  0   |  0.13 |  0.66 |  0.36  | 0.12 
+   Proanthocyanins    |  0   |  0.41 |  3.58 |  1.59  | 0.57 
+   Color intensity    |  0   |  1.28 |  13.0 |  5.06  | 2.31 
+         Hue          |  0   |  0.48 |  1.71 |  0.96  | 0.23 
+        OD280         |  0   |  1.27 |  4.0  |  2.61  | 0.71 
+       Proline        |  0   |  278  |  1680 | 746.89 |314.02
+       class_1        |  0   |   0   |   1   |  0.33  | 0.47 
+       class_2        |  0   |   0   |   1   |  0.40  | 0.49 
+       class_3        |  0   |   0   |   1   |  0.27  | 0.44 
+==============================================================
 ```
-#### Ⅱ. Preprocessing data
+#### Ⅱ. Preparing data
 Before we start a machine learning subject, we should process our 
 data so that the data can meet the requirements of the models.   
-  
+
 By just accessed our data we found that our dataset is arrangement 
 by class. For supporting a balance proportion of the training data, we can 
 mass our data with *shuffles()*. In addition, for the reason that 
 the dimensional difference between variables is significant, which 
 we found in scanning data, we suppose to normalize the data:
 ```Python
->>> wine.shuffles()
+>>> wine.shuffle()
 >>> wine.normalized()
 ```
 After disrupting the data, we should separte our data according to the 
@@ -146,11 +94,11 @@ target variables and feature variables:
 In the case of the wine dataset, the task is to predict, given a new record, 
 which class it represents. We are given samples of each of the 3 possible classes on 
 which we fit an estimator to be able to predict the classes to which unseen samples belong.  
-  
-In DaPy, an simple estimator is in the DaPy.machine_learn that 
+
+In DaPy, an example of an estimator is the class DaPy.MLP that 
 implements *mutilayer perceptrons*: 
 ```Python
->>> mlp = machine_learn.MLP()
+>>> mlp = MachineLearn.MLP()
 >>> mlp.create(input_cell=13, output_cell=3)
  - Create structure: 13 - 12 - 3
 ```
@@ -176,12 +124,12 @@ dataset apart in 80% of total. We select this training set with the
     Completed: 99.98 	Remain Time: 0.00 s	Error: 3.18%
  - Total Spent: 2.0 s	Error: 3.1763 %
 ```
-   ![Page Not Found](https://github.com/JacksonWuxs/DaPy/blob/master/doc/material/QuickStartResult.png 'Result of Training')  
-  
+   ![Page Not Found](https://github.com/JacksonWuxs/DaPy/blob/master/doc/Quick%20Start/result.png 'Result of Training')  
+
 Now, *mlp* has been trained. It should be attention that the *Error* 
 in last line does not means the correct proportion of classfication, 
 instead that it means the absolutely error of the target vector.  
-  
+
 Let us use our model to classifier the left records in wine dataset, 
 which we have not used to train the estimator:
 ```Python
@@ -189,7 +137,6 @@ which we have not used to train the estimator:
 'Classification Correct: 97.2222%'
 ```
 As you can see, our model has a satisfactory ability in classification. 
-
 #### Ⅳ. Postscript
 In order to save time in the next task by using a ready-made model, 
 it is possible to save our model in a file:

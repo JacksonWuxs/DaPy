@@ -2,9 +2,7 @@ from collections import namedtuple, OrderedDict, Counter
 from copy import deepcopy
 from csv import reader
 from datetime import date, datetime
-from numeric import describe, mean, _sum, log
 from tools import is_seq, is_iter, is_math, is_value, get_sorted_index
-from numeric import corr as f_c
 from tools import str2value, transfer_funcs
 from random import random, shuffle as shuffles
 from re import search as re_search
@@ -128,7 +126,7 @@ class BaseSheet(object):
     def __getattr__(self, name):
         if name in self._columns:
             return self.__getitem__(name)
-        raise AttributeError("'sheet' object has no attribute '%s'" % name)
+        raise AttributeError("DaPy.sheet object has no attribute '%s'" % name)
 
     def __len__(self):
         return self._dim.Ln
@@ -185,19 +183,19 @@ class BaseSheet(object):
             raise TypeError('only can set one record or one column each time.')
 
     def _getitem_by_tuple(self, interval, obj):
-        error_msg = "Can't get data by columns and index at the same time.\n" +\
-                    "Try: S['A':'B'][3:10] or S[3:10]['A':'B']"
+        ERROR = "DaPy doesn't support getting data by columns and index at the"+\
+                "same time. Try: S['A':'B'][3:10] or S[3:10]['A':'B']"
         for arg in interval:
             if isinstance(arg, str):
                 if obj and obj.shape.Ln != self._dim.Ln:
-                    raise SyntaxError(error_msg)
+                    raise SyntaxError(ERROR)
                 obj.append_col(self[arg], arg)
 
             elif isinstance(arg, slice):
                 start, stop = arg.start, arg.stop
                 if isinstance(start, str) or isinstance(stop, str):
                     if obj and obj.shape.Ln != self._dim.Ln:
-                        raise SyntaxError(error_msg)
+                        raise SyntaxError(ERROR)
                     extend_data = self.__getslice__(start, stop)
                     for title, sequence in extend_data.items():
                         if title not in obj:
@@ -205,14 +203,14 @@ class BaseSheet(object):
 
                 elif isinstance(start, int) or isinstance(stop, int):
                     if obj and obj.shape.Col != self._dim.Col:
-                        raise SyntaxError(error_msg)
+                        raise SyntaxError(ERROR)
                     obj.extend(self.__getslice__(start, stop))
                 else:
                     raise TypeError('bad statement as [%s:%s]' % (start, stop))
 
             elif isinstance(arg, int):
                 if obj and obj.shape.Col != self._dim.Col:
-                    raise SyntaxError(error_msg)
+                    raise SyntaxError(ERROR)
                 obj.append(self.__getitem__(arg))
             else:
                 raise TypeError('bad statement as [%s:%s]' % (start, stop))
@@ -512,7 +510,7 @@ class SeriesSet(BaseSheet):
 
     @property
     def info(self):
-        # calculate the informations
+        from DaPy import describe
         mins, maxs, avgs, stds = [], [], [], []
         for sequence in self._data.values():
             d = describe(sequence)
@@ -529,7 +527,6 @@ class SeriesSet(BaseSheet):
 
         miss = map(str, self._miss_value)
 
-        # calculate the blank size of each subject
         blank_size = [max(len(max(self._columns, key=len)), 5) + 2,
                       max(len(max(miss, key=len)), 4) + 2,
                       max(len(max(mins, key=len)), 3) + 2,
@@ -754,6 +751,7 @@ class SeriesSet(BaseSheet):
     def corr(self):
         '''correlation between variables in data -> Frame object
         '''
+        from DaPy import corr as f_c
         new_ = Frame([[0] * self._dim.Col for i in range(self._dim.Col)],
                      self._columns)
         for i, sequence in enumerate(self._data.values()):
@@ -947,14 +945,14 @@ class SeriesSet(BaseSheet):
                 else:
                     new_col.append(self._columns[each])
 
+        from DaPy import describe
+        if process == 'LOG':
+            from DaPy import log
         attrs_dic = dict()
         if process == 'NORMAL':
             attrs_structure = namedtuple('Nr_attr', ['Min', 'Range'])
         elif process == 'STANDARD':
             attrs_structure = namedtuple('Sd_attr', ['Mean', 'S'])
-
-        if process == 'LOG':
-            from math import log
 
         for i, title in enumerate(new_col):
             sequence = self._data[title]
@@ -1188,7 +1186,24 @@ class SeriesSet(BaseSheet):
 
         Attribute
         ---------
-        addr, first_line, miss_symbol, title_line, sep, prefer_type
+        addr : str
+            address of source file.
+
+        first_line : int (default=1)
+            the first line with data.
+
+        miss_symbol : str (default="NA")
+            the symbol of missing value in csv file.
+
+        title_line : int (default=0)
+            the line with title, rules design as follow:
+            -1 -> there is no title inside;
+            >=0 -> the titleline.
+
+        sep : str (default=",")
+            the delimiter symbol inside.
+
+        prefer_type : 
         '''
         with open(addr, 'r') as f:
             freader, col_types, miss_symbol, prefer = self._check_read_text(f, **kwrd)
@@ -1201,8 +1216,8 @@ class SeriesSet(BaseSheet):
                                     col_types, miss_symbol, prefer)
             except MemoryError:
                 self._dim = dims(m+1, self._dim.Col)
-                warn('since the limit of memory, DaPy can not read the whole '+\
-                     'file.')
+                warn('since the limitation of memory, DaPy cannot'+\
+                     'read the whole file.')
         self._data = OrderedDict(zip(self._columns, datas))
 
     def values(self):

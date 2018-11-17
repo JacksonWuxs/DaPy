@@ -30,11 +30,11 @@ __all__ = [ 'datasets', 'Frame', 'SeriesSet', 'MachineLearn',
            'distribution','describe', 'mean', 'exp', 'dot', 'is_math']
 
 from __version__ import __version__, __author__, __copyright__
-from core import (cov, corr, distribution, describe, sum,
-                  Frame, SeriesSet, DataSet,
-                  frequency, quantiles, mean, is_math, is_iter)
+from core import Frame, SeriesSet, DataSet
 from core import Matrix as mat
 from matlib import exp, dot, multiply, zeros, ones, C, P
+from matlib import cov, corr, frequency, quantiles, _sum as sum
+from matlib import distribution, describe, mean
 from io import read, encode, save
 from operation import delete, column_stack
 

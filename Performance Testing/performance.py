@@ -32,7 +32,8 @@ def test_Pandas(files):
     print '    Load Time: %.2f s '%(t2-t1)
     print 'Traverse Time: %.2f s '%(t3-t2)
     print '    Sort Time: %.2f s '%(t4-t3)
-    print '   Total Time: %.2f s '%(t4-t1)
+    print '    Save Time: %.2f s '%(t5-t4)
+    print '   Total Time: %.2f s '%(t5-t1)
 
 def test_Numpy(files):
     # Testing of numpy
@@ -46,7 +47,7 @@ def test_Numpy(files):
     t3 = clock()
     data_numpy = np.sort(data_numpy, order='Price')
     t4 = clock()
-    np.save('test_Numpy.csv', data_numpy)
+    data_numpy.tofile('test_Numpy.csv', sep=',')
     t5 = clock()
 
     
@@ -54,7 +55,8 @@ def test_Numpy(files):
     print '    Load Time: %.2f s '%(t2-t1)
     print 'Traverse Time: %.2f s '%(t3-t2)
     print '    Sort Time: %.2f s '%(t4-t3)
-    print '   Total Time: %.2f s '%(t4-t1)
+    print '    Save Time: %.2f s '%(t5-t4)
+    print '   Total Time: %.2f s '%(t5-t1)
 
 
 def test_DaPy(files):
@@ -70,11 +72,15 @@ def test_DaPy(files):
     t3 = clock()
     data_dapy.sort(('Price', 'ASC'))
     t4 = clock()
+    dp.save('test_DaPy.csv', data_dapy)
+    t5 = clock()
+    
     print '                Dapy (%s)' % dp.__version__
     print '    Load Time: %.2f s '%(t2-t1)
     print 'Traverse Time: %.2f s '%(t3-t2_)
     print '    Sort Time: %.2f s '%(t4-t3)
-    print '   Total Time: %.2f s '%(t4-t1)
+    print '    Save Time: %.2f s '%(t5-t4)
+    print '   Total Time: %.2f s '%(t5-t1)
     
 def main(files):
     test_Pandas(files)

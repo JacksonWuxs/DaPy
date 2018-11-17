@@ -1,19 +1,19 @@
 <img src="https://github.com/JacksonWuxs/DaPy/blob/master/doc/material/logo.bmp" width = 100% height = 100% div align=center />   
 DaPy - 享受数据挖掘之旅
 ====
-![](https://img.shields.io/badge/Version-1.4.4-green.svg)  ![](https://img.shields.io/badge/Download-PyPi-green.svg)  ![](https://img.shields.io/badge/License-GNU-blue.svg)  
+![](https://img.shields.io/badge/Version-1.5.3-green.svg)  ![](https://img.shields.io/badge/Download-PyPi-green.svg)  ![](https://img.shields.io/badge/License-GNU-blue.svg)  
 
 作为一个基于Python原生数据结构搭建的数据分析库，**DaPy**致力于节约数据科学家的时间并提高他们的研究效率，同时它也在尽其所能为他们提供更舒适和流畅的操作体验。
 
-[安装](#安装) | [特性](#特性) | [快速开始](https://github.com/JacksonWuxs/DaPy/blob/master/快速开始.md) | [远期规划](#远期规划) | [更新日志](#更新日志) | [用户手册](https://github.com/JacksonWuxs/DaPy/blob/master/Guide%20Book/Chinese/README.md) | [版权归属](#版权归属) | [English](https://github.com/JacksonWuxs/DaPy/blob/master/README.md)
+[安装](#安装) | [特性](#特性) | [快速开始](https://github.com/JacksonWuxs/DaPy/blob/master/doc/Quick%20Start/Chinese.md) | [远期规划](#远期规划) | [更新日志](#更新日志) | [用户手册](https://github.com/JacksonWuxs/DaPy/blob/master/doc/Guide%20Book/Chinese/README.md) | [版权归属](#版权归属) | [English](https://github.com/JacksonWuxs/DaPy/blob/master/README.md)
 
 ## 安装
-最新版本1.4.4已上传至PyPi。
+最新版本1.5.3已上传至PyPi。
 ```
 pip install DaPy
 ```
 
-用下面的代码将DaPy更新至1.4.1版本。
+用下面的代码将DaPy更新至1.5.3版本。
 ```
 pip install -U DaPy
 ```
@@ -29,7 +29,7 @@ pip install -U DaPy
     - 使用`DataSet`结构高效管理各种数据。
     - 快速完成数据的"增删改查"操作。
     - 轻松访问数据集的一部分，不仅可以通过索引或变量名称，还可以通过特定条件访问。
-    - 支持从CSV，Excel，db，SPSS或者html存取数据的强大I/O工具。
+    - 支持从CSV，Excel，SQLite3，SPSS或者html文件存取数据的强大I/O工具。
     - 支持多变量及多条件的排序。
     - 使用内置分析模型快速验证您的想法（例如“方差分析”，“多层感知机”，“线性回归”）。
     - 多种方法可帮助您轻松感知数据集。
@@ -42,40 +42,47 @@ DaPy的效率仍然与C写的一些库相当。
 有超过200万条记录，文件大小约119 MB。
 
 如果您想跟进最新进展，可以访问[这里](https://www.teambition.com/project/5b1b7bd40b6c410019df8c41/tasks/scrum/5b1b7bd51e4661001838eb10)。
-<table>
+<table style='text-align:center'>
 <thead>
-    <th>测试结果</th>
-    <th>DaPy(V1.5.1)</th>
+    <th>测试项目</th>
+    <th>DaPy(V1.5.3)</th>
     <th>Pandas(V0.23.4)</th>
     <th>Numpy(V1.15.1)</th>
 </thead>
 <tbody>
 <tr>
 	<td>加载数据</td>
-	<td>28.70s (3.0x)</td>
-	<td style='color:red'> 9.72s (1.0x)</td>
-  	<td>55.38s (5.7x)</td>
+	<td>12.85s (3.2x)</td>
+	<td> 4.02s (1.0x)</td>
+  	<td>22.63s (5.6x)</td>
 </tr>
 <tr>
 	<td>遍历数据</td>
-	<td style='color:red'>0.13s (1.0x)</td>
-	<td>2.90s (22.3x)</td>
-	<td>0.17s (1.3x)</td>
+	<td>0.09s (1.9x)</td>
+	<td>1.15s (14.4x)</td>
+	<td>0.08s (1.0x)</td>
 </tr>
 <tr>
 	<td>排序数据</td>
-	<td>0.88s (1.7x)</td>
-	<td style='color:red'>0.53s (1.0x)</td>
-	<td>4.90s (9.2x)</td>
-	</tr>
+	<td>0.97s (1.7x)</td>
+	<td>0.25s (1.0x)</td>
+	<td>3.03s (9.2x)</td>
+</tr>
+<tr>
+	<td>存储数据</td>
+	<td>7.20s (3.5x)</td>
+	<td>7.60s (3.7x)</td>
+	<td>2.05s (1.0x)</td>
+</tr>
 <tr>
 	<td>总耗时</td>
-	<td>29.71s (2.3x)</td>
-	<td style='color:red'>13.15s (1.0x)</td>
-	<td>60.45s (4.6x)</td>
+	<td>21.11s (1.6x)</td>
+	<td>13.02s (1.0x)</td>
+	<td>27.79s (2.1x)</td>
 </tr>
 </tbody>
 </table>  
+
 
 
 

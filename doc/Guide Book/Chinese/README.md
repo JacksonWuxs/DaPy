@@ -4,29 +4,29 @@
    - [为什么要使用DaPy？](https://github.com/JacksonWuxs/DaPy/tree/master/Guide%20Book#why-use-dapy)   
    - [如何使用DaPy？](https://github.com/JacksonWuxs/DaPy/tree/master/Guide%20Book#how-to-use-dapy)  
 
-[特征](https://github.com/JacksonWuxs/DaPy/blob/master/Guide%20Book/Features%20Introduction.md)
+[特性](https://github.com/JacksonWuxs/DaPy/blob/master/Guide%20Book/Features%20Introduction.md)
    - [可视化管理各种数据](https://github.com/JacksonWuxs/DaPy/blob/master/Guide%20Book/Features%20Introduction.md#visibly-manage-diverse-data)
    - 快速完成“增删改查"操作
    - 轻松访问部分数据
    - 灵活的I/O工具
    - 易于使用内建模型算法   
-   
+
 [快速入门](https://github.com/JacksonWuxs/DaPy/blob/master/doc/GuideBook.md#quick-start)  
    - 加载数据集  
    - 预处理数据  
    - 模型建立与训练  
    - 预测未来  
-  
+
 [数据结构]
   - 介绍
    - DataSet 结构
    - sheet 结构
    - matrix 结构
-  
+
 [集成算法]
    - 机器学习模型
    - 数学统计模型
-  
+
 # 介绍
 #### 什么是DaPy？
 DaPy是一个由Python原生数据结构设计的高效且易于使用的数据挖掘库。
@@ -67,4 +67,4 @@ DaPy是一个由Python原生数据结构设计的高效且易于使用的数据�
    2 | 3 | 4 | 6
    3 | 5 | 7 | 11
    4 | 6 | 8 | 12
- ```
+```
