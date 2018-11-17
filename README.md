@@ -1,4 +1,4 @@
-<img src="https://github.com/JacksonWuxs/DaPy/blob/master/doc/material/DaPy.png" width=50% height=50% style='display:inline-block;vertical-align:middle'>
+<img src="https://github.com/JacksonWuxs/DaPy/blob/master/doc/material/DaPy.png">
 
 DaPy - Enjoy the Tour in Data Mining
 ====
