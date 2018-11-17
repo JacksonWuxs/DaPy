@@ -2,6 +2,8 @@
 
 DaPy - 享受数据挖掘之旅
 ====
+
+
 ![](https://img.shields.io/badge/Version-1.5.3-green.svg)   ![](https://img.shields.io/badge/Download-PyPi-green.svg)   ![](https://img.shields.io/badge/License-GNU-blue.svg)  
 
 作为一个基于Python原生数据结构搭建的数据分析库，**DaPy**致力于节约数据科学家的时间并提高他们的研究效率，同时它也在尽其所能为他们提供更舒适和流畅的操作体验。
