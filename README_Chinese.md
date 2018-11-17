@@ -1,4 +1,4 @@
-<img src="https://github.com/JacksonWuxs/DaPy/blob/master/doc/material/logo.png" width = 50% height = 50% div align=center />   
+<img src="https://github.com/JacksonWuxs/DaPy/blob/master/doc/material/DaPy.png" width = 50% height = 50% div align=center />   
 
 DaPy - 享受数据挖掘之旅
 ====
