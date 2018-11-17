@@ -1,5 +1,5 @@
 from collections import namedtuple
-from DaPy.core import Frame, DataSet, mean, Matrix
+from DaPy import Frame, DataSet, mean
 
 __all__ = ['LinearRegression']
 
