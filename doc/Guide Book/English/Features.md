@@ -19,7 +19,7 @@ MS Office Excel software. In this software, every data should be contained in a
 *sheet* structures. We draw on ideas from Excel and proposed a data managing structure  
 that is *DataSet*. 
 
-Here is a example how does DaPy work basically to manage diverse dataset. We have prepared a [students.xlsx](http://www.wuxsweb.cn/Library/DaPy&Examples_data/students.xlsx) file as a example, which has 3 sheets insides, named "Info", "Course", and "Scholarship". Now, we will use DaPy to read this file into a DataSet object and access the data.
+Here is a example how does DaPy work basically to manage diverse dataset. We have prepared a [students.xlsx](http://www.wuxsweb.cn/Library/DaPy$Examples_data/students.xlsx) file as a example, which has 3 sheets insides, named "Info", "Course", and "Scholarship". Now, we will use DaPy to read this file into a DataSet object and access the data.
 ```Python2
 >>> import DaPy as dp
 >>> data = dp.read('students.xlsx')
@@ -55,7 +55,7 @@ sheet:Scholarship
  1801.0 |    Third    
  1805.0 |    Second   
  1806.0 |    First    
- ```
+```
 And now, we have a new sheet named "tuition" that needs to be added into data and save it as "new_students.xlsx". One of the sheet structure in DaPy is *Frame*. You can initialize a new Frame object with records and column names. 
  ```Python3
 >>> tuition = dp.Frame(
@@ -69,7 +69,7 @@ And now, we have a new sheet named "tuition" that needs to be added into data an
 	['ID', 'Tuition'])
 >>> data.add(tuition, 'Tuition')
 >>> data.save("new_students.xlsx")
-``` 
+ ```
 #### Easily insert and delete a large number of data  
 As far as we are concerned, DaPy is a kind of data manage system, therefore, we learned from the thinking as 'CRUE'(Create, Retrieve, Update and Delete). We followed some of the 'list()' structure supported functions and extended them appropriately to fit the two-dimensional data structure. In this section, we would briefly review all these functions.
 
@@ -156,7 +156,7 @@ sheet:sample
   None |  None |  None |  None |    12   |   None  |   None  |   None  |   None  
    A   |   A   |   A   |   A   |    A    |   None  |   None  |   None  |   None  
    C   |   C   |   C   |  None |   None  |   None  |   None  |   None  |   None  
- ```
+```
  Next, let me introduce some functions for dropping the data. The normalist way is to use keyword ```del``` in Python. 
  ```Python3
  >>> del example['A_col', 'B_col', 'A_col_1', 'B_col_1', 'C_col_1']
@@ -173,7 +173,7 @@ D_col_1: <4, 2, 2, 2, 3, ... ,5, 6, None, None, None>
 >>> example[5]
 [8, 3, 7, 3]
 >>>
-```
+ ```
 Anyway, we have some other functions so that you not only can delete the data, but also catch the data. The system will return the data into a new dataset object.
 ```python3
 >>> example.add(example.pop_col('C_col', 'D_col'))

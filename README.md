@@ -40,7 +40,7 @@ implement your ideas fluently.
 Even if it uses Python original data structures, 
 DaPy still has efficiency comparable to some libraries which are written by C.
 We have tested DaPy on the platform with
-Intel i7-8550U while the Python version is 2.7.15-64Bit. The [dataset](http://www.wuxsweb.cn/Library/DaPy&Test_data/read_csv.csv)
+Intel i7-8550U while the Python version is 2.7.15-64Bit. The [dataset](http://www.wuxsweb.cn/Library/DaPy$Test_data/read_csv.csv)
 has more than 2 million records and total size is 
 119 MB.  
 

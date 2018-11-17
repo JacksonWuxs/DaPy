@@ -40,8 +40,7 @@ pip install -U DaPy
 即使它使用Python原生数据结构，
 DaPy的效率仍然与C写的一些库相当。
 我们在Intel i7-8550U平台上的
-2.7.15-64Bit版本的Python原生IDLE中进行了测试。
-（[数据集](https://pan.baidu.com/s/1kK3_V8XbbVim4urDkKyI8A)）
+2.7.15-64Bit版本的Python原生IDLE中进行了测试。[数据集](http://www.kitgram.cn/Library/DaPy$Test_data/read_csv.csv)
 有超过200万条记录，文件大小约119 MB。
 
 如果您想跟进最新进展，可以访问[这里](https://www.teambition.com/project/5b1b7bd40b6c410019df8c41/tasks/scrum/5b1b7bd51e4661001838eb10)。
