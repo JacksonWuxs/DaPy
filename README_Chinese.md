@@ -45,34 +45,34 @@ DaPy的效率仍然与C写的一些库相当。
 <table>
 <thead>
     <th>测试结果</th>
-    <th>DaPy(V1.4.4)</th>
+    <th>DaPy(V1.5.1)</th>
     <th>Pandas(V0.23.4)</th>
     <th>Numpy(V1.15.1)</th>
 </thead>
 <tbody>
 <tr>
 	<td>加载数据</td>
-	<td>29.64s (3.5x)</td>
-	<td>9.72s (1.0x)</td>
-  	<td>59.38s (6.1x)</td>
+	<td>28.70s (3.0x)</td>
+	<td style='color:red'> 9.72s (1.0x)</td>
+  	<td>55.38s (5.7x)</td>
 </tr>
 <tr>
 	<td>遍历数据</td>
-	<td>0.70s (1.6x)</td>
-	<td>2.90s (14.8x)</td>
-	<td>0.28s (1.0x)</td>
+	<td style='color:red'>0.13s (1.0x)</td>
+	<td>2.90s (22.3x)</td>
+	<td>0.17s (1.3x)</td>
 </tr>
 <tr>
 	<td>排序数据</td>
-	<td>0.69s (1.65x)</td>
-	<td>0.75s (1.0x)</td>
-	<td>5.37s (10.1x)</td>
+	<td>0.88s (1.7x)</td>
+	<td style='color:red'>0.53s (1.0x)</td>
+	<td>4.90s (9.2x)</td>
 	</tr>
 <tr>
 	<td>总耗时</td>
-	<td>93.81s (1.8x)</td>
-	<td>33.66s (1.0x)</td>
-	<td>59.82s (10.0x)</td>
+	<td>29.71s (2.3x)</td>
+	<td style='color:red'>13.15s (1.0x)</td>
+	<td>60.45s (4.6x)</td>
 </tr>
 </tbody>
 </table>  
@@ -82,44 +82,51 @@ DaPy的效率仍然与C写的一些库相当。
 ## 远期规划  
 * 描述性统计
 * 推断性统计
+   * T-test
+   * 轮廓分析
 * 特征工程
-	- PCA (主成分分析)
-	- LDA (Linear Discriminant Analysis)
-	- MIC (Maximal information coefficient)
+  - PCA (主成分分析)
+  - LDA (Linear Discriminant Analysis)
+  - MIC (Maximal information coefficient)
 * 模型
-  	- 朴素贝叶斯
-	- 支持向量机
-	- K-Means
-	- Lasso Regression 
+   - 朴素贝叶斯
+   - 支持向量机
+   - K-Means
 
 ## 更新日志
+* V1.5.1 (2018-11-17)
+  * 添加 外部数据文件读写能力：html，Pickle;
+  * 添加 DaPy.delete() 和 DaPy.column_stack()函数用于删除和横向合并非DaPy对象;
+  * 添加 DaPy.P() 和 DaPy.C()函数用于计算排列数和组合数；
+  * 添加 语法特性，使得用户可以通过data.title来访问表结构中的列;
+  * 重构 DaPy.BaseSheet类，精简代码体积并提高了拓展性;
+  * 重构 DaPy.DataSet.save()函数，提高了代码稳定性及拓展能力；
+  * 重写 部分基本数学函数的算法；
+  * 修复 一些细小的bug;
 * V1.3.3 (2018-06-20)
-	- 添加 外部数据文件读取能力拓展: Excel, SPSS, SQLite3, CSV;
-	- 重构 DaPy架构, 提高了远期拓展能力;
-	- 重构 DaPy.DataSet类, 一个DataSet实例可以批量管理多个数据表;
-	- 重构 DaPy.Frame类, 删除了格式验证, 适配更多类型的数据集;
-	- 重构 DaPy.SeriesSet类, 删除了格式验证, 适配更多类型的数据集;
-	- 移除 DaPy.Table类;
-	- 优化 DaPy.Matrix类, 效率提升接近2倍;
-	- 优化 DaPy.Frame 及 Data.SeriesSet类的展示, 数据呈现更为清晰美观;
-	- 添加 `线性回归`及`方差分析`至DaPy.mathematical_statistics;
-	- 添加 DaPy.io.encode()函数, 更好地适配中文数据;
-	- 替换 read_col(), read_frame(), read_matrix() 为 read()函数;
-
+  - 添加 外部数据文件读取能力拓展: Excel, SPSS, SQLite3, CSV;
+  - 重构 DaPy架构, 提高了远期拓展能力;
+  - 重构 DaPy.DataSet类, 一个DataSet实例可以批量管理多个数据表;
+  - 重构 DaPy.Frame类, 删除了格式验证, 适配更多类型的数据集;
+  - 重构 DaPy.SeriesSet类, 删除了格式验证, 适配更多类型的数据集;
+  - 移除 DaPy.Table类;
+  - 优化 DaPy.Matrix类, 效率提升接近2倍;
+  - 优化 DaPy.Frame 及 Data.SeriesSet类的展示, 数据呈现更为清晰美观;
+  - 添加 `线性回归`及`方差分析`至DaPy.stats;
+  - 添加 DaPy.io.encode()函数, 更好地适配中文数据;
+  - 替换 read_col(), read_frame(), read_matrix() 为 read()函数;
 * V1.3.2 (2018-04-26)
-	- 优化 数据加载的效率;
-	- 添加 更多实用的功能到DaPy.DataSet中;
-	- 添加 新的数据结构DaPy.Matrix,支持常规的矩阵运算;
-	- 添加 常用描述数据的函数 (例如： corr, dot, exp);
-	- 添加 `支持向量机`至DaPy.machine_learn;
-	- 添加 一些标准数据集.
-	
+  - 优化 数据加载的效率;
+  - 添加 更多实用的功能到DaPy.DataSet中;
+  - 添加 新的数据结构DaPy.Matrix,支持常规的矩阵运算;
+  - 添加 常用描述数据的函数 (例如： corr, dot, exp);
+  - 添加 `多层感知机`至DaPy.machine_learn;
+  - 添加 一些标准数据集.
 * V1.3.1 (2018-03-19)
-	- 修复 在加载数据及中的bug;
-	- 添加 支持保存数据集的功能.
-	
+  - 修复 在加载数据及中的bug;
+  - 添加 支持保存数据集的功能.
 * V1.2.5 (2018-03-15)
-	- DaPy的第一个版本！
+  - DaPy的第一个版本！
 
 ## 版权归属
 Copyright (C) 2018 Xuansheng Wu

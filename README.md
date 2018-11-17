@@ -1,5 +1,5 @@
 <img src="https://github.com/JacksonWuxs/DaPy/blob/master/doc/material/logo.bmp" width = 100% height = 100%>
- 
+
 DaPy - Enjoy the Tour in Data Mining
 ====
 ![](https://img.shields.io/badge/Version-1.4.1-green.svg)  ![](https://img.shields.io/badge/Download-PyPi-green.svg)  ![](https://img.shields.io/badge/License-GNU-blue.svg)
@@ -9,11 +9,11 @@ As a data analysis and processing library based on the original data structures 
 [Installation](#installation) | [Features](#features) | [Quick Start](https://github.com/JacksonWuxs/DaPy/blob/master/Guide%20Book/English/Quick%20Start.md ) | [To Do List](#todo) | [Version Log](#version-log) | [License](#license) | [Guide Book](https://github.com/JacksonWuxs/DaPy/tree/master/Guide%20Book) | [中文版](https://github.com/JacksonWuxs/DaPy/blob/master/README_Chinese.md)
 
 ## Installation
-The latest version 1.4.1 had been upload to PyPi.
+The latest version 1.5.1 had been upload to PyPi.
 ```
 pip install DaPy
 ```
-Updating your last version to 1.4.1 with PyPi as follow.
+Updating your last version to 1.5.1 with PyPi as follow.
 ```
 pip install -U DaPy
 ```
@@ -38,67 +38,72 @@ implement your ideas fluently.
 	- A variety of ways to help you easily perceive your dataset.
   
 Even if it uses Python original data structures, 
-DaPy still has efficiency comparable to some libraries which was wrote by C.
+DaPy still has efficiency comparable to some libraries which were written by C.
 We have tested DaPy on the platform with
-Intel i7-6560U while the Python version is 2.7.13-64Bit. The [dataset](http://www.wuxsweb.cn/Library/DaPy&Test_data/read_csv.csv)
-has more than 4.5 million records and total size is 
-240.2 MB. 
+Intel i7-6560U while the Python version is 2.7.15-64Bit. The [dataset](http://www.wuxsweb.cn/Library/DaPy&Test_data/read_csv.csv)
+has more than 2 million records and total size is 
+119 MB.  
 
-| subject | DaPy | Pandas | Numpy |
-|:------:|:-------:|:------:|:------:|
-| Loading | 2.4x | 1.0x | 13.7x |
-| Traverse | 1.6x | 14.8x | 1.0x |
-| Sort | 1.65x | 1.0x | 10.1x |
-| Total | 1.9x | 1.0x | 10.1x |
-| Version | 1.3.3 | 0.22.0 | 1.14.0 |
+<table><thead>    <th>测试结果</th>    <th>DaPy(V1.5.1)</th>    <th>Pandas(V0.23.4)</th>    <th>Numpy(V1.15.1)</th></thead><tbody><tr>    <td>加载数据</td>    <td>28.70s (3.0x)</td>    <td style='color:red'> 9.72s (1.0x)</td>    <td>55.38s (5.7x)</td></tr><tr>    <td>遍历数据</td>    <td style='color:red'>0.13s (1.0x)</td>    <td>2.90s (22.3x)</td>    <td>0.17s (1.3x)</td></tr><tr>    <td>排序数据</td>    <td>0.88s (1.7x)</td>    <td style='color:red'>0.53s (1.0x)</td>    <td>4.90s (9.2x)</td>    </tr><tr>    <td>总耗时</td>    <td>29.71s (2.3x)</td>    <td style='color:red'>13.15s (1.0x)</td>    <td>60.45s (4.6x)</td></tr></tbody></table>  
 
 
 ## TODO  
 * Descriptive Statistics
 * Inferential statistics
-	- Time Sequence
+  - Time Sequence;
+  - T-test
 * Feature Engineering
-	- PCA (Principal Component Analysis)
-	- LDA (Linear Discriminant Analysis)
-	- MIC (Maximal information coefficient)
+  - PCA (Principal Component Analysis)
+  - LDA (Linear Discriminant Analysis)
+  - MIC (Maximal information coefficient)
 * Algorithm
-	- SVM ( Support Vector Machine)
-	- K-Means
-	- Lasso Regression  
-	- Bayes Classification
-	
+  - SVM ( Support Vector Machine)
+  - K-Means
+  - Lasso Regression  
+  - Bayes Classification
+
 If you want to follow up the latest developments, you can visit [here](https://www.teambition.com/project/5b1b7bd40b6c410019df8c41/tasks/scrum/5b1b7bd51e4661001838eb10).
 
 ## Version-Log
+* V1.5.1 (2018-11-17)
+  * Added `select()` function for quickly access partial data with some conditions;
+  * Added more supported external data types: html and SQLite3 for saving data;
+  * Added `DaPy.delete()` and `DaPy.column_stack()` for deleting and merging a un-DaPy object;
+  * Added `DaPy.P()` and `DaPy.C()` for calculating permutation numbers and combination numbers;
+  * Added new syntax, therefore users can view values in a column with statement as `data.title`.
+  * Refactored `DaPy.BaseSheet`, less codes and more flexsible in the future;
+  * Refactored `DaPy.DataSet.save()`, more stable and more flexsible in the future;
+  * Rewrite a part of basic mathematical functions;
+  * Fixed some bugs;
 * V1.4.1 (2018-08-19)
-	- Added `replace()` function for high-speed transering your data;
-	- Fixed some bugs;
-	- Optimized the speed in reading .csv file;
-	- Refactored the DaPy.machine_learn.MLP, which can be formed with any layers, any active functions and any cells now;
-	- Refactored the DaPy.Frame and DaPy.SeriesSet in order to improve the efficiency;
-	- Supported to initialize Pandas and Numpy data structures;
+  - Added `replace()` function for high-speed transering your data;
+  - Optimized the speed in reading .csv file;
+  - Refactored the `DaPy.machine_learn.MLP`, which can be formed with any layers, any active functions and any cells now;
+  - Refactored the DaPy.Frame and DaPy.SeriesSet in order to improve the efficiency;
+  - Supported to initialize Pandas and Numpy data structures;
+  - Fixed some bugs;
 * V1.3.3 (2018-06-20)
-	- Added more supported external data types: Excel, SPSS, SQLite3, CSV;
-	- Added `Linear Regression` and `ANOVA` to DaPy.Mathematical_statistics;
-	- Added `DaPy.io.encode()` for better adepting to Chinese;
-	- Optimized the presentations of SeriesSet and Frame in a more beautiful way;
-	- Optimized the DaPy.Matrix so that the speed in calculating is two times faster;
-	- Replaced read_col(), read_frame(), read_matrix() by read();
-	- Refactored the DaPy.DataSet, which can manage multiple sheets at the same time;
-	- Refactored the DaPy.Frame and DaPy.SeriesSet, delete the attribute limitation of types;
-	- Removed DaPy.Table;
+  - Added more supported external data types: Excel, SPSS, SQLite3, CSV;
+  - Added `Linear Regression` and `ANOVA` to DaPy.Mathematical_statistics;
+  - Added `DaPy.io.encode()` for better adepting to Chinese;
+  - Optimized the presentations of SeriesSet and Frame in a more beautiful way;
+  - Optimized the DaPy.Matrix so that the speed in calculating is two times faster;
+  - Replaced read_col(), read_frame(), read_matrix() by read();
+  - Refactored the DaPy.DataSet, which can manage multiple sheets at the same time;
+  - Refactored the DaPy.Frame and DaPy.SeriesSet, delete the attribute limitation of types;
+  - Removed DaPy.Table;
 * V1.3.2 (2018-04-26)
-	- Added more useful functions for DaPy.DataSet;
-	- Added a new data structure called DaPy.Matrix;
-	- Added some mathematic formulas (e.g. corr, dot, exp);
-	- Added `Multi-Layers Perceptrons` to DaPy.machine_learn;
-	- Added some standard dataset;
-	- Optimized the loading function significantly;
+  - Added more useful functions for DaPy.DataSet;
+  - Added a new data structure called DaPy.Matrix;
+  - Added some mathematic formulas (e.g. corr, dot, exp);
+  - Added `Multi-Layers Perceptrons` to DaPy.machine_learn;
+  - Added some standard dataset;
+  - Optimized the loading function significantly;
 * V1.3.1 (2018-03-19)
-	- Added the function which supports to save data as a csv file;
-	- Fixed some bugs in the loading data function;
+  - Added the function which supports to save data as a csv file;
+  - Fixed some bugs in the loading data function;
 * V1.2.5 (2018-03-15)
-	- First public version of DaPy!
+  - First public version of DaPy!
 
 ## License
 Copyright (C) 2018 Xuansheng Wu
