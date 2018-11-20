@@ -483,8 +483,8 @@ class Matrix(object):
         if self._dim.Ln != self._dim.Col:
             raise ValueError('can not operate a non-sqrt matrix.')
 
-        if self._dim.Ln < 3:
-            raise ValueError('can not opearte a matrix within 3 records.')
+        if self._dim.Ln < 2:
+            raise ValueError('can not opearte a matrix within 2 records.')
 
         if abs(x) >= self._dim.Ln or abs(y) >= self._dim.Col:
             raise IndexError('index is out of range.')

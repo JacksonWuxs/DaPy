@@ -26,14 +26,7 @@ def test_Pandas(files):
     t4 = clock()
     data_pandas.to_csv('test_Pandas.csv', index=0)
     t5 = clock()
-
-    
-    print '                Pandas (%s)' % pd.__version__
-    print '    Load Time: %.2f s '%(t2-t1)
-    print 'Traverse Time: %.2f s '%(t3-t2)
-    print '    Sort Time: %.2f s '%(t4-t3)
-    print '    Save Time: %.2f s '%(t5-t4)
-    print '   Total Time: %.2f s '%(t5-t1)
+    return t2-t1, t3-t2, t4-t3, t5-t4, t5-t1
 
 def test_Numpy(files):
     # Testing of numpy
@@ -49,14 +42,7 @@ def test_Numpy(files):
     t4 = clock()
     data_numpy.tofile('test_Numpy.csv', sep=',')
     t5 = clock()
-
-    
-    print '                Numpy (%s)' % np.__version__
-    print '    Load Time: %.2f s '%(t2-t1)
-    print 'Traverse Time: %.2f s '%(t3-t2)
-    print '    Sort Time: %.2f s '%(t4-t3)
-    print '    Save Time: %.2f s '%(t5-t4)
-    print '   Total Time: %.2f s '%(t5-t1)
+    return t2-t1, t3-t2, t4-t3, t5-t4, t5-t1
 
 
 def test_DaPy(files):
@@ -74,19 +60,37 @@ def test_DaPy(files):
     t4 = clock()
     dp.save('test_DaPy.csv', data_dapy)
     t5 = clock()
-    
-    print '                Dapy (%s)' % dp.__version__
-    print '    Load Time: %.2f s '%(t2-t1)
-    print 'Traverse Time: %.2f s '%(t3-t2_)
-    print '    Sort Time: %.2f s '%(t4-t3)
-    print '    Save Time: %.2f s '%(t5-t4)
-    print '   Total Time: %.2f s '%(t5-t1)
+    return t2-t1, t3-t2_, t4-t3, t5-t4, t5-t1
     
 def main(files):
-    test_Pandas(files)
-    test_Numpy(files)
-    test_DaPy(files)
+    dp_ = dp.Frame(None, ['Load', 'Traverse', 'Sort', 'Save', 'Total'])
+    np_ = dp.Frame(None, ['Load', 'Traverse', 'Sort', 'Save', 'Total'])
+    pd_ = dp.Frame(None, ['Load', 'Traverse', 'Sort', 'Save', 'Total'])
+    for i in range(100):
+        dp_.append(test_DaPy(files))
+        np_.append(test_Numpy(files))
+        pd_.append(test_Pandas(files))
+
+    summary = dp.Frame(None,
+            ['engine', 'Load', 'Traverse', 'Sort', 'Save', 'Total', 'Version'])
+    summary.append(['DaPy', dp.mean(dp_['Load']), dp.mean(dp_['Traverse']),
+                    dp.mean(dp_['Sort']), dp.mean(dp_['Save']),
+                    dp.mean(dp_['Total']), dp.__version__])
+    summary.append(['Numpy', dp.mean(np_['Load']), dp.mean(np_['Traverse']),
+                    dp.mean(np_['Sort']), dp.mean(np_['Save']),
+                    dp.mean(np_['Total']), np.__version__])
+    summary.append(['Pandas', dp.mean(pd_['Load']), dp.mean(pd_['Traverse']),
+                    dp.mean(pd_['Sort']), dp.mean(pd_['Save']),
+                    dp.mean(pd_['Total']), pd.__version__])
+
+    file_ = dp.DataSet()
+    file_.add(summary, 'Summary Table')
+    file_.add(dp_, 'DaPy')
+    file_.add(np_, 'Numpy')
+    file_.add(pd_, 'Pandas')
+    file_.save('Performance_result.xls')
     
 if __name__ == '__main__':
+    t = clock()
     main('read_csv.csv')
-    raw_input('Continue...')
+    print clock() - t

@@ -2,8 +2,11 @@ from collections import namedtuple, deque, Iterable, deque
 from datetime import datetime
 from time import struct_time
 from array import array
-from string import atof, atoi, strip
-from distutils.util import strtobool
+from string import atof as str2float, atoi as str2int
+from distutils.util import strtobool as str2bool
+from ciso8601 import parse_datetime as str2date
+from warnings import warn
+from re import compile
 
 __all__ = ['str2value', 'get_sorted_index',
            'is_value', 'is_math', 'is_iter', 'is_seq']
@@ -12,43 +15,43 @@ _value_types = (type(None), int, float, str, long, complex,
                 unicode, datetime, struct_time, bool)
 _math_types = (int, float, long, complex)
 _sequence_types = [list, tuple, deque, array, set, frozenset]
+_float_mask = compile(r'^[-+]?[0-9]\d*\.\d*|[-+]?\.?[0-9]\d*$')
+_int_mask = compile(r'^[-+]?[-0-9]\d*$')
 
 try:
     from numpy import ndarray
-except ImportError:
-    pass
-else:
     _sequence_types.append(ndarray)
-
-try:
     from pandas import Series
+    _sequence_types.append(Series)
 except ImportError:
     pass
-else:
-    _sequence_types.append(Series)
 
 _sequence_types = tuple(_sequence_types)
+transfer_funcs = {float: str2float,
+                  int: str2int,
+                  bool: str2bool,
+                  datetime: str2date}
 
-transfer_funcs = {float: atof,
-                  int: atoi,
-                  bool: strtobool,
-                  str: strip}
-
+def str2str(value):
+    return value  
+    
 def str2value(value, prefer_type=None):
-    if prefer_type is str:
-        return value
-    elif value.isdigit() or value[1:].isdigit():
-        if prefer_type is float:
-            return atof(value.replace(',', ''))
-        return atoi(value)
-    elif value.count('.') == 1:
-        return atof(value.replace(',', ''))
-    elif prefer_type is bool:
+    if prefer_type is not None:
         try:
-            return strtobool(value)
+            return transfer_funcs[prefer_type]
         except ValueError:
-            pass
-    return strip(value)
+            warn('cannot transform "%s" into %s' % (value, prefer_type))
+        except KeyError:
+            warn('unsupported prefer type as "%s", use float, int' % prefer_type+\
+                 ', bool, str, or datetime.')
+            
+    if _int_mask.match(value):
+        return str2int(value)
+    
+    elif _float_mask.match(value):
+        return str2float(value)
+
+    return str2str(value)
     
 def get_sorted_index(seq, cmp=None, key=None, reverse=False):
     index_dict = dict()

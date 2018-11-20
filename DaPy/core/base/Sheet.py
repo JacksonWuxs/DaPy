@@ -3,13 +3,17 @@ from copy import deepcopy
 from csv import reader
 from datetime import date, datetime
 from tools import is_seq, is_iter, is_math, is_value, get_sorted_index
-from tools import str2value, transfer_funcs
+from tools import str2value, transfer_funcs, str2str
 from random import random, shuffle as shuffles
 from re import search as re_search
+from sys import version_info
+
 
 __all__ = ['SeriesSet', 'Frame']
-
 dims = namedtuple('sheet', ['Ln', 'Col'])
+if version_info.major == 2:
+    range = xrange
+    
 
 class BaseSheet(object):
     '''
@@ -420,15 +424,17 @@ class BaseSheet(object):
         title_line = kwrd.get('title_line', 0)
         sep = kwrd.get('sep', ',')
         prefer_type = kwrd.get('prefer_type', None)
+        types = kwrd.get('types', None)
 
         freader = reader(f, delimiter=sep)
-        col = max([len(line) for l_n, line in enumerate(freader)])
+        shape = [line.count(sep) for line in f]
+        col, l_n = max(shape) + 1, len(shape) - 1
         self._miss_value = [0] * col
         self._dim = dims(l_n+1-first_line, col)
         if isinstance(prefer_type, str):
-            _col_types = [str] * col
+            col_types = [str] * col
         else:
-            _col_types = [None] * col
+            col_types = [None] * col
         if title_line < 0:
             self._init_col_name(None)
 
@@ -436,32 +442,41 @@ class BaseSheet(object):
         for i, lines in enumerate(freader):
             if i >= first_line:
                 for j, item in enumerate(lines):
-                    if j in _col_types or item in miss_symbol:
+                    if j in col_types or item in miss_symbol:
                         continue
-                    _col_types[j] = transfer_funcs[type(
-                                str2value(item, prefer_type))]
+                    col_type = type(str2value(item, prefer_type))
+                    col_types[j] = transfer_funcs.get(col_type, str2str)
+                    
             elif i == title_line:
                 if len(lines) < self._dim.Col:
                     lines.extend(['C_%d' % i for i in range(len(self._columns),
                                                 col - len(self._columns))])
                 self._init_col_name(lines)
 
-            if all(_col_types):
+            if all(col_types):
                 break
+
         f.seek(0)
         if first_line != 0:
             for m, record in enumerate(freader):
                 if m >= first_line - 1 :
                     break
-        return freader, tuple(_col_types), miss_symbol, prefer_type
 
-    def _check_transform_value(self, i, item, _col_types,
+        if types is not None:
+            if not isinstance(types, [list, tuple]):
+                types = (types, )
+            for i, type_ in enumerate(types):
+                col_types[i] = transfer_funcs[type_]
+
+        return freader, tuple(col_types), miss_symbol, prefer_type
+
+    def _transform_value(self, i, item, col_types,
                                 miss_symbol, prefer_type):
         try:
             if item in miss_symbol:
                 self._miss_value[i] += 1
                 return self._miss_symbol
-            return _col_types[i](item)
+            return col_types[i](item)
         except ValueError:
             return str2value(item, prefer_type)
 
@@ -1203,7 +1218,15 @@ class SeriesSet(BaseSheet):
         sep : str (default=",")
             the delimiter symbol inside.
 
-        prefer_type : 
+        prefer_type : type-object (default=float):
+            int -> transfer any possible values into int
+            float -> transfer any possible values into float
+            str -> keep all values in str type
+            datetime -> transfer any possible values into datetime-object
+            bool -> transfer any possible values into bool
+
+        types : Type name or dict of columns (default=None):
+            use one type to 
         '''
         with open(addr, 'r') as f:
             freader, col_types, miss_symbol, prefer = self._check_read_text(f, **kwrd)
@@ -1212,7 +1235,7 @@ class SeriesSet(BaseSheet):
             try:
                 for m, record in enumerate(freader):
                     for i, v in enumerate(record):
-                        datas[i][m] = self._check_transform_value(i, v,
+                        datas[i][m] = self._transform_value(i, v,
                                     col_types, miss_symbol, prefer)
             except MemoryError:
                 self._dim = dims(m+1, self._dim.Col)
@@ -1682,7 +1705,7 @@ class Frame(BaseSheet):
             self._data = []
             try:
                 for record in freader:
-                    line = [self._check_transform_value(
+                    line = [self._transform_value(
                             i, v, col_types, miss_symbol, prefer) \
                             for i, v in enumerate(record)]
                     if len(line) != self._dim.Col:

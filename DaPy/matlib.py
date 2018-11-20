@@ -339,7 +339,7 @@ def describe(data):
     
     '''
     statistic = namedtuple('STAT',
-                           ['Mean', 'S', 'Sn', 'CV', 
+                           ['Mean', 'S', 'Sn', 'CV', 'Range',
                             'Min', 'Max', 'Skew', 'Kurt'])
     data = filter(is_math, data)
     size = len(data)
@@ -350,7 +350,7 @@ def describe(data):
         Ex3 = sum(map(pow, data, [3]*size)) / float(size)
         Ex4 = sum(map(pow, data, [4]*size)) / float(size)
     except ZeroDivisionError:
-        return statistic(None, None, None, None, None, None, None, None)
+        return statistic(None, None, None, None, None, None, None, None, None)
     
     std = (Ex2 - Ex**2)**0.5
     if size > 1:
@@ -360,7 +360,8 @@ def describe(data):
 
     S = (Ex3 - 3*Ex*std**2 - Ex**3) / std ** 1.5
     K = Ex4 / std ** 4 - 3
+    min_, max_ = min(data), max(data)
     
     if Ex == 0:
-        return statistic(Ex, std, std_n, None, min(data), max(data), S, K)
-    return statistic(Ex, std, std_n, std/Ex, min(data), max(data), S, K)
+        return statistic(Ex, std, std_n, None, max_-min_, min_, max_, S, K)
+    return statistic(Ex, std, std_n, std/Ex, max_-min_, min_, max_, S, K)
