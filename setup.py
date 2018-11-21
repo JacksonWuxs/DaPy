@@ -3,8 +3,8 @@ pkg = find_packages()
 
 setup(
     name='DaPy',
-    version='1.5.4.2',
-    description='Enjoy your tour in data minning',
+    version='1.5.4.4',
+    description='Enjoy your tour in data mining',
     classifiers=[
         'Development Status :: 4 - Beta',
         'Intended Audience :: Developers',
