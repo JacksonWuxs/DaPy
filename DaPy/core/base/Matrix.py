@@ -1,10 +1,13 @@
-from collections import namedtuple
-from copy import deepcopy, copy
+from collections import namedtuple, deque
+from copy import copy, deepcopy
 from tools import is_seq, is_math, is_iter
 from random import random
-import csv
+from csv import reader
+from sys import version_info
 
 __all__ = ['Matrix']
+if version_info.major == 2:
+    range = xrange
 
 class Matrix(object):
 
@@ -16,8 +19,8 @@ class Matrix(object):
             self.__init_unknow_type(table, check)
                  
         elif isinstance(table, Matrix):
-            self._matrix = deepcopy(table)
-            self._dim = deepcopy(table._dim)
+            self._matrix = copy(table)
+            self._dim = copy(table._dim)
 
         elif table is None:
             self._matrix = list()
@@ -36,14 +39,19 @@ class Matrix(object):
         return self._dim
 
     @property
-    def T(self):
-        new_ = list()
-        for j in range(self._dim.Col):
-            new_.append([record[j] for record in self._matrix])
-        return Matrix(new_, False)
+    def eigvals(self):
+        pass
 
     @property
-    def I(self):# inverse
+    def eigvcts(self):
+        pass
+
+    @property
+    def T(self):
+        return Matrix([line for line in zip(*self._matrix)], False)
+
+    @property
+    def I(self):
         '''calculating the invert matrix
 
         Reference
@@ -54,34 +62,24 @@ class Matrix(object):
         if self._dim.Ln != self._dim.Col:
             raise ValueError('can not invert a non-sqrt matrix.')
 
-        D = float(self.D)
-        N = [1] * self._dim.Ln
-        for i in range(self._dim.Ln):
-            N[i] = [self._get_cofactor(i, j).D / D for j in range(self._dim.Col)]
+        D = self.D
+        if D == 0:
+            raise ValueError('Singular matrix can not calculating the invert matrix.')
+        N = [[(-1) ** (i+j+1) * self._get_cofactor(j, i).D / D for j in range(self._dim.Col)]
+             for i in range(self._dim.Ln)]
         return Matrix(N)
         
     @property
-    def D(self): # determinant
+    def D(self):
         if self._dim.Ln != self._dim.Col:
             raise ValueError('can not determinant a non-sqrt matrix.')
 
         if self._dim.Ln == 2:
             return self._matrix[0][0] * self._matrix[1][1] - \
                    self._matrix[0][1] * self._matrix[1][0]
-        total = 0.0
-        for c in range(self._dim.Col):
-            total += (-1) ** (c + 1) * self._matrix[1][c] * self._get_cofactor(1, c).D
-        return total
+        return float(sum([(-1)**(1+j) * self[0][j] * self._get_cofactor(0, j).D \
+                    for j in range(self._dim.Ln)]))
 
-        start = 0
-        for i, value in enumerate(self._matrix[0]):
-            new = self.get_cousin(0, i).D
-            if i % 2 == 0:
-                start += new
-            else:
-                start -= new
-        return start
-                
     def __repr__(self):
         temporary_series = [list()] * self._dim.Col
         if self._dim.Ln > 20:
@@ -224,14 +222,27 @@ class Matrix(object):
                            for j in range(self._dim.Col)]
 
         elif hasattr(other, 'shape'):
-            if self.shape != other.shape:
+            x1, y1 = self.shape
+            x2, y2 = other.shape
+            if x1 == x2 and y1 == y2:
+                for i in range(self._dim.Ln):
+                    new_[i] = [self._matrix[i][j] + other[i][j]\
+                               for j in range(self._dim.Col)]
+            elif x1 == x2 and y1 == 1 or y2 == 1:
+                for i in range(self._dim.Ln):
+                    new_[i] = [self._matrix[i][j] + other[i][0]\
+                               for j in range(self._dim.Col)]
+
+            elif y1 == y2 and x1 == 1 or x2 == 1:
+                for i in range(self._dim.Ln):
+                    new_[i] = [self._matrix[i][j] + other[0][j]\
+                               for j in range(self._dim.Col)]
+                
+            else:
                 raise ValueError('operands could not be broadcast '+\
                                  'together with shapes '+\
-                                 '(%d,%d) '%self._dim+\
-                                 '(%d,%d)'%other.shape)
-            for i in range(self._dim.Ln):
-                new_[i] = [self._matrix[i][j] + other[i][j]\
-                           for j in range(self._dim.Col)]
+                                 '(%d, %d) and '%self._dim+\
+                                 '(%d, %d)'%other.shape)
         else:
             raise TypeError("'+' operation expects the type of"+\
                             "number or an array-like object which has "+\
@@ -250,16 +261,27 @@ class Matrix(object):
                            for j in range(self._dim.Col)]
 
         elif hasattr(other, 'shape'):
-            if self.shape != other.shape:
-                raise ValueError('operands could not be broadcast '+\
-                                 'together with shapes '+\
-                                 '(%d,%d) '%self._dim+\
-                                 '(%d,%d)'%other.shape)
-
-            for i in range(self._dim.Ln):
-                new_[i] = [self._matrix[i][j] - other[i][j]\
+            x1, y1 = self.shape
+            x2, y2 = other.shape
+            if x1 == x2 and y1 == y2:
+                for i in range(self._dim.Ln):
+                    new_[i] = [self._matrix[i][j] - other[i][j]\
+                               for j in range(self._dim.Col)]
+            elif x1 == x2 and y1 == 1 or y2 == 1:
+                for i in range(self._dim.Ln):
+                    new_[i] = [self._matrix[i][j] - other[i][0]\
                                for j in range(self._dim.Col)]
 
+            elif y1 == y2 and x1 == 1 or x2 == 1:
+                for i in range(self._dim.Ln):
+                    new_[i] = [self._matrix[i][j] - other[0][j]\
+                               for j in range(self._dim.Col)]
+                
+            else:
+                raise ValueError('operands could not be broadcast '+\
+                                 'together with shapes '+\
+                                 '(%d, %d) and '%self._dim+\
+                                 '(%d, %d)'%other.shape)
         else:
             try:
                 return self.__sub__(Matrix(other))
@@ -278,14 +300,27 @@ class Matrix(object):
                            for j in range(self._dim.Col)]
 
         elif hasattr(other, 'shape'):
-            if self.shape != other.shape:
+            x1, y1 = self.shape
+            x2, y2 = other.shape
+            if x1 == x2 and y1 == y2:
+                for i in range(self._dim.Ln):
+                    new_[i] = [other[i][j] - self._matrix[i][j]\
+                               for j in range(self._dim.Col)]
+            elif x1 == x2 and y1 == 1 or y2 == 1:
+                for i in range(self._dim.Ln):
+                    new_[i] = [other[i][0] - self._matrix[i][j]\
+                               for j in range(self._dim.Col)]
+
+            elif y1 == y2 and x1 == 1 or x2 == 1:
+                for i in range(self._dim.Ln):
+                    new_[i] = [other[0][j] - self._matrix[i][j]\
+                               for j in range(self._dim.Col)]
+                
+            else:
                 raise ValueError('operands could not be broadcast '+\
                                  'together with shapes '+\
-                                 '(%d,%d) '%self._dim+\
-                                 '(%d,%d)'%other.shape)
-            for i in range(self._dim.Ln):
-                new_[i] = [other[i][j] - self._matrix[i][j]\
-                           for j in range(self._dim.Col)]
+                                 '(%d, %d) and '%self._dim+\
+                                 '(%d, %d)'%other.shape)
         else:
             try:
                 return self.__rsub__(Matrix(other))
@@ -304,14 +339,27 @@ class Matrix(object):
                            for j in range(self._dim.Col)]
 
         elif hasattr(other, 'shape'):
-            if self.shape != other.shape:
+            x1, y1 = self.shape
+            x2, y2 = other.shape
+            if x1 == x2 and y1 == y2:
+                for i in range(self._dim.Ln):
+                    new_[i] = [self._matrix[i][j] * other[i][j]\
+                               for j in range(self._dim.Col)]
+            elif x1 == x2 and y1 == 1 or y2 == 1:
+                for i in range(self._dim.Ln):
+                    new_[i] = [self._matrix[i][j] * other[i][0]\
+                               for j in range(self._dim.Col)]
+
+            elif y1 == y2 and x1 == 1 or x2 == 1:
+                for i in range(self._dim.Ln):
+                    new_[i] = [self._matrix[i][j] * other[0][j]\
+                               for j in range(self._dim.Col)]
+                
+            else:
                 raise ValueError('operands could not be broadcast '+\
                                  'together with shapes '+\
-                                 '(%d,%d) '%self._dim+\
-                                 '(%d,%d)'%other.shape)
-            for i in range(self._dim.Ln):
-                new_[i] = [other[i][j] * self._matrix[i][j]\
-                           for j in range(self._dim.Col)]
+                                 '(%d, %d) and '%self._dim+\
+                                 '(%d, %d)'%other.shape)
         else:
             raise TypeError("'*' operation expects the type of"+\
                             "number or an array-like object which has "+\
@@ -330,15 +378,27 @@ class Matrix(object):
                            for j in range(self._dim.Col)]
 
         elif hasattr(other, 'shape'):
-            if self.shape != other.shape:
+            x1, y1 = self.shape
+            x2, y2 = other.shape
+            if x1 == x2 and y1 == y2:
+                for i in range(self._dim.Ln):
+                    new_[i] = [self._matrix[i][j] / other[i][j]\
+                               for j in range(self._dim.Col)]
+            elif x1 == x2 and y1 == 1 or y2 == 1:
+                for i in range(self._dim.Ln):
+                    new_[i] = [self._matrix[i][j] / other[i][0]\
+                               for j in range(self._dim.Col)]
+
+            elif y1 == y2 and x1 == 1 or x2 == 1:
+                for i in range(self._dim.Ln):
+                    new_[i] = [self._matrix[i][j] / other[0][j]\
+                               for j in range(self._dim.Col)]
+                
+            else:
                 raise ValueError('operands could not be broadcast '+\
                                  'together with shapes '+\
-                                 '(%d,%d) '%self._dim+\
-                                 '(%d,%d)'%other.shape)
-            
-            for i in range(self._dim.Ln):
-                new_[i] = [self._matrix[i][j] / other[i][j]\
-                           for j in range(self._dim.Col)]
+                                 '(%d, %d) and '%self._dim+\
+                                 '(%d, %d)'%other.shape)
         else:
             raise TypeError("'/' operation expects the type of"+\
                             "number or an array-like object which has "+\
@@ -354,14 +414,27 @@ class Matrix(object):
                                                                 self._dim.Col)]
 
         elif hasattr(other, 'shape'):
-            if self.shape != other.shape:
+            x1, y1 = self.shape
+            x2, y2 = other.shape
+            if x1 == x2 and y1 == y2:
+                for i in range(self._dim.Ln):
+                    new_[i] = [other[i][j] / self._matrix[i][j]\
+                               for j in range(self._dim.Col)]
+            elif x1 == x2 and y1 == 1 or y2 == 1:
+                for i in range(self._dim.Ln):
+                    new_[i] = [other[i][0] / self._matrix[i][j]\
+                               for j in range(self._dim.Col)]
+
+            elif y1 == y2 and x1 == 1 or x2 == 1:
+                for i in range(self._dim.Ln):
+                    new_[i] = [other[0][j] / self._matrix[i][j]\
+                               for j in range(self._dim.Col)]
+                
+            else:
                 raise ValueError('operands could not be broadcast '+\
                                  'together with shapes '+\
-                                 '(%d,%d) '%self._dim+\
-                                 '(%d,%d)'%other._dim)
-            for i in range(self._dim.Ln):
-                new_[i] = [other[i][j] / self._matrix[i][j]\
-                           for j in range(self._dim.Col)]
+                                 '(%d, %d) and '%self._dim+\
+                                 '(%d, %d)'%other.shape)
         else:
             try:
                 other = Matrix(other)
@@ -395,35 +468,9 @@ class Matrix(object):
 
         return Matrix(new_, False)
 
-    def dot(self, other):
-        if hasattr(other, 'shape'):
-            if self.shape[1] != other.shape[0]:
-                raise ValueError('shapes (%d, %d)'%self._dim +\
-                                 ' and (%d, %d) not aligned.'%other._dim)
-            col_size_1 = self._dim.Col
-            col_size_2 = other.shape[1]
-            
-        elif isinstance(other, (list, tuple, deque)):
-            other = Matrix(other)
-            if self._dim.Col != other.shape:
-                raise ValueError('shapes (%d, %d)'%(self._dim)+\
-                                 ' and (%d, %d) not aligned.'%other.shape)
-            col_size_1 = self._dim.Col
-            col_size_2 = other._dim.Col
-            
-        else:
-            raise TypeError('unsupported operation dot, with type '+\
-                            '< Matrix > and '%str(type(self._matrix)) +\
-                            '%s and '%str(type(other)))
-        
-        new_ = [[0]*col_size_2 for k in range(self._dim.Ln)]
-        for i in range(self._dim.Ln):
-            for pos in range(col_size_2):
-                sumup = 0
-                for j in range(col_size_1):
-                    sumup += self._matrix[i][j]*other[j][pos]
-                new_[i][pos] = sumup
-        return Matrix(new_, False)
+    def _get_cofactor(self, i, j):
+        mat = self._matrix
+        return Matrix([r[:j] + r[j+1:] for r in (mat[:i]+mat[i+1:])], False)
 
     def __init_unknow_type(self, table, check):
         try:
@@ -447,6 +494,37 @@ class Matrix(object):
         else:
             self._matrix = table
         self._dim = Matrix.dims(len(table), dim_col)
+
+    def dot(self, other):
+        if hasattr(other, 'shape'):
+            if self.shape[1] != other.shape[0]:
+                raise ValueError('shapes (%d, %d)'%self._dim +\
+                                 ' and (%d, %d) not aligned.'%other._dim)
+            col_size_1 = self._dim.Col
+            col_size_2 = other.shape[1]
+            
+        elif isinstance(other, (list, tuple, deque)):
+            other = Matrix(other)
+            if self._dim.Col != other.shape:
+                raise ValueError('shapes (%d, %d)'%(self._dim)+\
+                                 ' and (%d, %d) not aligned.'%other.shape)
+            col_size_1 = self._dim.Col
+            col_size_2 = other._dim.Col
+            
+        else:
+            raise TypeError('unsupported operation dot, with type '+\
+                            '<Matrix> and '%str(type(self._matrix)) +\
+                            '%s and '%str(type(other)))
+
+        new_ = [[0]*col_size_2 for k in range(self._dim.Ln)]
+        for i in range(self._dim.Ln):
+            lineI = self._matrix[i]
+            for pos in range(col_size_2):
+                sumup = 0
+                for j in range(col_size_1):
+                    sumup += lineI[j]*other[j][pos]
+                new_[i][pos] = sumup
+        return Matrix(new_, False)
 
     def make(self, Ln, Col, element=0):
         if not (isinstance(Ln, int) and isinstance(Col, int) and\
@@ -473,34 +551,24 @@ class Matrix(object):
                 self._matrix[i] = [random()] * Col
         self._dim = Matrix.dims(Ln, Col)
 
-    def make_eye(self, size):
+    def make_eye(self, size, value=None):
+        if value is None:
+            value == [1.0] * size
+        elif is_math(value):
+            value = [value] * size
+        elif not all(is_math, value):
+            raise TypeError('value should be a list of number, number or None.')
         self._matrix = [[0.0] * size for j in range(size)]
         self._dim = Matrix.dims(size, size)
         for i in range(size):
-            self._matrix[i][i] = 1.0
-
-    def _get_cofactor(self, x, y):
-        if self._dim.Ln != self._dim.Col:
-            raise ValueError('can not operate a non-sqrt matrix.')
-
-        if self._dim.Ln < 2:
-            raise ValueError('can not opearte a matrix within 2 records.')
-
-        if abs(x) >= self._dim.Ln or abs(y) >= self._dim.Col:
-            raise IndexError('index is out of range.')
-
-        M = deepcopy(self._matrix)
-        del M[x]
-        for line in M:
-            del line[y]
-        return Matrix(M, False)
+            self._matrix[i][i] = value[i]
             
     def read_text(self, addr, **kward):
         first_line = kward.get('first_line', 1)
         sep = kward.get('sep', ',')
         
         with open(addr, 'r') as f:
-            reader = csv.reader(f, delimiter=sep)
+            reader = reader(f, delimiter=sep)
             self._matrix = list()
             for m, record in enumerate(reader):
                 if m >= first_line - 1:
@@ -509,13 +577,9 @@ class Matrix(object):
                 self._matrix.append(map(float, record))
 
         col = len(max(self._matrix, key=len))
-        def has_size(record):
+        for record in self._matrix:
             if len(record) != col:
-                return False
-            return True
-
-        if not all(map(has_size, self._matrix)):
-            raise ValueError('records in your data do not have the same lenth.')
+                record.extend([0.0] * (col - len(record)))
         self._dim = Matrix.dims(len(self._matrix), col)
 
     def tolist(self):

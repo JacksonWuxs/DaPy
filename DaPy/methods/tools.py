@@ -1,4 +1,4 @@
-from DaPy import Frame, DataSet
+from DaPy.core import Frame, is_iter
 from collections import namedtuple
 
 __all__ = ['binary_label', 'multiple_label', 'score_binary_clf']
@@ -10,7 +10,10 @@ def _tolist(lst):
         return lst.tolist()
     elif hasattr(lst, 'list'):
         return lst.list()
-    return list(lst)
+    elif is_iter(lst):
+        return list(lst)
+    else:
+        raise TypeError('unsupported type, try [%s] instead' % lst)
 
 def _engine2str(obj):
     return str(obj).split()[1][1: -1]
@@ -22,7 +25,7 @@ def _str2engine(obj):
     elif obj.lower() == 'dapy':
         import DaPy as engine
     else:
-        raise ValueError('do not support engine as %s, "DaPy" or "numpy" only.'%value)
+        raise ValueError('do not support engine as %s, "DaPy" or "numpy" only.'%obj)
     return engine
 
 def binary_label(num, cutpoint=0.5):

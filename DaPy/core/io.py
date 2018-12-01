@@ -273,7 +273,7 @@ def write_db(conn, sheet, data, if_exists):
                 cols.append('%s INTEGER' % column)
             else:
                 cols.append('%s REAL' % column)
-        cur.execute(u'CREATE TABLE %s (%s)' % (unicode(sheet), ','.join(cols)))
+        cur.execute(u'CREATE TABLE %s(%s)' % (unicode(sheet), ','.join(cols)))
 
     INSERT = 'INSERT INTO %s VALUES (%s)' % (\
                 sheet, ','.join(['?'] * data.shape.Col))

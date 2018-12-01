@@ -1,14 +1,17 @@
 from array import array
-from core import Matrix, is_math, is_seq, is_iter
+from core import Matrix, Frame, is_math, is_seq, is_iter
 from collections import namedtuple, deque, Iterable, deque
 from datetime import datetime
 from time import struct_time
 from warnings import warn
+from sys import version_info
 import math
 
+if version_info.major == 2:
+    range = xrange
 __all__ = ['dot', 'multiply', 'exp', 'zeros', 'ones', 'C', 'P',
            'cov', 'corr', 'frequency', 'quantiles', '_sum',
-           'distribution','describe', 'mean']
+           'distribution','describe', 'mean', 'diag', 'log']
 
 def P(n, k):
     '''"k" is for permutation numbers.
@@ -46,6 +49,15 @@ def C(n, k):
     right = reduce(multiply, range(1, 1+ n - k))
     return float(upper / (left * right))
 
+def add(m1, m2):
+    if hasattr(m1, '__add__'):
+        return m1 + m2
+
+    if is_seq(m1):
+        return Matrix(m1) + m2
+
+    raise TypeError('add() expectes elements which can add.')
+
 def multiply(m1, m2):
     if is_math(m1) and is_math(m2):
         return m1 * m2
@@ -76,7 +88,7 @@ def dot(matrix_1, matrix_2):
     for i in range(line_size_1):
         new_line = list()
         for pos in range(col_size_2):
-            sumup = sum(matrix_1[i][j]*matrix_2[j][pos]\
+            sumup = sum(matrix_1[i][j]*matrix_2[j][pos]
                         for j in range(col_size_1))
             new_line.append(sumup)
         new_.append(new_line)
@@ -110,6 +122,11 @@ def zeros(shape):
 
 def ones(shape):
     return create_mat(shape, 1)
+
+def diag(values):
+    matrix = mat()
+    matrix.make_eye(len(values), len(values), values)
+    return matrix
 
 def log(data):
     if is_seq(data):
@@ -190,11 +207,11 @@ def mean(data, axis=None):
     >>> dp.mean([[0.5, 0.7],
                  [0.2, 1.5]])
     0.725
-    >>> dp.sum([[0, 1],
-                [0, 5]], axis=1) # mean of each record
+    >>> dp.mean([[0, 1],
+                 [0, 5]], axis=1) # mean of each record
     [0.5, 2.5]
-    >>> dp.sum([[0, 1],
-                [0, 5]], axis=0) # mean of each variable
+    >>> dp.mean([[0, 1],
+                 [0, 5]], axis=0) # mean of each variable
     [0.0, 3.0]
     '''
     if axis is None:
@@ -211,44 +228,112 @@ def mean(data, axis=None):
         size = float(len(data))
     else:
         size = float(len(data[0]))
-    return [value / size for value in _sum(data, axis)]
+    return Matrix([value / size for value in _sum(data, axis)]).T
 
-def cov(x, y):
+def cov(x, y=None, **kwrds):
     '''
     formula:  cov(x,y) = E(xy) - E(x)E(y) 
     '''
+    if hasattr(x, 'shape') or y is None:
+        if hasattr(x, 'tolist'):
+            x = x.tolist()
+        size = len(x)
+        covX = [[0] * size for t in range(size)]
+        for i, x_1 in enumerate(x):
+            for j, x_2 in enumerate(x):
+                cov_num = cov(x_1, x_2)
+                covX[i][j] = cov_num
+                covX[j][i] = cov_num
+        return Matrix(covX)
+
     if len(x) != len(y):
         raise ValueError('two variables have different lenth.')
+
+    try:
+        X, Y = array('f', x), array('f', y)
+    except TypeError:
+        X, Y = array('f'), array('f')
+        for x, y in zip(x, y):
+            if is_math(x) and is_math(y):
+                X.append(x)
+                Y.append(y)
+
+    if len(X) != len(Y):
+        raise ValueError('X and Y has different dimention.')
     
-    X, Y = array('f'), array('f')
-    for x, y in zip(x, y):
-        if is_math(x) and is_math(y):
-            X.append(x)
-            Y.append(y)
-            
     size = float(len(X))
     if size == 0:
         warn('x and y has no efficient numbers.')
         return 0
     
-    Exy = sum([x*y for x, y in zip(X, Y)])/size
-    Ex = sum(X)/size
-    Ey = sum(Y)/size
-    return Exy - Ex * Ey
-     
-def corr(data_1, data_2):
+    Ex, Ey = kwrds.get('Ex', None), kwrds.get('Ey', None)
+    if not Ex:
+        Ex = sum(X) / size
+    if not Ey:
+        Ey = sum(Y) / size
+    return sum([(x-Ex) * (y-Ey) for x, y in zip(X, Y)]) / (size-1)
+
+def corr(x, y, method='pearson'):
+    '''calculate the correlation between X and Y
+
+    Parameters
+    ----------
+    x, y : array-like
+        sequence of values to calculate the correlation
+
+    method : str (default="pearson")
+        the method used to calculate correlation.
+        ("pearson" and "spearman" are supported).
     '''
-    formula: cor(x,y) = cov(x,y) / (std(x)*std(y))
+    if method.lower() == 'pearson':
+        return _corr_pearson(x, y)
+
+    if method.lower() == 'spearman':
+        return _corr_spearman(x, y)
+    raise AttributeError('method should be "pearson" or "spearman".')    
+
+def _corr_spearman(x, y):
+    '''calculate the spearman rank correlation between X and Y
+
+    Formula
+    -------
+                   6
+    Rs = 1 - -------------SIGMA(di^2)
+               n(n^2 - 1)
+
+    Reference
+    ---------
+    He X & Liu W. Applied Regression Analysis. China People's University
+    Publication House. 2015.
     '''
-    static_1 = describe(data_1)
-    static_2 = describe(data_2)
-    covariance = cov(data_1, data_2)
-    try:
-        return covariance / (static_1.Sn * static_2.Sn)
-    except TypeError:
-        return None
-    except ZeroDivisionError:
-        return float('+inf')
+    def rank(X):
+        lst, last_value, last_rank = [1], X[0], 1.0
+        for rank, value in enumerate(X[1:], 2):
+            if value == last_value:
+                lst.append(float(last_rank))
+                continue
+            lst.append(float(rank))
+            last_value, last_rank = value, rank
+        return lst
+        
+    data = Frame(zip(x, y), ['X', 'Y'])
+    n = data.shape.Ln
+    data.sort(('X', 'DESC'))
+    data.append_col(rank(data.X), 'xRank')
+    data.sort(('Y', 'DESC'))
+    data.append_col(rank(data.Y), 'yRank')
+    return _corr_pearson(data.xRank, data.yRank)
+
+def _corr_pearson(x, y):
+    '''calculate the pearson correlation between X and Y
+
+    formula
+    -------
+                    cov(x,y)
+    corr(x,y) = -----------------
+                 std(x) * std(y)
+    '''
+    return cov(x, y) / (cov(x, x) * cov(y, y)) ** 0.5
         
 def frequency(data, cut=0.5):
     statistic = namedtuple('Frequency', ['Lower', 'Equal', 'Upper'])
@@ -342,26 +427,27 @@ def describe(data):
                            ['Mean', 'S', 'Sn', 'CV', 'Range',
                             'Min', 'Max', 'Skew', 'Kurt'])
     data = filter(is_math, data)
-    size = len(data)
-
-    try:
-        Ex = sum(data) / float(size)
-        Ex2 = sum(map(pow, data, [2]*size)) / float(size)
-        Ex3 = sum(map(pow, data, [3]*size)) / float(size)
-        Ex4 = sum(map(pow, data, [4]*size)) / float(size)
-    except ZeroDivisionError:
+    size = float(len(data))
+    if size == 0:
         return statistic(None, None, None, None, None, None, None, None, None)
-    
-    std = (Ex2 - Ex**2)**0.5
-    if size > 1:
-        std_n = size / (size - 1.0) * std
-    else:
-        std_n = std
 
+    Ex = sum(data) / float(size)
+    Ex2 = sum(map(lambda x: x**2, data)) / size
+    Ex3 = sum(map(lambda x: x**3, data)) / size
+    Ex4 = sum(map(lambda x: x**4, data)) / size
+
+    std = (Ex2 - Ex**2)**0.5
+    std_n = size / (size - 1.0) * std
+    
     S = (Ex3 - 3*Ex*std**2 - Ex**3) / std ** 1.5
     K = Ex4 / std ** 4 - 3
     min_, max_ = min(data), max(data)
+
+    try:
+        rang = max_ - min_
+    except:
+        rang = None
     
     if Ex == 0:
-        return statistic(Ex, std, std_n, None, max_-min_, min_, max_, S, K)
-    return statistic(Ex, std, std_n, std/Ex, max_-min_, min_, max_, S, K)
+        return statistic(Ex, std, std_n, None, rang, min_, max_, S, K)
+    return statistic(Ex, std, std_n, std/Ex, rang, min_, max_, S, K)

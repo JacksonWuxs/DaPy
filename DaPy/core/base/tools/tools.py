@@ -2,11 +2,20 @@ from collections import namedtuple, deque, Iterable, deque
 from datetime import datetime
 from time import struct_time
 from array import array
-from string import atof as str2float, atoi as str2int
+from string import atof as str2float, atoi as str2int, strip
 from distutils.util import strtobool as str2bool
-from ciso8601 import parse_datetime as str2date
 from warnings import warn
 from re import compile
+
+try:
+    from ciso8601 import parse_datetime as str2date
+except ImportError:
+    warn('`ciso8601` not found, uses `dateutil` instead for parsing datetime.')
+    try:
+        from dateutil.parser import parse as str2date
+    except ImportError:
+        warn('`dateutil` not found, DaPy can not auto-parse date type from text.')
+        str2date = strip
 
 __all__ = ['str2value', 'get_sorted_index',
            'is_value', 'is_math', 'is_iter', 'is_seq']
@@ -33,7 +42,7 @@ transfer_funcs = {float: str2float,
                   datetime: str2date}
 
 def str2str(value):
-    return value  
+    return value.strip()
     
 def str2value(value, prefer_type=None):
     if prefer_type is not None:
@@ -54,6 +63,10 @@ def str2value(value, prefer_type=None):
     return str2str(value)
     
 def get_sorted_index(seq, cmp=None, key=None, reverse=False):
+    if all(map(is_value, seq)):
+        return [value[0] for value in\
+                sorted(enumerate(seq), cmp=cmp, key=lambda x: x[1], reverse=reverse)]
+    
     index_dict = dict()
     for i, value in enumerate(seq):
         if value in index_dict:

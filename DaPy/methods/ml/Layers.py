@@ -1,10 +1,10 @@
 from random import randint, gauss, uniform
 from DaPy.core import Matrix
-from .active_functions import functions as acfs
+from DaPy.methods.activation import activation as acfs
 from math import sqrt
-from tools import _engine2str, _str2engine
+from DaPy.methods.tools import _str2engine, _engine2str
 
-class Layer(object):
+class Layer:
     def __init__(self, engine, index, function):
         self._engine = engine
         self._func = acfs[function.lower()]
@@ -50,16 +50,16 @@ class Layer(object):
         pass
 
 
-class Fully_Connected_Layer(Layer):
+class Dense_Layer(Layer):
     '''A type of common layer for multilayer perceptron
 
-    This kind of structure can help you quick develop a new
+    This kind of structure can help you quickly develop a new
     machine learning model.
     '''
     
     def __init__(self, engine, in_cells, out_cells, layer_index,
-                 function='sigm', weight_mode='Xavier'):
-        Layer.__init__(self, engine, layer_index, function)
+                 activation='sigm', weight_mode='Xavier'):
+        Layer.__init__(self, engine, layer_index, activation)
         self.__init__weight(in_cells, out_cells, weight_mode)
 
     @property
@@ -110,7 +110,7 @@ class Fully_Connected_Layer(Layer):
     def __repr__(self):
         if not isinstance(self._index, int):
             return self._index
-        return 'Fully_Conn_%s' % self._index
+        return 'Dense_%s' % self._index
 
     def propagation(self, x):
         return self._func(self._engine.dot(x, self._weight) + 1, self._engine)

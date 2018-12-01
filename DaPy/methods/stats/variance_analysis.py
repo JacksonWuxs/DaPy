@@ -5,13 +5,13 @@ __all__ = ['ANOVA']
 
 def ANOVA(*classes):
     if len(classes) <= 1:
-        raise ValueError('ANOVA() expects more than 1 comparing types.')
+        raise ValueError('ANOVA() expects more than 1 comparing class.')
 
     new_classes = list()
     for sequence in classes:
         sequence = filter(is_math, sequence)
         if len(sequence) <= 1:
-            raise ValueError('ANOVA() expects more than 1 samples in each type.')
+            raise ValueError('ANOVA() expects more than 1 samples in each class.')
         new_classes.append(sequence)
 
     n = sum(map(len, new_classes))

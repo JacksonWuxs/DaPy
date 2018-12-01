@@ -23,20 +23,19 @@ Enjoy the tour in data mining!
 :License: GNU 3.0, see LICENSE for more details.
 '''
 
-__all__ = [ 'datasets', 'Frame', 'SeriesSet', 'MachineLearn',
-            'stats', 'ones', 'zeros', 'delete',
+__all__ = [ 'datasets', 'Frame', 'SeriesSet', 'methods',
+            'ones', 'zeros', 'delete', 'column_stack',
            'DataSet', 'Table', 'Matrix', 'cov', 'corr', 'frequency',
-           'quantiles', 'sum', 'is_iter', 'read', 'encode', 'save',
+           'quantiles', 'sum', 'read', 'encode', 'save',
            'distribution','describe', 'mean', 'exp', 'dot', 'is_math']
 
 from __version__ import __version__, __author__, __copyright__
-from core import Frame, SeriesSet, DataSet
-from core import Matrix as mat
-from matlib import exp, dot, multiply, zeros, ones, C, P
+from core import Frame, SeriesSet, DataSet, Matrix as mat
+from matlib import exp, dot, multiply, zeros, ones, C, P, add, diag, log
 from matlib import cov, corr, frequency, quantiles, _sum as sum
 from matlib import distribution, describe, mean
 from io import read, encode, save
-from operation import delete, column_stack
+from operation import delete, column_stack, merge
 
         
     

@@ -1,6 +1,56 @@
 from copy import deepcopy
-from core import Frame, SeriesSet, Matrix as mat
+from core import DataSet, Frame, SeriesSet, Matrix as mat
 from core import is_seq, is_math, is_value
+
+def merge(*datas, **kwrds):
+    '''laterally merge multiple datasets into a new dataset.
+    More info with help(dp.DataSet.merge)
+
+    Parameters
+    ----------
+    keys : int, str and list
+        the key column in each dataset.
+        `int` -> the number of key column index;
+        `str` -> the name of key column;
+        `list` -> the number or names for each key column in each dataset
+
+    Return
+    ------
+    sheet : merged dataset
+
+    Example
+    -------
+    >>> import DaPy as dp
+    >>> data1 = dp.Frame([['A', 39, 'F'], ['B', 40, 'F'], ['C', 38, 'M']],
+                          ['Name', 'Age', 'Gender'])
+    >>> data2 = dp.Frame([['A', 'F', True], ['B', 'F', False], ['C', 'M', True]],
+                          ['Name', 'Gender', 'Married'])
+    >>> data3 = [['A', 'China'], ['B', 'US'], ['C', 'Japan'], ['D', 'England']]
+    >>> dp.merge(data1, data2, data3, keys=0, keep_key='self', keep_same=False).show()
+     Name | Age  | Gender | Married |   C_1  
+    ------+------+--------+---------+---------
+      A   |  39  |   F    |    F    |  China  
+      B   |  40  |   F    |    F    |    US   
+      C   |  38  |   M    |    M    |  Japan  
+     None | None |  None  |   None  | England 
+    '''
+    keys = kwrds.get('keys', 0)
+    keep_key = kwrds.get('keep_key', True)
+    keep_same = kwrds.get('keep_same', True)
+    if not is_seq(keys):
+        keys = [keys] * len(datas)
+    assert len(keys) == len(datas), 'keys should have same lenth as datas.'
+
+    if len(datas) == 1:
+        if isinstance(datas[0], DataSet):
+            return merge(*datas[0].data, **kwrds)
+        raise RuntimeError('only one sheets, can not merge.')
+    
+    first_data, last_key = SeriesSet(datas[0]), keys[0]
+    for key, data in zip(keys[1:], datas[1:]):
+        first_data.merge(data, last_key, key, keep_key, keep_same)
+        last_key = key
+    return first_data    
 
 def delete(data, index, axis=0):
     if isinstance(index, int):

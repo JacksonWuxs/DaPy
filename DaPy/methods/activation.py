@@ -37,7 +37,7 @@ def softmax(x, engine, diff=False):
         output[i] = [value / div for value in record]
     return Matrix(output, False)
 
-functions = {'sigm': sigmoid,
+activation = {'sigm': sigmoid,
              'tanh': tanh,
              'line': linear,
              'radb': radb,

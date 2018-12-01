@@ -105,8 +105,7 @@ class BaseSheet(object):
 
     @miss_symbol.setter
     def miss_symbol(self, item):
-        if not is_value(item):
-            raise TypeError('miss value should be a value object, not %s' % type(item))
+        assert is_value(item), 'miss value should be a value object'
 
         if isinstance(self._data, list):
             for record in self._data:
@@ -221,17 +220,17 @@ class BaseSheet(object):
         return obj
 
     def __delitem__(self, key):
+        assert isinstance(key, (int, str, list, tuple, unicode))
+        
         if isinstance(key, int):
             self.pop(key)
 
-        elif isinstance(key, str) and key in self._columns:
+        if isinstance(key, str):
             self.pop_col(key)
 
-        elif isinstance(key, tuple):
+        if isinstance(key, (list, tuple)):
             for every in key:
                 self.__delitem__(every)
-        else:
-            raise KeyError('%s should be int, str or slice.'%key)
 
     def __getslice__(self, start, stop, step=1):
         if start in self._columns or stop in self._columns:
@@ -278,10 +277,10 @@ class BaseSheet(object):
         if axis == 0:
             for i in get_sorted_index(self._columns, key=len, reverse=True):
                 cond = cond.replace(self._columns[i], 'record[%d]'%i)
-            record = self.__getitem__(0) # test record
+            record = self.__getitem__(0)
 
         elif axis == 1:
-            opeartes = {'and': 3, 'or': 2}
+            opeartes = {' and ': 3, ' or ': 2}
             for opearte, bias in opeartes.items():
                 counts = cond.count(opearte)
                 index = 0
@@ -353,8 +352,8 @@ class BaseSheet(object):
         if not new_name:
             return self._check_col_new_name('C_%d' % len(self._columns))
         
-        if str(new_name) not in self._columns:
-            return str(new_name)
+        if isinstance(new_name, (str, unicode)) and new_name not in self._columns:
+            return new_name
 
         start_no, titles = 1, ','.join(self._columns) + ','
         while True:
@@ -463,12 +462,16 @@ class BaseSheet(object):
                     break
 
         if types is not None:
-            if not isinstance(types, [list, tuple]):
+            if not isinstance(types, (list, tuple)):
                 types = (types, )
             for i, type_ in enumerate(types):
                 col_types[i] = transfer_funcs[type_]
 
         return freader, tuple(col_types), miss_symbol, prefer_type
+
+    def _check_columns_index(self, col):
+        if col.lower() == 'all':
+            return self._columns
 
     def _transform_value(self, i, item, col_types,
                                 miss_symbol, prefer_type):
@@ -526,38 +529,39 @@ class SeriesSet(BaseSheet):
     @property
     def info(self):
         from DaPy import describe
-        mins, maxs, avgs, stds = [], [], [], []
+        mins, maxs, avgs, stds, skes, kurs = [], [], [], [], [], []
         for sequence in self._data.values():
             d = describe(sequence)
-            mins.append(str(d.Min))
-            maxs.append(str(d.Max))
-            try:
-                avgs.append('%.2f'%d.Mean)
-            except TypeError:
-                avgs.append(' - ')
-            try:
-                stds.append('%.2f'%d.S)
-            except TypeError:
-                stds.append(' - ')
+            for ls, value in zip([mins, maxs, avgs, stds, skes, kurs],
+                                 [d.Min, d.Max, d.Mean, d.S, d.Skew, d.Kurt]):
+                if value == None:
+                    ls.append('-')
+                elif isinstance(value, float):
+                    ls.append('%.2f' % value)
+                else:
+                    ls.append(str(value))
 
         miss = map(str, self._miss_value)
-
         blank_size = [max(len(max(self._columns, key=len)), 5) + 2,
                       max(len(max(miss, key=len)), 4) + 2,
                       max(len(max(mins, key=len)), 3) + 2,
                       max(len(max(maxs, key=len)), 3) + 2,
                       max(len(max(avgs, key=len)), 4) + 2,
-                      max(len(max(stds, key=len)), 3)]
+                      max(len(max(stds, key=len)), 3) + 2,
+                      max(len(max(skes, key=len)), 4) + 2,
+                      max(len(max(kurs, key=len)), 4) + 1]
 
         # Draw the title line of description
-        title_line = 'Title'.center(blank_size[0]) + '|' +\
-                     'Miss'.center(blank_size[1]) +'|' +\
-                     'Min'.center(blank_size[2]) + '|' +\
-                     'Max'.center(blank_size[3]) + '|' +\
-                     'Mean'.center(blank_size[4]) + '|' +\
-                     'Stdev'.center(blank_size[5]) + '\n'
-        for lenth in blank_size:
-            title_line += '-'*lenth + '+'
+        title_line = '|'.join([
+                     'Title'.center(blank_size[0]),
+                     'Miss'.center(blank_size[1]),
+                     'Min'.center(blank_size[2]),
+                     'Max'.center(blank_size[3]),
+                     'Mean'.center(blank_size[4]),
+                     'Std'.center(blank_size[5]),
+                     'Skew'.center(blank_size[6]),
+                     'Kurt'.center(blank_size[7])]) + '\n'
+        title_line += '+'.join(map(lambda x: '-' * x, blank_size)) + '\n'
 
         # Draw the main table of description
         info = str()
@@ -567,14 +571,17 @@ class SeriesSet(BaseSheet):
             info += mins[i].center(blank_size[2]) + '|'
             info += maxs[i].center(blank_size[3]) + '|'
             info += avgs[i].center(blank_size[4]) + '|'
-            info += stds[i].center(blank_size[5]) + '\n'
-
+            info += stds[i].center(blank_size[5]) + '|'
+            info += skes[i].center(blank_size[6]) + '|'
+            info += kurs[i].center(blank_size[7]) + '\n'
+            
+        lenth = 7 + sum(blank_size)
+        line = '=' * lenth
         print('1.  Structure: DaPy.SeriesSet\n' +\
-              '2. Dimensions: Ln=%d | Col=%d\n'%self._dim +\
+              '2. Dimensions: Lines=%d | Variables=%d\n'%self._dim +\
               '3. Miss Value: %d elements\n'%sum(self._miss_value) +\
-              '4.   Describe: \n'+\
-              title_line[:-1] + '\n' +\
-              info + '='*(6 + sum(blank_size)))
+              'Descriptive Statistics'.center(lenth) + '\n' +\
+              line + '\n' + title_line + info + line)
 
     def _init_col(self, series):
         self._data = deepcopy(series._data)
@@ -682,7 +689,7 @@ class SeriesSet(BaseSheet):
         elif isinstance(interval, slice):
             return self.__getslice__(interval.start, interval.stop)
 
-        elif isinstance(interval, str):
+        elif isinstance(interval, (unicode, str)):
             return self._data[interval]
 
         else:
@@ -697,7 +704,7 @@ class SeriesSet(BaseSheet):
         for i in range(self._dim.Ln-1, -1, -1):
             yield self[i]
 
-    def __arrange_by_index(self, self_new_index=None, other_new_index=None):
+    def _arrange_by_index(self, self_new_index=None, other_new_index=None):
         if self_new_index:
             for title, sequence in self._data.items():
                 self._data[title] = [sequence[j] for j in self_new_index]
@@ -774,7 +781,10 @@ class SeriesSet(BaseSheet):
                 if i == j:
                     new_[j][i] = 1
                     continue
-                r = f_c(sequence, next_sequence)
+                try:
+                    r = f_c(sequence, next_sequence)
+                except ZeroDivisionError:
+                    r = '-'
                 new_[i][j], new_[j][i] = r, r
         new_.insert_col(0, self._columns, '_Subjects_')
         return new_
@@ -936,7 +946,7 @@ class SeriesSet(BaseSheet):
         self._miss_value.insert(index, mv)
 
         new_data = OrderedDict()
-        if index >= self._dim.Col:
+        if index >= self._dim.Col-1:
             self._data[variable_name] = series
             return
 
@@ -949,8 +959,8 @@ class SeriesSet(BaseSheet):
     def keys(self):
         return self._data.keys()
 
-    def normalized(self, process='NORMAL', col=all, attr=None, get_attr=None):
-        if col is all:
+    def normalized(self, process='NORMAL', col='all', attr=None, get_attr=None):
+        if isinstance(col, str) and col.lower() == 'all':
             new_col = self._columns
         else:
             new_col = []
@@ -958,16 +968,17 @@ class SeriesSet(BaseSheet):
                 if each in self._columns:
                     new_col.append(each)
                 else:
-                    new_col.append(self._columns[each])
+                    new_col.append(self._columns[self._columns.index(each)])
 
         from DaPy import describe
-        if process == 'LOG':
+        if process.upper() == 'LOG':
             from DaPy import log
+            
         attrs_dic = dict()
-        if process == 'NORMAL':
-            attrs_structure = namedtuple('Nr_attr', ['Min', 'Range'])
-        elif process == 'STANDARD':
-            attrs_structure = namedtuple('Sd_attr', ['Mean', 'S'])
+        if process.upper() == 'NORMAL':
+            attrs_structure = namedtuple('NORMALIZED', ['Min', 'Range'])
+        elif process.upper() == 'STANDAR':
+            attrs_structure = namedtuple('STANDAR', ['Mean', 'S'])
 
         for i, title in enumerate(new_col):
             sequence = self._data[title]
@@ -979,7 +990,7 @@ class SeriesSet(BaseSheet):
                 statis = describe(sequence)
                 A, B = statis.Min, statis.Range
 
-            elif process == 'STANDARD':
+            elif process == 'STANDAR':
                 statis = describe(sequence)
                 A, B = statis.Mean, statis.Sn
 
@@ -990,10 +1001,8 @@ class SeriesSet(BaseSheet):
             new = [0] * self._dim.Ln
             if process == 'LOG':
                 for i, value in enumerate(sequence):
-                    try:
-                        new[i] = log(value)
-                    except ValueError:
-                        continue
+                    new[i] = log(value)
+                self._data[title] = new
             else:
                 for i, value in enumerate(sequence):
                     try:
@@ -1001,8 +1010,9 @@ class SeriesSet(BaseSheet):
                     except ZeroDivisionError:
                         continue
                     except TypeError:
-                        continue
-                self._data[title] = new
+                        break
+                else:
+                    self._data[title] = new
 
             try:
                 attrs_dic[title] = attrs_structure(A, B)
@@ -1013,41 +1023,40 @@ class SeriesSet(BaseSheet):
             return attrs_dic
         return
 
-    def merge(self, other, self_key=0, other_key=0, keep=True):
+    def merge(self, other, self_key=0, other_key=0, keep_key=True, keep_same=True):
         other = SeriesSet(other)
+        def check_key(key, d, str_):
+            if isinstance(key, int):
+                return d._columns[key]
+            assert isinstance(key, (unicode, str)), 'key shoule be a string or int type'
+            assert key in d._columns, '`%s` is not a vaiable name '%(key, str_)
+            return key
 
-        if isinstance(self_key, int):
-            self_key = self._columns[self_key]
-        elif not isinstance(self_key, str):
-            raise TypeError('self_key shoule be a string or int type, which '+\
-                            'representes the column.')
-        if self_key not in self._columns:
-            raise IndexError('`%s` is not the '%self_key +\
-                             'element in this dataset.')
-
-        if isinstance(other_key, int):
-            other_key = other._columns[other_key]
-        elif not isinstance(other_key, str):
-            raise TypeError('other_key shoule be a string or int type, which '+\
-                            'representes the column.')
-        if other_key not in other._columns:
-            raise IndexError('`%s` is not the '%other_key+\
-                             'element in other dataset.')
-
-        if keep not in (True, False, 'other', 'self'):
-            raise ValueError('keep should be in (True, False, "other", "self").')
-
-        change_name = []
+        if self.shape.Ln != 0:
+            self_key = check_key(self_key, self, 'this')
+        other_key = check_key(other_key, other, 'other')
+        new_other_key = self._check_col_new_name(other_key)
+        
+        assert keep_key in (True, False, 'other', 'self')
+        assert keep_same in (True, False)
+   
+        # check new variables
+        change_name, original_name = [], []
         for i, col in enumerate(other.columns):
-            self._miss_value.append(other._miss_value[i])
+            if col in self._columns and col != other_key and keep_same is False:
+                continue
+            if col in self._columns and col == other_key and keep_key != 'other':
+                continue
+            original_name.append(col)
             col = self._check_col_new_name(col)
+            self._miss_value.append(other._miss_value[i])
             self._columns.append(col)
             change_name.append(col)
-
+            
+        # match the records
         temp_index, new_index = [], self._dim.Ln
         self_key_seq, other_key_seq = self[self_key], other[other_key]
         for i, value in enumerate(other_key_seq):
-
             self_keys  = self_key_seq.count(value)
             other_keys = other_key_seq.count(value)
             if self_keys == 0:
@@ -1079,6 +1088,7 @@ class SeriesSet(BaseSheet):
                 else:
                     temp_index.append(this_index)
 
+        # extend the empty dataset
         how_many_new_index = new_index - other.shape.Ln
         if how_many_new_index != 0:
             other.extend([[None] * other.shape.Col for i in range(how_many_new_index)])
@@ -1087,16 +1097,21 @@ class SeriesSet(BaseSheet):
         for i in range(new_index):
             if i not in hash_temp_index:
                 temp_index.append(i)
-        other.__arrange_by_index(None, temp_index)
+        other._arrange_by_index(None, temp_index)
 
         if other.miss_symbol != self._miss_symbol:
             other.symbol = self._miss_symbol
-        for title, seq in zip(change_name, other.values()):
-            self._data[title] = seq
+        for title, origi in zip(change_name, original_name):
+            self._data[title] = other[origi]
 
         self._dim = dims(new_index, len(self._columns))
         for seq in self._data.values():
             seq.extend([None] * (self._dim.Ln - len(seq)))
+
+        if keep_key == 'other':
+            self.__delitem__(new_other_key)
+        elif keep_key is False:
+            del self[self_key, new_other_key]
 
     def pop_miss_value(self, axis='COL'):
         if str(axis).upper() == 'COL':
@@ -1293,12 +1308,12 @@ class SeriesSet(BaseSheet):
             raise TypeError("`%s` is not a recognized symbol." % orders[0][1])
 
         new_index = get_sorted_index(self._data[compare_title], reverse=reverse)
-        self.__arrange_by_index(new_index)
+        self._arrange_by_index(new_index)
 
     def shuffle(self):
-        new_index = range(self._dim.Ln)
+        new_index = list(range(self._dim.Ln))
         shuffles(new_index)
-        self.__arrange_by_index(new_index)
+        self._arrange_by_index(new_index)
 
 
 class Frame(BaseSheet):

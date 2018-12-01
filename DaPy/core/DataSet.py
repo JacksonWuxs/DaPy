@@ -416,6 +416,7 @@ class DataSet(object):
 
         Example
         -------
+        >>> import DaPy as dp
         >>> data2 = dp.DataSet([[1, 1, 1], [1, 1, 1]])
         >>> data2.toframe()
         >>> data2
@@ -523,6 +524,7 @@ class DataSet(object):
 
         Example
         -------
+        >>> import DaPy as dp
         >>> data = dp.DataSet({
             'A_col': [1, 3, 4, 5, 6, 4, 5, 6, 8],
             'B_col': [2, 4, 6, 8, 12, 13, 15, 16],
@@ -541,10 +543,10 @@ class DataSet(object):
         new_title = list()
         for i, data in enumerate(self._data):
             if hasattr(data, 'corr'):
-                if True:
+                try:
                     corrs.append(data.corr())
                     new_title.append(self._sheets[i])
-                else: #xcept Exception, e:
+                except Exception, e:
                     warn('sheet:%s.corr() failed, ' % self._sheets[i] +\
                          'because %s'%e)
                     
@@ -574,6 +576,7 @@ class DataSet(object):
 
         Examples
         --------
+        >>> import DaPy as dp
         >>> data = dp.DataSet([[1, 2,    3,    4],
                                [2, None, 3,    4],
                                [3, 3,    None, 5],
@@ -620,6 +623,7 @@ class DataSet(object):
 
         Examples
         --------
+        >>> import DaPy as dp
         >>> data = dp.DataSet([[1, 2, 3, 4],
                                [2, None, 3, 4],
                                [3, 3, None, 5],
@@ -701,6 +705,7 @@ class DataSet(object):
 
         Examples
         --------
+        >>> import DaPy as dp
         >>> data = dp.DataSet(dp.SeriesSet([1,2,3,4,5,6], 'A'))
         >>> data.insert_col(3, ['New', 'New', 'New'], 'insert_col')
         >>> data
@@ -730,8 +735,8 @@ class DataSet(object):
                                [3, 3, None, 5],
                                [7, 8, 9, 10]])
         >>> data.tocol()
-        
-        There are two different keywords to use. Using keyword as ``LINE``:
+        >>> # There are two different keywords to use.
+        >>> # Using keyword as ``LINE``:
         >>> data.pop_miss_value('line')
         sheet:sheet0
         ============
@@ -742,7 +747,7 @@ class DataSet(object):
           None |   3   
            5   |   4 
 
-        Using keyword as 'COL':
+        >>> # Using keyword as 'COL':
         >>> data.pop_miss_value('col')
         sheet:sheet0
         ============
@@ -899,6 +904,7 @@ class DataSet(object):
 
         Examples
         --------
+        >>> import DaPy as dp
         >>> data = dp.DataSet() # Initiallized a empty DataSet object.
         >>> data.add(dp.Frame(
                         [[11, 11],
@@ -959,6 +965,7 @@ class DataSet(object):
 
         Examples
         --------
+        >>> import DaPy as dp
         >>> data = dp.DataSet()
         >>> data.add(dp.Frame(
                         [[11, 11],
@@ -1005,7 +1012,7 @@ class DataSet(object):
                     warn('sheet:%s.extend_col() new object failed, '%self._sheets[i] +\
                          'because %s'%e)
                     
-    def normalized(self, process='NORMAL', col=all, attr=None, get_attr=None):
+    def normalized(self, process='NORMAL', col='all', attr=None, get_attr=None):
         '''Normalized or standardlized your data in each col.
 
         Examples
@@ -1016,31 +1023,33 @@ class DataSet(object):
         sheet:sample
         ============
         1.  Structure: DaPy.SeriesSet
-        2. Dimensions: Ln=12 | Col=4
+        2. Dimensions: Lines=12 | Variables=4
         3. Miss Value: 0 elements
-        4.   Describe: 
-         Title | Miss | Min | Max | Mean | Std  |Dtype
-        -------+------+-----+-----+------+------+-----
-         A_col |  0   |  1  |  6  | 3.00 | 1.41 | list
-         B_col |  0   |  1  |  9  | 4.33 | 2.67 | list
-         C_col |  0   |  1  |  8  | 3.33 | 2.71 | list
-         D_col |  0   |  2  |  6  | 3.50 | 1.45 | list
-        ==============================================
+                        Descriptive Statistics                
+        ======================================================
+         Title | Miss | Min | Max | Mean | Std  | Skew | Kurt 
+        -------+------+-----+-----+------+------+------+------
+         A_col |  0   |  1  |  6  | 3.00 | 1.35 | 0.63 |57.05 
+         B_col |  0   |  1  |  9  | 4.33 | 2.56 | 3.11 |29.84 
+         C_col |  0   |  1  |  8  | 3.33 | 2.59 | 3.13 |15.63 
+         D_col |  0   |  2  |  6  | 3.50 | 1.38 | 0.61 |81.70 
+        ======================================================
         >>> data.normalized()
         >>> data.info
         sheet:sample
         ============
         1.  Structure: DaPy.SeriesSet
-        2. Dimensions: Ln=12 | Col=4
+        2. Dimensions: Lines=12 | Variables=4
         3. Miss Value: 0 elements
-        4.   Describe: 
-         Title | Miss | Min | Max | Mean | Std  |Dtype
-        -------+------+-----+-----+------+------+-----
-         A_col |  0   |  0  |  1  | 0.08 | 0.29 | list
-         B_col |  0   |  0  |  1  | 0.17 | 0.39 | list
-         C_col |  0   |  0  |  1  | 0.17 | 0.39 | list
-         D_col |  0   |  0  |  1  | 0.08 | 0.29 | list
-        ==============================================
+                        Descriptive Statistics                
+        ======================================================
+         Title | Miss | Min | Max | Mean | Std  | Skew | Kurt 
+        -------+------+-----+-----+------+------+------+------
+         A_col |  0   |  0  |  1  | 0.08 | 0.28 | 0.44 |11.28 
+         B_col |  0   |  0  |  1  | 0.17 | 0.37 | 0.41 | 5.64 
+         C_col |  0   |  0  |  1  | 0.17 | 0.37 | 0.41 | 5.64 
+         D_col |  0   |  0  |  1  | 0.08 | 0.28 | 0.44 |11.28 
+        ======================================================
         '''
         for i, data in enumerate(self._data):
             if hasattr(data, 'normalized'):
@@ -1050,7 +1059,7 @@ class DataSet(object):
                     warn('sheet:%s.normalized() current data failed, '%self._sheets[i] +\
                          'because %s'%e)
 
-    def merge(self, other, self_key=0, other_key=0):
+    def merge(self, other, self_key=0, other_key=0, keep_key=True, keep_same=True):
         '''laterally merge another data to exist sheet. 
 
         In this function, people could use this function to combind two
@@ -1079,6 +1088,19 @@ class DataSet(object):
 
         other_key : int, str(default=0)
             choose a column as the keyword in the other sheet.
+
+        keep_key : True, False, 'self' and 'other' (default=True)
+            how to handle the key columns.
+            `self` -> keep the self key column only;
+            `other` -> keep the other key column only;
+            `True` -> both keep two key columns;
+            `False` -> drop out two key columns;
+
+        keep_same : True, False(default=True)
+            when other data set has the same column name with current dataset,
+            how to handle the same columns?
+            `True` -> keep the same column in other dataset;
+            `False` -> not merge the same column in other dataset;
 
         Return
         ------
@@ -1169,9 +1191,7 @@ class DataSet(object):
                 self.add(sheet, name)
 
         elif ftype == 'sav':
-            if sheet_name:
-                fbase = sheet_name
-            self.add(parse_sav(addr, dtype, miss_symbol, miss_value), fbase)
+            self.add(parse_sav(addr, dtype, miss_symbol, miss_value), sheet_name)
                 
         elif ftype == 'xls' or ftype == 'xlsx':
             first_line = kward.get('first_line', 1)
@@ -1188,30 +1208,17 @@ class DataSet(object):
             
             if dtype.upper() == 'COL' or dtype.upper() == 'SERIESSET':
                 data = SeriesSet(miss_value=miss_value)
-                self._types.append(SeriesSet)
-                
             elif dtype.upper() == 'FRAME':
                 data = Frame(miss_value=miss_value)
-                self._types.append(Frame)
-
             elif dtype.upper() == 'MATRIX':
                 data = Matrix()
-                self._types.append(Matrix)
-
             else:
-                raise RuntimeError('data type should be SeriesSet, Frame or Matrix')
+                raise RuntimeError('dtype should be SeriesSet, Frame or Matrix')
 
             data.read_text(addr, **kward)
             self._data.append(data)
-
-            if sheet_name:
-                table = sheet_name
-            else:
-                table = fbase
-                
-            while table in self._sheets:
-                table += '_%d'%len(self._sheets)
-            self._sheets.append(table)
+            self._types.append(type(data))
+            self._sheets.append(self._check_sheet_new_name(sheet_name))
 
         elif ftype == 'pkl':
             self.add(pickle.load(open(addr, 'rb')), sheet_name)
@@ -1223,22 +1230,24 @@ class DataSet(object):
             if '<table' not in text:
                 raise ValueError('there is no tag <table> in the html file.')
             
-            if sheet_name:
-                fbase = sheet_name
-                
             for sheet, name in parse_html(\
-                            text, dtype, miss_symbol, miss_value, fbase):
+                        text, dtype, miss_symbol, miss_value, sheet_name):
                 self.add(sheet, name)
-            
         else:
             raise ValueError('DaPy singly supports file types as'+\
                              '(xls, xlsx, csv, txt, pkl, db, sav, html, htm).')
 
     def reverse(self, axis='sheet'):
-        '''Reverse your data set.
+        '''Reverse your data set or records.
+
+        Parameters
+        ----------
+        axis : str (default='sheet')
+            settle down reverse sheets or records in each sheet.
 
         Example
         -------
+        >>> import DaPy as dp
         >>> data = dp.DataSet([[1,2,3,4],
                                [2,3,4,5],
                                [3,4,5,6],
@@ -1253,9 +1262,13 @@ class DataSet(object):
             self._types.reverse()
             return
 
-        for data in self._data:
-            if hasattr(data, 'reverse'):
-                data.reverse(axis)
+        if axis.upper() == 'RECORD':
+            for data in self._data:
+                if hasattr(data, 'reverse'):
+                    data.reverse(axis)
+            return
+
+        raise AttributeError('axis should be "sheet" or "record"')
 
     def replace(self, *arg):
         '''d.replace(col, condition, target)
@@ -1266,6 +1279,7 @@ class DataSet(object):
 
         Examples
         --------
+        >>> import DaPy as dp
         >>> data = dp.DataSet([['Andy', 'Mary', 'Peter'],
                                ['Henry', 'Char', 'Iris'],
                                ['Peter', 'Mary', 'Andy'],
@@ -1326,7 +1340,7 @@ class DataSet(object):
                 data.shuffle()
 
     def sort(self, *orders):
-        '''You could easily sorted your data set with this function.
+        '''Easily sort records with this function.
 
         You will be asked to offer at least one ordering conditions.
         The parameter should be like a tuple or a list with two elements,
@@ -1339,12 +1353,16 @@ class DataSet(object):
         >>> from DaPy import datasets
         >>> data = datasets.example()
         >>> data
+        sheet:sample
+        ============
         A_col: <3, 4, 1, 3, 4, ... ,4, 1, 3, 2, 3>
         B_col: <2, 3, 3, 3, 5, ... ,7, 9, 2, 9, 4>
         C_col: <1, 2, 4, 1, 4, ... ,8, 8, 6, 1, 1>
         D_col: <4, 2, 2, 2, 3, ... ,3, 3, 5, 5, 6>
         >>> data.sort(('B_col', 'DESC'), ('A_col', 'ASC'))
         >>> data
+        sheet:sample
+        ============
         A_col: <1, 2, 4, 4, 3, ... ,3, 4, 3, 3, 2>
         B_col: <9, 9, 7, 5, 4, ... ,3, 3, 2, 2, 1>
         C_col: <8, 1, 8, 4, 1, ... ,1, 2, 1, 6, 1>
@@ -1356,6 +1374,38 @@ class DataSet(object):
 
     def save(self, addr, **kwrds):
         '''Save the DataSet to a file.
+
+        Parameters
+        ----------
+        addr : str
+            the output file address.
+
+        encode : str (default='utf-8')
+            saving the file in such code type
+
+        decode : str (default='utf-8')
+            parse your data in such code type
+
+        ftype : str
+            the file type you want to save as. Use the file type in
+            your address as default. For example, 'data.save("test.csv")'
+            means save this object into .csv type. DaPy supports
+            following file types since V1.5.1:
+            .csv, .txt, .xls, .pkl, .db, .html
+
+        newline : str (default='\n')
+            use this simble to mark change line.
+
+        delimiter : str (default=',')
+            use this simble to seperate a records.
+
+        if_exists : str (default='fail')
+            when saving the data into a exist database file, how to face the
+            delimma while the sheet name has been inside the database.
+            'fail' -> raise an error;
+            'replace' -> replace the exist table with current data;
+            'append' -> append these records to the exist sheet
+            '
         '''
         fpath, fname, fbase, ftype = parse_addr(addr)
         encode = kwrds.get('encode', 'utf-8')
@@ -1366,7 +1416,7 @@ class DataSet(object):
             newline = kwrds.get('newline', '\n')
             delimiter = kwrds.get('delimiter', ',')
             for data, sheet in zip(self._data, self._sheets):
-                if not data:
+                if data is None:
                     continue
                 if len(self._data) > 1:
                     addr = fpath + fbase + '_' + sheet + '.' + ftype
@@ -1434,7 +1484,7 @@ class DataSet(object):
         for i, data in enumerate(self._data):
             if isinstance(data, SeriesSet):
                 continue
-            if True:
+            try:
                 if hasattr(data, 'columns'):
                     if hasattr(data, 'miss_symbol'):
                         self._data[i] = SeriesSet(data, data.columns,
@@ -1443,7 +1493,7 @@ class DataSet(object):
                         self._data[i] = SeriesSet(data, data.columns)
                 else:
                     self._data[i] = SeriesSet(data, miss_value=miss_symbol)
-            else: #except Exception, e:
+            except Exception, e:
                 warn('sheet[%s] can not transform to SeriesSet, ' % self._sheets[i] +\
                     'because: %s' % e)
             self._types[i] = SeriesSet
@@ -1470,3 +1520,6 @@ class DataSet(object):
             else:
                 print(data.__repr__())
 
+if __name__ == '__main__':
+    from doctest import testmod
+    testmod()
