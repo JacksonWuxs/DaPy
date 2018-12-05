@@ -4,7 +4,7 @@ DaPy - Enjoy the Tour in Data Mining
 ====
 ![](https://img.shields.io/badge/Version-1.5.3-green.svg)  ![](https://img.shields.io/badge/Download-PyPi-green.svg)  ![](https://img.shields.io/badge/License-GNU-blue.svg)
 
-As a data analysis and processing library based on the original data structures in Python, **DaPy** is not only committed to save the time of data scientists and improve the efficiency of research, but also try it best to offer you a new experience in data science.
+As a data analysis and processing library based on the original Python data structures, **DaPy** is not only committed to save the time of data scientists and improve the efficiency of research, but also try it best to offer you a new experience in data mining. In order to approach this goal, DaPy provides you some flexible and powerful high-level __data structures__, some __statistical functions__ and __machine learning models__.
 
 [Installation](#installation) | [Features](#features) | [Quick Start](https://github.com/JacksonWuxs/DaPy/blob/master/doc/Quick%20Start/English.md ) | [To Do List](#todo) | [Version Log](#version-log) | [License](#license) | [Guide Book](https://github.com/JacksonWuxs/DaPy/tree/master/doc/Guide%20Book/README.md) | [中文版](https://github.com/JacksonWuxs/DaPy/blob/master/README_Chinese.md)
 
@@ -25,8 +25,8 @@ native data structures as much as possible and we try to make
 it supports more Python syntax habits. Therefore you can 
 adapt to DaPy quickly, if you imagine you are opearting an Excel table.
 In addition, we do our best to simplify
-the formulas or mathematical models in it, in order to let you 
-implement your ideas fluently.  
+the formulas or mathematical models in it, so that it can be easy to use 
+and helps you to implement your idea fluentely.
 
 * Here are just a few of the things that DaPy does well:  
 	- [Efficiently manage diverse data with clearly perceiving approach](https://github.com/JacksonWuxs/DaPy/blob/master/doc/Guide%20Book/English/Features.md#visually-manage-diverse-data)
