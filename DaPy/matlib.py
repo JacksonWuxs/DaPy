@@ -58,6 +58,24 @@ def add(m1, m2):
 
     raise TypeError('add() expectes elements which can add.')
 
+def _abs(data):
+    if hasattr(data, 'shape'):
+        new = [0] * data.shape[0]
+        if hasattr(data, 'tolist'):
+            data = data.tolist()
+        for i, line in enumerate(data):
+            new[i] = map(abs, line)
+        return Matrix(new, check=False)
+    
+    if is_math(data):
+        return abs(data)
+
+    if is_iter(data):
+        return map(abs, data)
+
+    raise TypeError('expects an iterable or numeric for exp(), got %s'%type(other))
+
+
 def multiply(m1, m2):
     if is_math(m1) and is_math(m2):
         return m1 * m2
@@ -113,7 +131,7 @@ def exp(other):
     raise TypeError('expects an iterable or numeric for exp(), got %s'%type(other))
 
 def create_mat(shape, num):
-    matrix = mat()
+    matrix = Matrix()
     matrix.make(shape[0], shape[1], num)
     return matrix
 
@@ -124,17 +142,24 @@ def ones(shape):
     return create_mat(shape, 1)
 
 def diag(values):
-    matrix = mat()
-    matrix.make_eye(len(values), len(values), values)
+    matrix = Matrix()
+    matrix.make_eye(len(values), values)
     return matrix
 
-def log(data):
+def diff(seq, lag=1):
+    return [seq[i] - seq[i-lag] for i in range(lag, len(seq))]
+
+def log(data, base=2.71828183):
     if is_seq(data):
         if is_seq(data[0]):
-            return [map(math.log, record) for record in data]
-        return map(math.log, data)
-    return math.log(data)
+            return [map(log, record, [base] * len(record)) for record in data]
+        return map(log, record, [base] * len(record))
+    return math.log(data, base)
 
+def boxcox(value, lambda_=1, a=0, k=1):
+    if lambda_ == 0:
+        return log(value)
+    return ((value + a) ** lambda_ - 1) / (k + lambda_)
 
 def _sum(data, axis=None):
     '''Sum of sequence elements.
@@ -387,7 +412,7 @@ def describe(data):
 
     Return
     ------
-    NamedTuple(Mean, S, Sn, CV, Min, Max, Range)
+    NamedTuple(Mean, S, Sn, CV, Range, Min, Max, Skew, Kurt)
 
     Mean : float
         mean of data.
@@ -438,7 +463,6 @@ def describe(data):
 
     std = (Ex2 - Ex**2)**0.5
     std_n = size / (size - 1.0) * std
-    
     S = (Ex3 - 3*Ex*std**2 - Ex**3) / std ** 1.5
     K = Ex4 / std ** 4 - 3
     min_, max_ = min(data), max(data)

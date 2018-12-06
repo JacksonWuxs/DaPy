@@ -1,8 +1,20 @@
 from collections import namedtuple
-from DaPy import Frame, DataSet, mean, mat
+from DaPy.matlib import mean, corr, _abs as abs, log, _sum as sum
 from DaPy.methods.tools import _str2engine, _engine2str
+from DaPy.methods.activation import UnsupportTest
+from DaPy.core import Frame, DataSet, is_seq, is_math, Matrix as mat
+from DaPy.operation import column_stack
+from math import sqrt
 
 __all__ = ['LinearRegression']
+
+try:
+    from scipy.stats import f, t  
+except ImportError:
+    Fcdf, Tcdf = UnsupportTest, UnsupportTest
+    warn('DaPy uses scipy to compute p-value, try: pip install scipy.')
+else:
+    Fcdf, Tcdf = f.cdf, t.cdf
 
 class LinearRegression:
     '''Linear Regression Model
@@ -45,14 +57,16 @@ class LinearRegression:
 
     Reference
     ---------
-    Xiaoling Xu, Ronghua Wang. (2013). Probability Theory & Mathematical Statistics.
-        Shanghai: Shanghai Jiaotong University Press.
+    Xu X, Wang R. Probability Theory & Mathematical Statistics.
+        Shanghai: Shanghai Jiaotong University Press. 2013.
+    He X, Liu W. Applied Regression Analysis.
+        Beijing: China People University Press. 2015.
+    
     '''
-    def __init__(self, engine='Numpy', beta_=None, alpha_=None):
+    def __init__(self, engine='Numpy', beta=None, weight=None):
         self._engine = _str2engine(engine)
-        self._beta = self._engine.mat(beta_)
-        self._alpha = self._engine.mat(alpha_)
-        self._mode = None
+        self._beta = self._engine.mat(beta)
+        self._W = self._engine.mat(weight)
         self._report = DataSet()
 
     @property
@@ -68,14 +82,6 @@ class LinearRegression:
         self._engine = _str2engine(value)
 
     @property
-    def alpha(self):
-        return self._alpha
-
-    @alpha.setter
-    def alpha(self, new_alpha):
-        self._alpha = self._engine.mat(new_alpha)
-
-    @property
     def beta(self):
         return self._beta
 
@@ -84,13 +90,47 @@ class LinearRegression:
         self._beta = self._engine.mat(new_beta)
 
     @property
+    def SSE(self):
+        if hasattr(self, '_SSE'):
+            return self._SSE
+        return None
+
+    @property
+    def SSR(self):
+        if hasattr(self, '_SSR'):
+            return self._SSR
+        return None
+
+    @property
     def report(self):
         return self._report
 
     def __call__(self, x):
         return self.predict(x)
+
+    def _get_weight(self, W, cols, X):
+        if W is None:
+            return self._engine.diag([1] * X.shape[0])
+
+        if hasattr(W, 'shape'):
+            assert W.shape[0] == W.shape[1], 'weight matrix should be a square.'
+            assert W.shape[0] == X.shape[0], 'weight should have same lenth with data.'
+            return self._engine.mat(W)
+
+        if isinstance(W, dict):
+            assert len(W) == 1, 'weighted variable should be only one.'
+            variable, power = reduce(list.__add__, W.items())
+            if isinstance(variable, (str, unicode)):
+                variable = cols.index(variable)
+            assert abs(variable) < X.shape[1], 'settle variable index out of range.'
+            return self._engine.diag((X[:, variable] ** (-power)).tolist())
+
+        if is_seq(W) is True:
+            assert all(map(is_math, W)), 'sequence of weight should be number inside.'
+            assert len(W) == X.shape[0], 'weight should have same lengh with data.'
+            return self._engine.diag(W)
         
-    def fit(self, x, y, solve='MLE', F=True, R=True, T=True):
+    def fit(self, X, Y, W=None, **kwrds):
         '''
         Parameter
         ---------
@@ -100,8 +140,24 @@ class LinearRegression:
         Y : matrix-like
             A sequence stores some targets of the records.
 
-        solve : str (default="MLE")
-            how to get the beta matrix.
+        W : dict, array-like & bool (default=None)
+            when this parameter is not None, this model will be fit with
+            Weighted Least Squares algorithm.
+            
+            dict -> {variable name: power value}. when you use a dict as your
+            parameter, it will auto-calculate the weight matrix for each
+            observation.
+
+            array-like -> [W1, W2, W3, ..., Wn]. The model will build the matrix
+            in light of the weight array.
+            
+
+        Cp: dict, 2D-tuple (default=None)
+            (m, SSEm) -> when this parameter fills with 2D-tuple, the first
+            position in this tuple is the dimension size of total model and the
+            other position is the SSE of Full-Regression-model. Get SSE from 
+            other model with statement as ">>> lr.SSE"
+            {'SSE': value, 'm': value} -> fill with dict.
 
         Formulas
         --------
@@ -113,69 +169,100 @@ class LinearRegression:
         He X & Liu W. Applied Regression Analysis. China People's University
         Publication House. 2015.
         '''
-        assert solve.lower() == 'mle', 'solve should be "MLE" in this version'
-        X, Y = self._engine.mat(mat(x)), self._engine.mat(mat(y))
-        X = self._engine.column_stack([[1] * X.shape[0], X])
-        self._fit_mle(X, Y)
+        if hasattr(X, 'columns'):
+            kwrds['variables'] = X.columns
+        X, Y = mat(X), mat(Y)
+        X_, Y_ = self._engine.mat(X), self._engine.mat(Y)
+        n, p = X.shape
+        cols = kwrds.get('variables', ['X%d' % i for i in range(1, p+1)])
+        if kwrds.get('C', True) is True:
+            cols.insert(0, 'Constant')
+            X_ = self._engine.column_stack([[1] * X_.shape[0], X_])
+        
+        W = self._get_weight(W, cols, X)
+        self._fit_mle(X_, Y_, W)
+        
+        y_hat = self._beta.T.dot(X_.T) # Engine.mat
+        self._res = Y - mat(y_hat.tolist()).T # DaPy.mat
+        y_bar = self._engine.mean(Y_)
+        self._SSR = sum(mat((y_hat-y_bar).tolist()) ** 2)
+        self._SSE = sum(self._res ** 2)
+        R2 = round(self._SSR / (self._SSE+self._SSR), 4)
+                    
+        self._report.add(self.GetSummary(R2, n, p), 'Model Summary')
+        self._report.add(self.GetANOVA(n, p), 'ANOVA')
+        self._report.add(self.GetCoeff(X_, n, p, cols), 'Coefficients')
+        self._report.add(self.GetCorr(X, n ,p, cols), 'Residual Correlation')
+        self._report.add(self.GetPerf(R2, n, p, kwrds.get('Cp', self._SSE)),
+                         'Method Performance')
 
-        if True in (F, R, T):
-            Y_bar, Y_hat = self._engine.mean(Y), self._beta.T.dot(X.T)
-            SSR = round(self._engine.sum(mat((Y_hat-Y_bar).tolist()) ** 2), 4)
-            SSE = round(self._engine.sum(mat((Y - Y_hat.T).tolist()) ** 2), 4)
-            SST = round(SSE + SSR, 4)
-            R_sqrt = SSR / SST
-            n, p = float(X.shape[0]), X.shape[1]-1.0
-            M, N = p, n - p - 1.0
-            
-        if R is True:
-            table = Frame(None, ['R', u'R\u00B2', u'Adj-R\u00B2'])
-            table.append([round(R_sqrt**0.5, 4), round(R_sqrt, 4), round(1-((1-R_sqrt)*(n-1))/N, 4)])
-            self._report.add(table, 'Model Summary')
-            
-        if F is True:
-            F = round((SSR/p) / (SSE/(n-p-1)), 4)
-            try:
-                from scipy.stats import f
-                sig = f.pdf(F, M, N)
-            except ImportError:
-                sig = '-'
-                warn('F-test bases on the scipy lib, try: pip install scipy.')
-            table = Frame(None,
-                    ['Source', 'df', 'Sum Square', 'Mean Square', 'F', 'Sig.'],
-                    miss_value='')
-            table.append(['Regression', int(M), SSR, SSR/p, F, '%.4f' % sig])
-            table.append(['Residual', int(N), SSE, round(SSE/(n-p-1), 4)])
-            table.append(['Total', int(n-1), SST])
-            self._report.add(table, 'ANOVA')
+    def GetSummary(self, R2, n, p):
+        rho_up = [v1[0] * v2[0] for v1, v2 in zip(self._res, self._res[1:])]
+        rho_low = map(lambda x: x[0]**2, self._res[1:])
+        table = Frame(None, ['R', u'R\u00B2', u'Adj-R\u00B2', 'DW'])
+        table.append([round(sqrt(R2), 4), R2,
+                      round(1-((1-R2)*(n-1))/(n-p-1.0), 4),
+                      round(2 - 2*sum(rho_up) / sum(rho_low), 4)])
+        return table
 
-        if T is True:
-            if hasattr(x, 'columns'):
-                cols = x.columns
-            else:
-                cols = ['X%d' % i for i in range(1, X.shape[1]+1)]
-            c = X.T.dot(X).I.tolist()
-            c = [c[i][i] ** 0.5 for i in range(int(p+1))]
-            sigma_hat = (SSE / N) ** 0.5
-            betas = self._beta.T.tolist()[0]
-            t = [round(beta_ / (c_ * sigma_hat), 4) for c_, beta_ in zip(c, betas)]
-            try:
-                from scipy.stats import t as t_test
-                sigs = map(lambda x: round(t_test.pdf(x, n-p), 4), t)
-            except ImportError:
-                sigs = ['-'] * len(t)
-                warn('t-test bases on the scipy lib, try: pip install scipy.')
-            
-            table = Frame(None, ['Method', 'Beta', 't', 'Sig.'])
-            table.append(['Constant', '%.4f' % betas[0], t[0], sigs[0]])
-            for i, (beta_, t_, sig_) in enumerate(zip(betas[1:], t[1:], sigs[1:])):
-                table.append([cols[i], round(beta_, 6), t_, sig_])
-            self._report.add(table, 'Coefficients')
-                
-    def _fit_mle(self, X, Y):
-        self._beta = X.T.dot(X).I.dot(X.T).dot(Y)
+    def GetANOVA(self, n, p):
+        M, N = p, n - p - 1.0
+        F = (self._SSR/M) / (self._SSE/N)
+        sig = 1 - Fcdf(F, M, N)
+        table = Frame(None,
+                ['Source', 'df', 'Sum Square', 'Mean Square', 'F', 'Sig.'],
+                miss_value='')
+        table.append(['Regression', int(M), self._SSR, self._SSR/M, F, '%.4f' % sig])
+        table.append(['Residual', int(N), self._SSE, round(self._SSE/N, 4)])
+        table.append(['Total', int(N+M), self._SSE+self._SSR])
+        return table
+
+    def GetCoeff(self, X, n, p, cols):
+        c = X.T.dot(X).I.tolist()
+        if cols[0] == 'Constant':
+            c = [sqrt(c[i][i]) for i in range(int(p)+1)]
+        else:
+            c = [sqrt(c[i][i]) for i in range(int(p))]
+        sigma_hat = sqrt(self._SSE / (n - p -1.0))
+        betas = self._beta.T.tolist()[0]
+        t = [round(beta_ / (c_ * sigma_hat), 4) for c_, beta_ in zip(c, betas)]
+        sigs = map(lambda x: round(2 * Tcdf(min(x, -x), n-p), 4), t)
+        table = Frame(None, ['Method', 'Beta', 't', 'Sig.'])
+        for col, beta_, t_, sig_ in zip(cols, betas, t, sigs):
+            table.append([col, beta_, t_, sig_])
+        return table
+
+    def GetCorr(self, X, n, p, cols):
+        abs_res = abs(self._res.T).T.tolist()
+        table = Frame(None, ['Variable', 'Spearman', 't', 'Sig.'])
+        for i, col_ in enumerate(cols[len(cols) // X.shape[1]:]):
+            seq = X[:, i].T.tolist()[0]
+            rs = round(corr(seq, abs_res, 'spearman'), 4)
+            t = round(sqrt(n - 2) * rs / sqrt(1 - rs**2), 4)
+            sig = 2 * round(Tcdf(min(t, -t), n-2), 4)
+            table.append([col_, rs, t, sig])
+        return table
+
+    def GetPerf(self, R2, n ,p, Cp):
+        table = Frame(None, [u'R\u00B2\u2090', 'AIC', u'C\u209A'])
+
+        assert isinstance(Cp, (dict, list, tuple, float))
+        if isinstance(Cp, dict):
+            m, SSEm = Cp['m'], Cp['SSE']
+        if isinstance(Cp, (list, tuple)):
+            m, SSEm = Cp
+        if isinstance(Cp, (int, float)):
+            m, SSEm = (p, self._SSE)
+        Cp = round((n - m - 1.0) * self._SSE / SSEm - n + 2 * p, 3)
+        table.append([round(1 - (n-1) / (n-p-1.0) * (1 - R2), 4),
+                      round(n * log(self._SSE) + 2 * p, 2), Cp])
+        return table
+                     
+    def _fit_mle(self, X, Y, W):
+        self._beta = X.T.dot(W).dot(X).I.dot(X.T).dot(W).dot(Y)
 
     def predict(self, X):
-        if not isinstance(X, mat):
+        if not isinstance(X, mata):
             X = mat(X)
         X = self._engine.column_stack([[1] * X.shape[0], X])
         return self._beta.T.dot(mat(X).T)

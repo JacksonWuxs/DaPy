@@ -1,5 +1,8 @@
 from DaPy.core import Matrix
 
+def UnsupportTest(*attrs, **kwrds):
+    return '-'
+
 def sigmoid(x, engine, diff=False):
     if diff:
         return (1 - x) * x

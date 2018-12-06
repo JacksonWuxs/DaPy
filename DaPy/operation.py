@@ -84,7 +84,6 @@ def delete(data, index, axis=0):
         new = [line for i, line in enumerate(data) if i not in index]
         return mat(new, False)
 
-
 def column_stack(tup):
     '''Stack 1-D data as columns into a 2-D data.
 

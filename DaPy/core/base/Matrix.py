@@ -163,7 +163,8 @@ class Matrix(object):
             return self._matrix[pos]
         
         if isinstance(pos, tuple):
-            return self._matrix[pos[0]][pos[1]]
+            assert len(pos) == 2, 'too many indices for array.'
+            return Matrix([record[pos[1]] for record in self._matrix[pos[0]]])
 
     def __setitem__(self, pos, value):
         if isinstance(pos, tuple):
@@ -556,7 +557,7 @@ class Matrix(object):
             value == [1.0] * size
         elif is_math(value):
             value = [value] * size
-        elif not all(is_math, value):
+        elif not all(map(is_math, value)):
             raise TypeError('value should be a list of number, number or None.')
         self._matrix = [[0.0] * size for j in range(size)]
         self._dim = Matrix.dims(size, size)

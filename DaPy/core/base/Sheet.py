@@ -220,17 +220,20 @@ class BaseSheet(object):
         return obj
 
     def __delitem__(self, key):
-        assert isinstance(key, (int, str, list, tuple, unicode))
-        
+        assert isinstance(key, (int, str, list, tuple, unicode, slice))
         if isinstance(key, int):
             self.pop(key)
 
-        if isinstance(key, str):
+        if isinstance(key, (unicode, str)):
             self.pop_col(key)
 
         if isinstance(key, (list, tuple)):
-            for every in key:
-                self.__delitem__(every)
+            int_keys = filter(is_math, key)
+            str_keys = filter(lambda x: isinstance(x, str), key)
+            if str_keys != ():
+                self.pop_col(*str_keys)
+            if int_keys != ():
+                self.pop(int_keys)
 
     def __getslice__(self, start, stop, step=1):
         if start in self._columns or stop in self._columns:
@@ -367,14 +370,14 @@ class BaseSheet(object):
         elif i is None:
             i = 0
         else:
-            raise ValueError('can not get the title of %s'%j)
+            raise ValueError('%s is not a title in current dataset'%j)
 
         if j in self._columns:
             j =  self._columns.index(j)
         elif j is None:
             j = self._dim.Col - 1
         else:
-            raise ValueError('can not get the title of %s'%j)
+            raise ValueError('%s is not a title in current dataset'%j)
         return (i, j)
 
     def _check_area(self, point1, point2):
@@ -470,11 +473,21 @@ class BaseSheet(object):
         return freader, tuple(col_types), miss_symbol, prefer_type
 
     def _check_columns_index(self, col):
-        if col.lower() == 'all':
-            return self._columns
+        if isinstance(col, str):
+            if col.lower() == 'all':
+                return self._columns
+            if col in self._columns:
+                return col
+            raise ValueError('%s is not a title in current dataset' % col)
 
-    def _transform_value(self, i, item, col_types,
-                                miss_symbol, prefer_type):
+        if isinstance(col, int):
+            assert abs(col) >= self.shape.Col, 'title index is out of range'
+            return self._columns[col]
+
+        if is_seq(col):
+            return map(self._check_columns_index, col)
+
+    def _transform_value(self, i, item, col_types, miss_symbol, prefer_type):
         try:
             if item in miss_symbol:
                 self._miss_value[i] += 1
@@ -959,69 +972,47 @@ class SeriesSet(BaseSheet):
     def keys(self):
         return self._data.keys()
 
-    def normalized(self, process='NORMAL', col='all', attr=None, get_attr=None):
-        if isinstance(col, str) and col.lower() == 'all':
-            new_col = self._columns
-        else:
-            new_col = []
-            for each in col:
-                if each in self._columns:
-                    new_col.append(each)
-                else:
-                    new_col.append(self._columns[self._columns.index(each)])
+    def normalized(self, process='NORMAL', col='all', **attr):
+        assert isinstance(process, str)
+        assert isinstance(col, (str, list, tuple))
+        assert process.upper() in ('NORMAL', 'STANDAR', 'LOG', 'BOX-COX')
+        process = process.upper()
+        new_col = self._check_columns_index(col)
+        if isinstance(new_col, str):
+            new_col = [new_col]
 
-        from DaPy import describe
-        if process.upper() == 'LOG':
-            from DaPy import log
-            
-        attrs_dic = dict()
-        if process.upper() == 'NORMAL':
-            attrs_structure = namedtuple('NORMALIZED', ['Min', 'Range'])
-        elif process.upper() == 'STANDAR':
-            attrs_structure = namedtuple('STANDAR', ['Mean', 'S'])
-
-        for i, title in enumerate(new_col):
+        from DaPy import describe, log, boxcox
+        for title in new_col:
             sequence = self._data[title]
-
-            if attr:
-                A, B = attr[title]
-
-            elif process == 'NORMAL':
+            if process in ('NORMAL', 'STANDAR') and attr == {}:
                 statis = describe(sequence)
-                A, B = statis.Min, statis.Range
 
+            if process == 'NORMAL':
+                A = float(attr.get('min', statis.Min))
+                B = float(attr.get('range', statis.Range))
             elif process == 'STANDAR':
-                statis = describe(sequence)
-                A, B = statis.Mean, statis.Sn
+                A = float(attr.get('mean', statis.Mean))
+                B = float(attr.get('std', statis.Sn))
+            elif process == 'BOX-COX':
+                lamda = attr.get('lamda', 1)
+            elif process == 'LOG':
+                base = attr.get('base', 2.71828183)
 
-            elif process != 'LOG':
-                raise ValueError("unrecognized symbol '%s',"%str(process)+\
-                                 "use 'NORMAL', 'STANDARD' and 'LOG'")
-
-            new = [0] * self._dim.Ln
-            if process == 'LOG':
+            if process == 'LOG':                                     
                 for i, value in enumerate(sequence):
-                    new[i] = log(value)
-                self._data[title] = new
-            else:
+                    if is_math(value):
+                        sequence[i] = log(value, base)
+
+            elif process in ('NORMAL', 'STANDAR'):
+                assert B != 0, 'column `%s` can not have 0 range or std' % title
                 for i, value in enumerate(sequence):
-                    try:
-                        new[i] = (value - A) / B
-                    except ZeroDivisionError:
-                        continue
-                    except TypeError:
-                        break
-                else:
-                    self._data[title] = new
-
-            try:
-                attrs_dic[title] = attrs_structure(A, B)
-            except UnboundLocalError:
-                pass
-
-        if get_attr:
-            return attrs_dic
-        return
+                    if is_math(value):
+                        sequence[i] = (value - A) / B
+                    
+            elif process == 'BOX-COX':
+                for i, value in enumerate(sequence):
+                    if is_math(value):
+                        sequence[i] = boxcox(value, lamda)
 
     def merge(self, other, self_key=0, other_key=0, keep_key=True, keep_same=True):
         other = SeriesSet(other)
@@ -1162,16 +1153,21 @@ class SeriesSet(BaseSheet):
     def pop(self, pos=-1):
         '''pop(remove & return) a record from the Frame
         '''
-        if not isinstance(pos, int):
-            raise TypeError('an integer is required.')
-
-        pop_item = [sequence.pop(pos) for sequence in self._data.values()]
-
-        self._dim = dims(self._dim.Ln - 1, self._dim.Col)
+        assert isinstance(pos, (int, list, tuple)), 'an int or ints in list is required.'
+        if isinstance(pos, int):
+            pos = [pos,]
+        pos = sorted(pos, reverse=True)
+        
+        pop_item = []
+        for seq in self._data.values():
+            pop_item.append([seq.pop(pos_) for pos_ in pos])
+        pop_item = zip(*pop_item)
+        
+        self._dim = dims(self._dim.Ln - len(pos), self._dim.Col)
         for i, each in enumerate(pop_item):
             if self._miss_symbol == each:
                 self._miss_value[i] -= 1
-        return pop_item
+        return Frame(pop_item, self._columns)
 
     def pop_col(self, *titles):
         pop_name = []
@@ -1624,18 +1620,18 @@ class Frame(BaseSheet):
             return None
         return Frame(return_data, self._columns)
 
-    def pop(self, item=-1):
+    def pop(self, pos=-1):
         '''pop(remove & return) a record from the Frame
         '''
-        if isinstance(item, int):
-            pop_item = self._data.pop(item)
-            self._dim = dims(self._dim.Ln - 1, self._dim.Col)
-            for i, value in enumerate(pop_item):
-                if value == self._miss_symbol:
-                    self._miss_value[i] -= 1
-            return pop_item
-
-        raise TypeError('an integer is required.')
+        assert isinstance(pos, (int, list, tuple)), 'an int or ints in list is required.'
+        if isinstance(pos, int):
+            pos = [pos,]
+        pos = sorted(pos, reverse=True)
+        pop_item = Frame([self._data.pop(pos_) for pos_ in pos])
+        self._dim = dims(self._dim.Ln - len(pos), self._dim.Col)
+        for i, value in enumerate(pop_item._miss_value):
+            self._miss_value[i] -= value
+        return pop_item
 
     def pop_col(self, *titles):
         '''pop(remove & return) a series from the Frame

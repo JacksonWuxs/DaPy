@@ -51,6 +51,8 @@ class LinearDiscriminantAnalysis:
         X_bar = self._calculate_xbar(X)
         X_T = reduce(self._engine.add,
                      [n*x for n, x in zip(size, X_bar)]) / sum(size)
+        Sp = self._calculate_Sp(X).I
+        
         H = 0
         for n, x in zip(size, X_bar):
             out_diff = (x-X_T).T
@@ -60,15 +62,12 @@ class LinearDiscriminantAnalysis:
         for x, x_bar in zip(X, X_bar):
             in_diff = (x - x_bar).T
             E += in_diff.dot(in_diff.T)
-
-        delta = E.I.dot(H)
-        L = filter(lambda x: x > 0, self._engine.linalg.eig(delta)[0])
-        T = []
-        for lamda in L:
-            print '--' * 20
-            lamda_eye = self._engine.diag([lamda] * col)
-            t = self._engine.linalg.solve(delta, lamda_eye)
-            
+        Sp_ = E / (size[0] - col)
+        delta = E.I.dot(H.T)
+        value, vector = self._engine.linalg.eig(delta)
+        for v, t in zip(value, vector):
+            if v >= 0:
+                print v, Sp_.dot(t.T).I
         
     def _predict_linear(self, X):
         results = [i.T.dot(X.T) + c for i, c in zip(self._I, self._C)]
