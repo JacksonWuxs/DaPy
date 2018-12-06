@@ -1,10 +1,14 @@
 from collections import namedtuple
-from DaPy.matlib import mean, corr, _abs as abs, log, _sum as sum
-from DaPy.methods.tools import _str2engine, _engine2str
-from DaPy.methods.activation import UnsupportTest
-from DaPy.core import Frame, DataSet, is_seq, is_math, Matrix as mat
-from DaPy.operation import column_stack
 from math import sqrt
+
+from DaPy.core import DataSet, Frame
+from DaPy.core import Matrix as mat
+from DaPy.core import is_math, is_seq
+from DaPy.matlib import _abs as abs
+from DaPy.matlib import _sum as sum
+from DaPy.matlib import corr, log, mean
+from DaPy.methods.activation import UnsupportTest
+from DaPy.methods.tools import _engine2str, _str2engine
 
 __all__ = ['LinearRegression']
 
@@ -262,7 +266,7 @@ class LinearRegression:
         self._beta = X.T.dot(W).dot(X).I.dot(X.T).dot(W).dot(Y)
 
     def predict(self, X):
-        if not isinstance(X, mata):
+        if not isinstance(X, mat):
             X = mat(X)
         X = self._engine.column_stack([[1] * X.shape[0], X])
         return self._beta.T.dot(mat(X).T)
