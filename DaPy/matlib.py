@@ -1,16 +1,11 @@
 from array import array
-from core import Matrix, Frame, is_math, is_seq, is_iter
+from .core import Matrix, Frame, is_math, is_seq, is_iter, range, filter
 from collections import namedtuple, deque, Iterable, deque
-from datetime import datetime
-from time import struct_time
 from warnings import warn
-from sys import version_info
 import math
-
-if version_info.major == 2:
-    range = xrange
+    
 __all__ = ['dot', 'multiply', 'exp', 'zeros', 'ones', 'C', 'P',
-           'cov', 'corr', 'frequency', 'quantiles', '_sum',
+           'cov', 'corr', 'frequency', 'quantiles', '_sum', '_max',
            'distribution','describe', 'mean', 'diag', 'log']
 
 def P(n, k):
@@ -64,14 +59,17 @@ def _abs(data):
         if hasattr(data, 'tolist'):
             data = data.tolist()
         for i, line in enumerate(data):
-            new[i] = map(abs, line)
+            try:
+                new[i] = map(abs, line)
+            except TypeError:
+                new[i] = abs(line)
         return Matrix(new, check=False)
     
     if is_math(data):
         return abs(data)
 
     if is_iter(data):
-        return map(abs, data)
+        return map(_abs, data)
 
     raise TypeError('expects an iterable or numeric for exp(), got %s'%type(other))
 
@@ -194,16 +192,28 @@ def _sum(data, axis=None):
                 [0, 5]], axis=0) # sum of each variable
     [0, 6]
     '''
+    if hasattr(data, 'sum'):
+        return data.sum(axis)
+        
     if axis is None:
         if all(map(is_math, data)):
             return sum(data)
-        return sum(sum(data, list()))
+        return reduce(sum, data)
     
     if axis == 1:
         return map(sum, data)
 
     if axis == 0:
         return _sum([line for line in zip(*data)], axis=1)
+
+def _max(data, axis=None):
+    data = Frame(data)
+    if axis is None:
+        return max(map(max, data))
+    if axis == 0:
+        return map(max, data.values())
+    if axis == 1:
+        return map(max, data)
 
 def mean(data, axis=None):
     '''average of sequence elements.
@@ -259,6 +269,7 @@ def cov(x, y=None, **kwrds):
     '''
     formula:  cov(x,y) = E(xy) - E(x)E(y) 
     '''
+    # high level data structure
     if hasattr(x, 'shape') or y is None:
         if hasattr(x, 'tolist'):
             x = x.tolist()
@@ -271,9 +282,7 @@ def cov(x, y=None, **kwrds):
                 covX[j][i] = cov_num
         return Matrix(covX)
 
-    if len(x) != len(y):
-        raise ValueError('two variables have different lenth.')
-
+    # sequence level data structure
     try:
         X, Y = array('f', x), array('f', y)
     except TypeError:
@@ -283,9 +292,7 @@ def cov(x, y=None, **kwrds):
                 X.append(x)
                 Y.append(y)
 
-    if len(X) != len(Y):
-        raise ValueError('X and Y has different dimention.')
-    
+    assert len(X) == len(Y), 'two variables have different lenth.'
     size = float(len(X))
     if size == 0:
         warn('x and y has no efficient numbers.')
@@ -310,12 +317,13 @@ def corr(x, y, method='pearson'):
         the method used to calculate correlation.
         ("pearson" and "spearman" are supported).
     '''
+    assert isinstance(method, (str, unicode)), 'method should be a str or unicode'
+    assert method in ('pearson', 'spearman'), 'method should be "pearson" or "spearman"'
     if method.lower() == 'pearson':
         return _corr_pearson(x, y)
 
     if method.lower() == 'spearman':
-        return _corr_spearman(x, y)
-    raise AttributeError('method should be "pearson" or "spearman".')    
+        return _corr_spearman(x, y)  
 
 def _corr_spearman(x, y):
     '''calculate the spearman rank correlation between X and Y
@@ -463,8 +471,11 @@ def describe(data):
 
     std = (Ex2 - Ex**2)**0.5
     std_n = size / (size - 1.0) * std
-    S = (Ex3 - 3*Ex*std**2 - Ex**3) / std ** 1.5
-    K = Ex4 / std ** 4 - 3
+    try:
+        S = (Ex3 - 3*Ex*std**2 - Ex**3) / std ** 1.5
+        K = Ex4 / std ** 4 - 3
+    except ZeroDivisionError:
+        S, K = '-', '-'
     min_, max_ = min(data), max(data)
 
     try:

@@ -1,9 +1,10 @@
 from setuptools import setup, find_packages
+from DaPy import __version__
 pkg = find_packages()
 
 setup(
     name='DaPy',
-    version='1.5.4.4',
+    version=__version__,
     description='Enjoy your tour in data mining',
     classifiers=[
         'Development Status :: 4 - Beta',
@@ -33,7 +34,6 @@ setup(
     install_requires=[
         'xlrd>=1.1.0',     # Used for function DataSet.read()
         'xlwt>=1.3.0',     # Used for function DataSet.save()
-        'ciso8601>=2.1.1', # Used for function: str2value()
     ]
 
 )

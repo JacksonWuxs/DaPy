@@ -1,17 +1,30 @@
-from collections import namedtuple, deque, OrderedDict, Counter, Iterable
-from copy import deepcopy
-try:
-    import cPickle as pickle
-except IOError:
-    import Pickle as pickle
-from base import is_value, is_iter, is_seq, SeriesSet, Frame, Matrix
-from io import parse_addr, parse_sql, parse_excel, parse_sav, parse_html
-from io import write_txt, write_xls, write_html, write_db
+from collections import namedtuple, Counter
+from copy import copy
+from .base import is_value, is_iter, is_seq, SeriesSet, Frame, Matrix
+from .base import range, filter, map, pickle, auto_plus_one
+from .io import parse_addr, parse_sql, parse_excel, parse_sav, parse_html
+from .io import write_txt, write_xls, write_html, write_db
 from warnings import warn
 from os.path import isfile
 from re import search as re_search
+from time import clock
 
-__all__ = ['DataSet']
+__all__ = ['DataSet', 'show_time']
+
+show_time = True
+logger = True
+
+
+def timer(func):
+    def timer_func(*args, **kwrds):
+        start = clock()
+        returned = func(*args, **kwrds)
+        if show_time is True:
+            print(' - finished "%s" in %.3f seconds.' % (func.func_name,
+                                                                clock() - start))
+        return returned
+    return timer_func
+
 
 class DataSet(object):
     '''A general two-dimentional data structure supports users easily
@@ -83,9 +96,9 @@ class DataSet(object):
             raise TypeError('DataSet can not store this object.')
 
         elif isinstance(obj, DataSet):
-            self._data = deepcopy(obj._data)
-            self._sheets = deepcopy(obj._sheets)
-            self._types = deepcopy(obj._types)
+            self._data = copy(obj._data)
+            self._sheets = copy(obj._sheets)
+            self._types = copy(obj._types)
             
         elif isinstance(obj, (Matrix, SeriesSet, Frame)):
             self._data = [obj, ]
@@ -129,7 +142,7 @@ class DataSet(object):
         return None
 
     @property
-    def size(self):
+    def level(self):
         return len(self._data)
 
     @columns.setter
@@ -159,19 +172,19 @@ class DataSet(object):
                 
     @property
     def shape(self):
-        new_ = []
-        for data in self._data:
+        temp = Frame(None, ['Level', 'Sheet', 'Ln', 'Col'], miss_symbol='-')
+        for i, (sheet, data) in enumerate(zip(self._sheets, self._data)):
             if hasattr(data, 'shape'):
-                new_.append(data.shape)
+                temp.append([i, sheet] + list(data.shape))
             else:
-                new_.append((len(data), 1))
-        return new_
+                temp.append((i, sheet, len(data)))
+        return temp
     
     @property
     def info(self):
         for i, data in enumerate(self._data):
-            print 'sheet:' + self._sheets[i]
-            print '=' * (len(self._sheets[i]) + 6)
+            print('sheet:' + self._sheets[i])
+            print('=' * (len(self._sheets[i]) + 6))
             if isinstance(data, (Frame, SeriesSet)):
                 data.info
             else:
@@ -181,8 +194,16 @@ class DataSet(object):
     def __getattr__(self, name):
         if name in self._sheets:
             return self.__getitem__(name)
-        raise AttributeError("'DataSet' object has no sheet or attribute %s'" % name)
 
+        temp = DataSet()
+        for sheet, data in zip(self._sheets, self._data):
+            if hasattr(data, name):
+                temp.add(data.__getattr__(name), sheet)
+
+        if temp.level == 0:
+            raise AttributeError("DataSet has no sheet `%s`'" % name)
+        return temp
+    
     def __trans_str(self, sheet):
         if sheet not in self._sheets:
             raise IndexError("'%s' is not a sheet name"%sheet)
@@ -262,6 +283,9 @@ class DataSet(object):
         return any([e == data for data in self._data])
 
     def __repr__(self):
+        if len(self._data) == 0:
+            return 'empty DataSet object'
+        
         reprs = ''
         for i, data in enumerate(self._data):
             reprs += 'sheet:' + self._sheets[i] + '\n'
@@ -278,8 +302,7 @@ class DataSet(object):
         
     def __getitem__(self, pos):
         if len(self._data) == 1 and (pos not in self._sheets):
-            return_data = self._data[0][pos]
-            return return_data
+            return self._data[0][pos]
         
         if isinstance(pos, slice):
             return self.__getslice__(pos.__getattribute__('start'),
@@ -397,12 +420,9 @@ class DataSet(object):
         if new_name not in self._sheets:
             return new_name
 
-        start_no, titles = 1, ','.join(self._sheets) + ','
-        while True:
-            if not re_search('%s_%d,' % (new_name, start_no), titles):
-                return '%s_%d' % (new_name, start_no)
-            start_no += 1
+        return auto_plus_one(self._sheets, new_name)
 
+    @timer
     def add(self, item, sheet=None):
         ''' add a new sheet to this dataset
 
@@ -457,7 +477,8 @@ class DataSet(object):
             self._types.append(type(item))
             self._sheets.append(self._check_sheet_new_name(sheet))
 
-    def append(self, item, miss_symbol=None):
+    @timer
+    def append(self, item):
         '''Append a new record ``item`` at the tail of each sheet.
 
         Parameter
@@ -475,18 +496,21 @@ class DataSet(object):
             the symbol of missing value in this record. It will be
             transformed to the inside miss value.
         '''
-        for i, sheet in enumerate(self._data):
-            if hasattr(sheet, 'append'):
-                try:
-                    try:
-                        sheet.append(item, miss_symbol)
-                    except TypeError:
-                        sheet.append(item)
-                except Exception, e:
-                    warn('sheet:%s.append() new object failed, '%self._sheets[i] +\
-                         'because %s'%e)
+        if isinstance(item, DataSet):
+            map(self.append, item._data)
+            return
 
-    def append_col(self, series, variable_name, miss_symbol=None):
+        for sheet, data in zip(self._sheets, self._data):
+            if hasattr(data, 'append') is False:
+                warn('sheet: %s has no attribute append(), ignored.' % sheet)
+                continue
+            try:
+                data.append(item)
+            except Exception as e:
+                warn('sheet: %s.append() failed because %s.'%(sheet, e))
+
+    @timer
+    def append_col(self, series, variable_name=None):
         '''Append a new variable named ``variable_name`` with a list of data
         ``series`` at the tail of data set.
 
@@ -500,21 +524,22 @@ class DataSet(object):
             a value you expect to append. If
             the number of value is less than the size of dataset, it will be
             added miss value to expand.
-
-        element_type : type (defualt='AUTO')
-            the values' type in this variable, use ``AUTO`` to set by itself.
-
-        miss_symbol : value (defualt=None)
-            the miss value represented by symbol in this sequence.
         '''
-        for i, sheet in enumerate(self._data):
-            if hasattr(sheet, 'append_col'):
-                try:
-                    sheet.append_col(series, variable_name, miss_symbol)
-                except Exception, e:
-                    warn('sheet:%s.append_col() new object failed, '%self._sheets[i] +\
-                         'because %s'%e)
-    def corr(self):
+        if isinstance(series, DataSet):
+            map(self.append_col, series._data, [variable_name] * series.level)
+            return
+
+        for sheet, data in zip(self._sheets, self._data):
+            if hasattr(data, 'append_col') is False:
+                warn('sheet: %s has no attribute append_col(), ignored.' % sheet)
+                continue
+            try:
+                data.append_col(series, variable_name)
+            except Exception as e:
+                warn('sheet: %s.append() failed because %s.'%(sheet, e))
+
+    @timer   
+    def corr(self, method='pearson'):
         '''Calculate the correlation matrix of your data set.
         SeriesSet structure support this operation only.
 
@@ -541,17 +566,16 @@ class DataSet(object):
         '''
         corrs = list()
         new_title = list()
-        for i, data in enumerate(self._data):
+        for sheet, data in zip(self._sheets, self._data):
             if hasattr(data, 'corr'):
                 try:
-                    corrs.append(data.corr())
+                    corrs.append(data.corr(pearson))
                     new_title.append(self._sheets[i])
-                except Exception, e:
-                    warn('sheet:%s.corr() failed, ' % self._sheets[i] +\
-                         'because %s'%e)
-                    
+                except Exception as e:
+                    warn('sheet:%s.corr() failed, because %s' %(sheet, e))                    
         return DataSet(corrs, new_title)
 
+    @timer
     def count(self, x, point1=None, point2=None):
         '''Find one or more set of identification data in the specified area.
 
@@ -601,12 +625,13 @@ class DataSet(object):
                     except TypeError:
                         counter.append(data.count(x))
                     counter_sheet.append(self._sheets[i])
-                except Exception, e:
+                except Exception as e:
                     warn('sheet:%s.count() faild, '%self._sheets[i] +\
                          'because %s'%e)
         return DataSet(counter, counter_sheet)
 
-    def count_element(self, col=all):
+    @timer
+    def count_element(self, col='all'):
         '''Count the frequency of values for each variable.
         You could count only a part of your data set with setting key-word(col)
         as a iterble inluding column number or variable names.
@@ -629,25 +654,83 @@ class DataSet(object):
                                [3, 3, None, 5],
                                [7, 8, 9, 10]])
         >>> data.tocol()
-        >>> data.count_element(all)
-        {'Col_2': Counter({3: 2, 9: 1, None: 1}),
-        'Col_3': Counter({4: 2, 10: 1, 5: 1}),
-        'Col_0': Counter({1: 1, 2: 1, 3: 1, 7: 1}),
-        'Col_1': Counter({8: 1, 2: 1, 3: 1, None: 1})}
+        >>> data.count_element('all').show()
+        sheet:sheet0
+        ============
+         Variable | Value | Frequency
+        ----------+-------+-----------
+           C_0    |   1   |     1     
+           C_0    |   2   |     1     
+           C_0    |   3   |     1     
+           C_0    |   7   |     1     
+           C_1    |   8   |     1     
+           C_1    |   2   |     1     
+           C_1    |   3   |     1     
+           C_1    |  None |     1     
+           C_2    |   9   |     1     
+           C_2    |   3   |     2     
+           C_2    |  None |     1     
+           C_3    |   10  |     1     
+           C_3    |   4   |     2     
+           C_3    |   5   |     1     
         '''
         counter = list()
         counter_sheet = list()
-        for i, data in enumerate(self._data):
+        for sheet, data in zip(self._sheets, self._data):
             if hasattr(data, 'count_element'):
                 try:
                     counter.append(data.count_element(col))
-                    counter_sheet.append(self._sheets[i])
-                except Exception, e:
-                    warn('sheet:%s.count_element failed, '%self._sheets[i] +\
-                         'because %s'%e)
+                    counter_sheet.append(sheet)
+                except Exception as e:
+                    warn('sheet:%s.count_element() failed, because %s'%(sheet, e))
         return DataSet(counter, counter_sheet)
 
-    def insert(self, index, item, miss_symbol=None):
+    @timer
+    def get_dummies(self, col='all', value=1):
+        '''Convert categorical variable into dummy variables
+
+        Parameters
+        ----------
+        data : array-like
+            the data you expect to convert, it should be a 1D sequence data
+
+        value : value-type (default=1)
+            the value which will be used as a mark in the return object
+
+        dtype : str, data structure (default='mat')
+            the type of return object
+
+        Examples
+        --------
+        >>> import DaPy as dp
+        >>> data = dp.SeriesSet([
+                    ['A', 2],
+                    ['B', 3],
+                    ['A', 3],
+                    ['C', 1],
+                    ['D', 4],
+                    ['C', 1]],
+		    ['alpha', 'num'])
+        >>> data.get_dummies(col='alpha')
+        >>> print data.show()
+         alpha | num | alpha_A | alpha_C | alpha_B | alpha_D
+        -------+-----+---------+---------+---------+---------
+           A   |  2  |    1    |    0    |    0    |    0    
+           B   |  3  |    0    |    0    |    1    |    0    
+           A   |  3  |    1    |    0    |    0    |    0    
+           C   |  1  |    0    |    1    |    0    |    0    
+           D   |  4  |    0    |    0    |    0    |    1    
+           C   |  1  |    0    |    1    |    0    |    0    
+         '''
+        for sheet, data in zip(self._sheets, self._data):
+            if hasattr(data, 'get_dummies'):
+                try:
+                    data.get_dummies(col, value)
+                except Exception as e:
+                    warn('sheet: %s.get_dummies() failed, because %s' % (sheet, e))
+
+    @timer
+    def insert(self, index, item):
         '''Insert a new record ``item`` in position ``index``.
 
         Parameter
@@ -658,10 +741,6 @@ class DataSet(object):
         item : value or iter
             an iterable object containing new record.
 
-        miss_symbol : value (default=None)
-            the symbol of missing value in this record. It will be
-            transformed to the inside miss value.
-
         Examples
         --------
         >>> d = dp.DataSet([1,2,3,4,5,6])
@@ -671,17 +750,21 @@ class DataSet(object):
         ============
         [1, 2, 3, 'insert_item', 4, 5, 6]
         '''
-        for i, data in enumerate(self._data):
-            if hasattr(data, 'insert'):
-                try:
-                    data.insert(index, item, miss_symbol=miss_symbol)
-                except TypeError:
-                    data.insert(index, item)
-                except Exception, e:
-                    warn('sheet:%s.insert() new records failed, '%self._sheets[i] +\
-                         'because %s'%e)
+        if isinstance(item, DataSet):
+            map(self.insert, [index] * item.level, item._data)
+            return
 
-    def insert_col(self, index, series, variable_name=None, miss_symbol=None):
+        for sheet, data in zip(self._sheets, self._data):
+            if hasattr(data, 'insert') is False:
+                warn('sheet: %s has no attribute insert(), ignored.' % sheet)
+                continue
+            try:
+                data.insert(index, item)
+            except Exception as e:
+                warn('sheet: %s.insert() failed because %s.'%(sheet, e))
+
+    @timer
+    def insert_col(self, index, series, variable_name=None):
         '''Insert a new variable named ``variable_name`` with a sequence of data
         ``series`` in position ``index``.
 
@@ -696,13 +779,6 @@ class DataSet(object):
         index : int
             the position of new variable at.
 
-        element_type : type (default='AUTO')
-            the type of new variables' value.
-
-        miss_symbol : value (default=None)
-            the symbol of missing value in this sequence, which would be
-            replaced by missing value inside.
-
         Examples
         --------
         >>> import DaPy as dp
@@ -714,15 +790,22 @@ class DataSet(object):
             A_0: <1, 2, 3, 4, 5, 6>
         insert_col: <New, New, New, None, None, None>
         '''
-        for i, data in enumerate(self._data):
-            if hasattr(data, 'insert_col'):
-                try:
-                    data.insert_col(index, series, variable_name, miss_symbol)
-                except Exception, e:
-                    warn('sheet:%s.insert_col() new variable failed, '%self._sheets[i] +\
-                         'because %s'%e)              
+        if isinstance(series, DataSet):
+            map(self.insert_col, [index] * series.level, series._data,
+                [variable_name] * series.level)
+            return
 
-    def pop_miss_value(self, order='LINE'):
+        for sheet, data in zip(self._sheets, self._data):
+            if hasattr(data, 'insert_col') is False:
+                warn('sheet: %s has no attribute insert_col(), ignored.' % sheet)
+                continue
+            try:
+                data.insert_col(index, series, variable_name)
+            except Exception as e:
+                warn('sheet: %s.insert_col() failed because %s.'%(sheet, e))          
+
+    @timer
+    def dropna(self, axis=0):
         '''Drop out all the records, which contain miss value, if ``order`` is
         ``LINE``. Drop out all the variables, which contain miss value,
         if ``order`` is ``COL``.
@@ -737,7 +820,7 @@ class DataSet(object):
         >>> data.tocol()
         >>> # There are two different keywords to use.
         >>> # Using keyword as ``LINE``:
-        >>> data.pop_miss_value('line')
+        >>> data.dropna('line')
         sheet:sheet0
         ============
          Col_0 | Col_1
@@ -754,18 +837,15 @@ class DataSet(object):
         Col_1: <2, None, 3, 8>
         Col_2: <3, 3, None, 9>
         '''
-        pops, pops_name = list(), list()
-        for i, data in enumerate(self._data):
-            if hasattr(data, 'pop_miss_value'):
+        for sheet, data in zip(self._sheets, self._data):
+            if hasattr(data, 'dropna'):
                 try:
-                    pops.append(data.pop_miss_value(order))
-                    pops_name.append(self._sheets[i])
-                except Exception, e:
-                    warn('sheet:%s.pop_miss_value() failed, '%self._sheets[i] +\
-                         'because %s'%e)
-        return DataSet(pops, pops_name)
-                
-    def select(self, conditions):
+                    data.dropna(axis)
+                except Exception as e:
+                    warn('sheet:%s.dropna() failed because %s' % (sheet, e))
+
+    @timer
+    def select(self, where):
         '''select the records which obey your conditions.
 
         In this function, we support you to select some specific records
@@ -812,16 +892,16 @@ class DataSet(object):
         '''
         new_data = list()
         new_sheets = list()
-        for i, (sheet, data) in enumerate(zip(self._sheets, self._data)):
+        for sheet, data in zip(self._sheets, self._data):
             if hasattr(data, 'select'):
-                if True:
-                    new_data.append(data.select(conditions))
+                try:
+                    new_data.append(data.select(where))
                     new_sheets.append(sheet)
-                else:#xcept Exception, e:
-                    warn('sheet:%s.select() failed, '%self._sheets[i] +\
-                         'because %s'%e)
+                except Exception as e:
+                    warn('sheet:%s.select() failed, because %s'%(sheet, e))
         return DataSet(new_data, new_sheets)
 
+    @timer
     def pop(self, index=-1):
         '''Delete and return the record in position ``index``.
 
@@ -850,12 +930,13 @@ class DataSet(object):
                 try:
                     new_data.append(data.pop(index))
                     new_sheets.append(sheet)
-                except Exception, e:
+                except Exception as e:
                     warn('sheet:%s.pop() current record failed, '%self._sheets[i] +\
                          'because %s'%e)
         return DataSet(new_data, new_sheets)
 
-    def pop_col(self, *variables):
+    @timer
+    def pop_col(self, col='all'):
         '''Delete and return all the value of each columns in ``variables``.
         Key-word(item) could assignment as a number or the variable name.
 
@@ -892,13 +973,14 @@ class DataSet(object):
         for i, (sheet, data) in enumerate(zip(self._sheets, self._data)):
             if hasattr(data, 'pop_col'):
                 try:
-                    new_data.append(data.pop_col(*variables))
+                    new_data.append(data.pop_col(col))
                     new_sheets.append(sheet)
-                except Exception, e:
+                except Exception as e:
                     warn('sheet:%s.pop_col() current variable failed, '%self._sheets[i] +\
                          'because %s'%e)
         return DataSet(new_data, new_sheets)
 
+    @timer
     def extend(self, other):
         '''extend your data by another object, new data as new records.
 
@@ -943,18 +1025,19 @@ class DataSet(object):
         24 | 24 
         '''
         if isinstance(other, DataSet):
-            for extend_sheet in other._data:
-                self.extend(extend_sheet)
+            map(self.extend, other._data)
             return
-        
-        for i, data in enumerate(self._data):
-            if hasattr(data, 'extend'):
-                try:
-                    data.extend(other)
-                except Exception, e:
-                    warn('sheet:%s.extend() new object failed, '%self._sheets[i] +\
-                         'because %s'%e)
-                    
+
+        for sheet, data in zip(self._sheets, self._data):
+            if hasattr(data, 'extend') is False:
+                warn('sheet: %s has no attribute extend(), ignored.' % sheet)
+                continue
+            try:
+                data.extend(other)
+            except Exception as e:
+                warn('sheet: %s.extend() failed because %s.'%(sheet, e))
+
+    @timer         
     def extend_col(self, other):
         '''extend your dataset by another object, new data seems as new variables.
 
@@ -1000,21 +1083,58 @@ class DataSet(object):
         24 | 24 
         '''
         if isinstance(other, DataSet):
-            for extendcol_sheet in other._data:
-                self.extend_col(extendcol_sheet)
+            map(self.extend_col, other._data)
             return
 
-        for i, data in enumerate(self._data):
-            if hasattr(data, 'extend_col'):
-                try:
-                    data.extend_col(other)
-                except Exception, e:
-                    warn('sheet:%s.extend_col() new object failed, '%self._sheets[i] +\
-                         'because %s'%e)
-                    
-    def normalized(self, process='NORMAL', col='all', attr=None, get_attr=None):
-        '''Normalized or standardlized your data in each col.
+        for sheet, data in zip(self._sheets, self._data):
+            if hasattr(data, 'extend_col') is False:
+                warn('sheet: %s has no attribute extend_col(), ignored.' % sheet)
+                continue
+            try:
+                data.extend_col(other)
+            except Exception as e:
+                warn('sheet: %s.extend_col() failed because %s.'%(sheet, e))
 
+    @timer     
+    def normalized(self, process='NORMAL', col='all', **kwrds):
+        '''Apply a data operation to your data
+
+        Parameters
+        ----------
+        process : str (default='NORMAL')
+            which process you wish to apply
+            `NORMAL` -> operate the data so that its arrange between 0 to 1.
+            `STANDAR` -> operate the data so that its mean is 0 and variance is 1.
+            `LOG` -> find the logarithm of X.
+            `BOX-COX` -> Box-Cox operation
+
+        col : str, str in list (default='all')
+            which column you wish to operate
+
+        min : float (default=Min(X))
+            Available when process is NORMAL
+
+        range : float, int (default=Range(X))
+            Available when process is NORMAL
+
+        mean : float (default=mean(X))
+            Available when process is STANDAR
+
+        std : float (default=std(X))
+            Available when process is STANDAR
+
+        a : float (default=0)
+            Available when process is BOX-COX
+
+        k : float (default=1)
+            Available when process is BOX-COX
+            
+        lamda : float (default=1)
+            Available when process is BOX-COX
+            
+        base : float (default=e)
+            Available when process is LOG
+            
         Examples
         --------
         >>> from DaPy import datasets
@@ -1053,12 +1173,37 @@ class DataSet(object):
         '''
         for i, data in enumerate(self._data):
             if hasattr(data, 'normalized'):
-                try:
-                    data.normalized(process, col, attr, get_attr)
-                except Exception, e:
-                    warn('sheet:%s.normalized() current data failed, '%self._sheets[i] +\
-                         'because %s'%e)
+                data.normalized(process, col, **kwrds)
 
+    @timer
+    def map(self, func, col='all'):
+        '''map a process to such a column.
+
+        Parameters
+        ----------
+        func : callable
+            the function that you need to process the data
+
+        col : str, str in list (default='all')
+            the columns that you expect to process
+
+        Example
+        -------
+        >>> data = example()
+        >>> data['A_col']
+        [3, 4, 1, 3, 4, 2, 6, 4, 1, 3, 2, 3]
+        >>> data.map(lambda x: x ** 2, 'A_col')
+        >>> data['A_col']
+        [9, 16, 1, 9, 16, 4, 36, 16, 1, 9, 4, 9]
+        '''
+        for sheet, data in zip(self._sheets, self._data):
+            if hasattr(data, 'map'):
+                try:
+                    data.map(func, col)
+                except Exception as e:
+                    warn('sheet:%s.map() failed, because %s'%(sheet, e))
+
+    @timer
     def merge(self, other, self_key=0, other_key=0, keep_key=True, keep_same=True):
         '''laterally merge another data to exist sheet. 
 
@@ -1129,14 +1274,22 @@ class DataSet(object):
           Daniel |  29  |   None  | None 
            None  | None |  Janny  |  F   
         '''
-        for i, data in enumerate(self._data):
-            if hasattr(data, 'merge'):
-                try:
-                    data.merge(other, self_key, other_key)
-                except Exception, e:
-                    warn('sheet:%s.merge() failed, '%self._sheets[i] +\
-                         'because %s'%e)
+        if isinstance(other, DataSet):
+            map(self.merge, other._data,
+                [self_key]*other.level, [other_key]*other.level,
+                [keep_key]*other.level, [keep_same]*other.level)
+            return
 
+        for sheet, data in zip(self._sheets, self._data):
+            if hasattr(data, 'merge') is False:
+                warn('sheet: %s has no attribute merge(), ignored.' % sheet)
+                continue
+            try:
+                data.merge(other, self_key, other_key, keep_key, keep_same)
+            except Exception as e:
+                warn('sheet: %s.merge() failed because %s.'%(sheet, e))
+        
+    @timer
     def read(self, addr, dtype='col', **kward):
         '''This function could be used in loading data from a file and
         transform it into one of DaPy data structure.
@@ -1176,8 +1329,6 @@ class DataSet(object):
         >>> data = dp.read('your_data_file.csv')
         >>> data.read('another_data_file.xlsx')
         '''
-        if not isfile(addr):
-            raise IOError('can not find the target file.')
         miss_symbol = kward.get('miss_symbol', 'NA')
         miss_value = kward.get('miss_value', None)
         sheet_name = kward.get('sheet_name', None)
@@ -1185,6 +1336,8 @@ class DataSet(object):
         ftype = kward.get('ftype', ftype)
         if sheet_name is None:
             sheet_name = fbase
+        if ftype != 'web' and not isfile(addr):
+            raise IOError('can not find the target file.')
         
         if ftype == 'db':
             for sheet, name in parse_sql(addr, dtype, miss_symbol, miss_value):
@@ -1223,9 +1376,17 @@ class DataSet(object):
         elif ftype == 'pkl':
             self.add(pickle.load(open(addr, 'rb')), sheet_name)
 
-        elif ftype in ('html', 'htm'):
-            with open(addr) as f:
-                text = f.read()
+        elif ftype in ('html', 'htm', 'web'):
+            if ftype == 'web':
+                try:
+                    from requests import get
+                except ImportError:
+                    raise ImportError('DaPy uses "reqeusts" to load a website.')
+                else:
+                    text = get(addr).text
+            else:
+                with open(addr) as f:
+                    text = f.read()
 
             if '<table' not in text:
                 raise ValueError('there is no tag <table> in the html file.')
@@ -1237,6 +1398,7 @@ class DataSet(object):
             raise ValueError('DaPy singly supports file types as'+\
                              '(xls, xlsx, csv, txt, pkl, db, sav, html, htm).')
 
+    @timer
     def reverse(self, axis='sheet'):
         '''Reverse your data set or records.
 
@@ -1270,6 +1432,7 @@ class DataSet(object):
 
         raise AttributeError('axis should be "sheet" or "record"')
 
+    @timer
     def replace(self, *arg):
         '''d.replace(col, condition, target)
            d.replace([c0, co1, ..., c(n)], condition, target)
@@ -1330,6 +1493,7 @@ class DataSet(object):
             if hasattr(data, 'replace'):
                 data.replace(*arg)
 
+    @timer
     def shuffle(self):
         ''' Mess up your data
         '''
@@ -1339,6 +1503,7 @@ class DataSet(object):
             elif hasattr(data, 'shuffle'):
                 data.shuffle()
 
+    @timer
     def sort(self, *orders):
         '''Easily sort records with this function.
 
@@ -1372,6 +1537,7 @@ class DataSet(object):
             if hasattr(data, 'sort'):
                 data.sort(*orders)
 
+    @timer
     def save(self, addr, **kwrds):
         '''Save the DataSet to a file.
 
@@ -1393,7 +1559,7 @@ class DataSet(object):
             following file types since V1.5.1:
             .csv, .txt, .xls, .pkl, .db, .html
 
-        newline : str (default='\n')
+        newline : str (default='\\n')
             use this simble to mark change line.
 
         delimiter : str (default=',')
@@ -1458,8 +1624,9 @@ class DataSet(object):
             
         else:
             raise ValueError('unrecognized file type')
-        
-    def toframe(self, miss_symbol=None):
+
+    @timer
+    def toframe(self):
         '''Transform all of the stored data structure to DaPy.Frame
         '''
         for i, data in enumerate(self._data):
@@ -1473,12 +1640,13 @@ class DataSet(object):
                     else:
                         self._data[i] = Frame(data, data.columns)
                 else:
-                    self._data[i] = Frame(data, miss_value=miss_symbol)
+                    self._data[i] = Frame(data)
             except:
                 warn('sheet:%s can not transform to Frame.'%self._sheets[i])
             self._types[i] = Frame
 
-    def tocol(self, miss_symbol=None):
+    @timer
+    def tocol(self):
         '''Transform all of the stored data structure to DaPy.SeriesSet
         '''
         for i, data in enumerate(self._data):
@@ -1487,17 +1655,18 @@ class DataSet(object):
             try:
                 if hasattr(data, 'columns'):
                     if hasattr(data, 'miss_symbol'):
-                        self._data[i] = SeriesSet(data, data.columns,
+                        self._data[i] = SeriesSet(data, list(data.columns),
                                            miss_value=data.miss_symbol)
                     else:
                         self._data[i] = SeriesSet(data, data.columns)
                 else:
-                    self._data[i] = SeriesSet(data, miss_value=miss_symbol)
-            except Exception, e:
+                    self._data[i] = SeriesSet(data)
+            except Exception as e:
                 warn('sheet[%s] can not transform to SeriesSet, ' % self._sheets[i] +\
                     'because: %s' % e)
             self._types[i] = SeriesSet
 
+    @timer
     def tomat(self):
         '''Transform all of the stored data structure to DaPy.Matrix
         '''

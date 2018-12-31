@@ -1,17 +1,24 @@
+from math import sqrt
 from random import randint
-from DaPy.core import Matrix, is_math
-from time import clock, localtime 
-from warnings import warn
-from Layers import Dense_Layer
-from contents import CELL, ONE_CELL
-from DaPy.methods.activation import activation
-from DaPy.methods.tools import _str2engine, _engine2str
+from time import clock, localtime
+
+from DaPy.core import DataSet
+from DaPy.core import Matrix as mat
+from DaPy.core import is_math
+from DaPy.methods.functions import activation
+from DaPy.methods.tools import _engine2str, _str2engine
+
+from .Layers import Dense_Layer
 
 try:
     import cPickle as pkl
 except ImportError:
     import Pickle as pkl
-    
+
+
+CELL = u'\u25CF'.encode('utf-8')
+ONE_CELL = u'\u2460'.encode('utf-8')
+
 
 class MLP(object):
     '''
@@ -93,6 +100,7 @@ class MLP(object):
         self._layer_list = []
         self._engine = _str2engine(engine)      # which library for camputing
         self._size = 0
+        self._report = DataSet()
 
     @property
     def weight(self):
@@ -116,6 +124,10 @@ class MLP(object):
         self._engine = _str2engine(value)
         for layer in self._layer_list:
             layer.engine = self._engine
+
+    @property
+    def report(self):
+        return self._report
 
     def __repr__(self):
         max_size_y = max([layer.shape[1] for layer in self._layer_list]) * 2
@@ -205,10 +217,9 @@ class MLP(object):
         funcs = ['line']
         if not func:
             funcs += ['sigm'] * (len(cells) - 1)
-        elif isinstance(func, list):
+        if isinstance(func, list):
             for every in func:
-                if every not in activation:
-                    raise ValueError('invalid activation symbol as `%s`, '%every +\
+                assert every in activation, ('invalid activation symbol as `%s`, '%every +\
                                      'tanh, sigm, relu, softmax, radb and line.' )
                 funcs.append(every)
         if len(funcs) != len(cells):
@@ -247,10 +258,11 @@ class MLP(object):
         ------
         None
         '''
-        X = Matrix(X)
-        Y = Matrix(Y)                       # Target Matrix
+        X = mat(X)
+        Y = mat(Y)                       # Target Matrix
         self._Error = [1,]                      # Mistakes Recorder
         mini_error = mini_error * 100
+        n, p = X.shape
         start = clock()                          # Training Start
 
         for term in range(1, train_time + 1): # Make a Loop
@@ -314,11 +326,9 @@ class MLP(object):
         dataset and then train it. It will use the function self.create()
         at the first place, and call self.train() function following.
         '''
-        X, Y = Matrix(X), Matrix(Y)
+        X, Y = mat(X), mat(Y)
         if self._size == 0:
-            respone = self.create(X.shape.Col, Y.shape.Col, hidden_cells, func)
-        if verbose:
-            print(respone)
+            print(self.create(X.shape.Col, Y.shape.Col, hidden_cells, func))
         self.train(X, Y, train_time, verbose, mini_error)
                                         
     def predict_proba(self, data):
@@ -327,14 +337,14 @@ class MLP(object):
 
         Paremeter
         ---------
-        data : matrix
+        data rix
             The new data that you expect to predict.
 
         Return
         ------
         Matrix: the predict result of your data.
         '''
-        return Matrix(self._foreward(Matrix(data))[-1])
+        return mat(self._foreward(mat(data))[-1])
 
     def save(self, addr):
         '''Save your model to a .pkl file
@@ -345,7 +355,7 @@ class MLP(object):
         obj = pkl.load(open(addr, 'rb'))
         self.__setstate__(obj.__getstate__())
 
-    def show_error(self):
+    def plot_error(self):
         '''use matplotlib library to draw the error curve during the training.
         '''
         try:
@@ -356,7 +366,7 @@ class MLP(object):
             plt.xlabel('Epoch')
             plt.show()
         except ImportError:
-            warn('DaPy uses `matplotlib` library to draw picture.')
+            raise ImportError('DaPy uses `matplotlib` to draw picture, try: pip install matplotlib.')
             
     def readpkl(self, addr):
         '''Load your model from a .pkl file
@@ -373,7 +383,7 @@ class MLP(object):
         if len(data) != len(target):
             raise IndexError("the number of target data is not equal to variable data")
 
-        result, target = self.predict_proba(data), Matrix(target)
+        result, target = mat(self.predict_proba(data)), mat(target)
         if mode == 'clf':
             error = 0
             if all(map(is_math, target)):
@@ -390,8 +400,7 @@ class MLP(object):
                 (1 - float(error)/len(target))*100) + '%'
         
         elif mode == 'reg':
-            return ' - Regression MSE: %.4f' % self._engine.mean(
-                ((target - result)**2)**0.5)
+            return ' - Regression MSE: %.4f' % sqrt(self._engine.mean((target - result) ** 2))
         
         else:
             raise ValueError("`mode` supports `clf` or `reg` only.")

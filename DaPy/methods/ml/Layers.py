@@ -1,8 +1,10 @@
-from random import randint, gauss, uniform
-from DaPy.core import Matrix
-from DaPy.methods.activation import activation as acfs
 from math import sqrt
-from DaPy.methods.tools import _str2engine, _engine2str
+from random import gauss, randint, uniform
+
+from DaPy.core import Matrix
+from DaPy.methods.functions import activation as acfs
+from DaPy.methods.tools import _engine2str, _str2engine
+
 
 class Layer:
     def __init__(self, engine, index, function):

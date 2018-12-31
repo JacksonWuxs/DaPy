@@ -1,13 +1,10 @@
 from collections import namedtuple, deque
 from copy import copy, deepcopy
-from tools import is_seq, is_math, is_iter
+from .tools import is_seq, is_math, is_iter, range, filter_ as filter, map_ as map
 from random import random
 from csv import reader
-from sys import version_info
 
 __all__ = ['Matrix']
-if version_info.major == 2:
-    range = xrange
 
 class Matrix(object):
 
@@ -16,7 +13,7 @@ class Matrix(object):
     def __init__(self, table=None, check=True):
         
         if is_iter(table) and not isinstance(table, str):
-            self.__init_unknow_type(table, check)
+            self._init_unknow_type(table, check)
                  
         elif isinstance(table, Matrix):
             self._matrix = copy(table)
@@ -59,14 +56,18 @@ class Matrix(object):
         1. Bin Luo. (2015). The Implement of Matrix with Python.
             from http://www.cnblogs.com/hhh5460/p/4314231.html
         '''
-        if self._dim.Ln != self._dim.Col:
-            raise ValueError('can not invert a non-sqrt matrix.')
-
+        assert self._dim.Ln == self._dim.Col, 'can not invert a non-sqrt matrix.'
+        if self._dim.Ln == 1:
+            return Matrix(self)
         D = self.D
-        if D == 0:
-            raise ValueError('Singular matrix can not calculating the invert matrix.')
-        N = [[(-1) ** (i+j+1) * self._get_cofactor(j, i).D / D for j in range(self._dim.Col)]
-             for i in range(self._dim.Ln)]
+        assert D != 0, 'Singular matrix can not calculating the invert matrix.'
+        if self._dim.Ln == 2:
+            a, b = self[0]
+            c, d = self[1]
+            return Matrix([[d, -b], [-c, a]]) / float(a * d - b * c)
+        N = [[(-1) ** (i+j+1) * self._get_cofactor(j, i).D / D \
+              for j in range(self._dim.Col)]
+                  for i in range(self._dim.Ln)]
         return Matrix(N)
         
     @property
@@ -338,8 +339,9 @@ class Matrix(object):
             for i in range(self._dim.Ln):
                 new_[i] = [other * self._matrix[i][j]\
                            for j in range(self._dim.Col)]
+            return Matrix(new_, False)
 
-        elif hasattr(other, 'shape'):
+        if hasattr(other, 'shape'):
             x1, y1 = self.shape
             x2, y2 = other.shape
             if x1 == x2 and y1 == y2:
@@ -361,12 +363,8 @@ class Matrix(object):
                                  'together with shapes '+\
                                  '(%d, %d) and '%self._dim+\
                                  '(%d, %d)'%other.shape)
-        else:
-            raise TypeError("'*' operation expects the type of"+\
-                            "number or an array-like object which has "+\
-                            "attribute `shape`")
-
-        return Matrix(new_, False)
+            return Matrix(new_, False)
+        return self.__mul__(Matrix(other))       
 
     def __rmul__(self, other):
         return self.__mul__(other)
@@ -473,7 +471,9 @@ class Matrix(object):
         mat = self._matrix
         return Matrix([r[:j] + r[j+1:] for r in (mat[:i]+mat[i+1:])], False)
 
-    def __init_unknow_type(self, table, check):
+    def _init_unknow_type(self, table, check):
+        if hasattr(table, 'tolist'):
+            table = table.tolist()
         try:
             dim_col, dim_ln = len(table[0]), len(table)
         except TypeError:
@@ -485,11 +485,11 @@ class Matrix(object):
             self._matrix = [0] * dim_ln
             for i, record in enumerate(table):
                 if len(record) != dim_col:
-                    raise IndexError("the No.%d record doesn't "%i+\
-                                     "have same dimensions.")
+                    raise IndexError("No.%d record doesn't "%i+\
+                                     "have same dimensions as %d" % dim_col)
                 for value in record:
                     if not is_math(value):
-                        raise ValueError('value %s in the No.%d'%(value, i)+\
+                        raise ValueError('value "%s" in the No.%d'%(value, i)+\
                                         " record is not a number")
                 self._matrix[i] = list(record)
         else:

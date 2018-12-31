@@ -1,6 +1,16 @@
 from collections import namedtuple
 from DaPy.core import is_math, Frame, DataSet
 
+try:
+    from scipy.stats import f
+except ImportError:
+    def unsupportedTest(*args, **kwrds):
+        return '-'
+    Fcdf = UnsupportTest
+    warn('DaPy uses scipy to compute p-value, try: pip install scipy.')
+else:
+    Fcdf = f.cdf
+
 __all__ = ['ANOVA']
 
 def ANOVA(*classes):
@@ -26,10 +36,9 @@ def ANOVA(*classes):
     MSa = Sa / float(r - 1)
     MSe = Se / float(sum(ni) - r)
     F = MSa / MSe
-
     return  DataSet(Frame([
-        ['Regression', round(Sa, 4), r - 1, round(MSa, 4), round(F, 4)],
-        ['Residual', round(Se, 4), n - r, round(MSe), ''],
-        ['Total', round(Sa + Se, 4), n - 1, '', '']],
-        ['Model', 'Sum Squr', 'DF', 'Mean Squr', 'F - Value']), 'ANOVA')
+        ['Regression', round(Sa, 4), r - 1, round(MSa, 4), round(F, 4), round(1 - Fcdf(F, r-1, n-r), 4)],
+        ['Residual', round(Se, 4), n - r, round(MSe), '', ''],
+        ['Total', round(Sa + Se, 4), n - 1, '', '', '']],
+        ['Model', 'Sum Squr', 'DF', 'Mean Squr', 'F', 'p-value']), 'ANOVA')
         

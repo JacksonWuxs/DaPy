@@ -1,8 +1,17 @@
 from DaPy.core import Matrix
 
-def UnsupportTest(*attrs, **kwrds):
-    return '-'
+def Accuracy(confumat):
+    upper = sum([confumat[i][i] for i in range(confumat.shape[1] - 1)])
+    return round(upper / float(confumat[-1][-1]) * 100, 4)
 
+def Kappa(confumat):
+    as_ = confumat[:, -1].tolist()[:-1]
+    bs_ = confumat[-1][:-1]
+    Po = Accuracy(confumat) /100
+    upper = sum([a * b for a, b in zip(as_, bs_)])
+    Pe = float(upper) / confumat[-1][-1] ** 2
+    return (Po - Pe) / (1 - Pe)
+    
 def sigmoid(x, engine, diff=False):
     if diff:
         return (1 - x) * x

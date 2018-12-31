@@ -1,11 +1,11 @@
-from base import SeriesSet, Frame, Matrix
-from base import is_seq, is_iter, is_value, is_math
-from base.tools import str2value
+from .base import SeriesSet, Frame, Matrix
+from .base import is_seq, is_iter, is_value, is_math
+from .base.tools import str2value
 from os.path import split
 from warnings import warn
 
 def create_sheet(dtype, data, titles, miss_symbol, miss_value):
-    if dtype.upper() == 'COL' or dtype.upper() == 'SERIESSET':
+    if dtype.upper() in ('COL', 'SERIESSET'):
         return SeriesSet(data, titles, miss_symbol, miss_value)
 
     elif dtype.upper() == 'FRAME':
@@ -18,6 +18,12 @@ def create_sheet(dtype, data, titles, miss_symbol, miss_value):
         raise RuntimeError('unrecognized symbol of data type')
 
 def parse_addr(addr):
+    if addr.startswith('http'):
+        fname = addr.split(':')[1].split('.')
+        if fname[0].startswith('name'):
+            return None, None, fname[1], 'web'
+        return None, None, fname[0], 'web'
+    
     file_path, file_name = split(addr)
     if file_name.count('.') > 1:
         file_base = '.'.join(file_name.split('.')[:-1])
@@ -106,20 +112,23 @@ def parse_html(text, dtype, miss_symbol, miss_value, sheetname):
             title = [col.string for col in title.findAll(['td', 'th'])]
             
         records = []
-        for record in table.find('tbody').findAll(['tr', 'div']):
-            current_record = []
-            for value in record.findAll(['td', 'th']):
-                if value.find(['a', 'div']) is not None:
-                    current_record.append(value.find(['a', 'div']).text)
-                else:
-                    current_record.append(value.text)
-            records.append(map(str2value, current_record))
-
         try:
-            yield (create_sheet(dtype, records, title, miss_symbol, miss_value), sheet)
-        except UnicodeEncodeError:
-            warn('"ascii" can not encode characters, use dp.io.encode() to fix.')
-        
+            for record in table.find('tbody').findAll(['tr', 'div']):
+                current_record = []
+                for value in record.findAll(['td', 'th']):
+                    if value.find(['a', 'div']) is not None:
+                        current_record.append(value.find(['a', 'div']).text)
+                    else:
+                        current_record.append(value.text)
+                records.append(map(str2value, current_record))
+
+            try:
+                yield (create_sheet(dtype, records, title, miss_symbol, miss_value), sheet)
+            except UnicodeEncodeError:
+                warn('"ascii" can not encode characters, use dp.io.encode() to fix.')
+        except AttributeError:
+            warn('Table "%s" can not be auto parsed.' % sheet)
+            
 def write_txt(f, data, newline, delimiter, encode, decode):
     def writeline(f, record):
         msg = delimiter.join(map(str, record)) + newline
@@ -178,7 +187,7 @@ def write_xls(worksheet, data, decode, encode):
                     
         elif hasattr(data, 'items'):
             if all(map(is_seq, data.values())):
-                writeline(0, j, data.keys())
+                writeline(0, 0, data.keys())
                 temp = SeriesSet(data)
                 for i, line in enumerate(temp, 1):
                     writeline(worksheet, i, line)

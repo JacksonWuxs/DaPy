@@ -1,22 +1,25 @@
-from collections import namedtuple
+﻿from collections import namedtuple
 from math import sqrt
 
-from DaPy.core import DataSet, Frame
-from DaPy.core import Matrix as mat
+from DaPy.core import DataSet, Frame, SeriesSet, Matrix as mat
 from DaPy.core import is_math, is_seq
 from DaPy.matlib import _abs as abs
 from DaPy.matlib import _sum as sum
 from DaPy.matlib import corr, log, mean
-from DaPy.methods.activation import UnsupportTest
 from DaPy.methods.tools import _engine2str, _str2engine
+from DaPy.operation import column_stack
+
+from warnings import warn
 
 __all__ = ['LinearRegression']
 
 try:
     from scipy.stats import f, t  
 except ImportError:
-    Fcdf, Tcdf = UnsupportTest, UnsupportTest
-    warn('DaPy uses scipy to compute p-value, try: pip install scipy.')
+    def unsupportedTest(*args, **kwrds):
+        return '-'
+    Fcdf, Tcdf = unsupportedTest, unsupportedTest
+    warn('DaPy uses `scipy` to compute p-value, try: pip install scipy.')
 else:
     Fcdf, Tcdf = f.cdf, t.cdf
 
@@ -41,20 +44,34 @@ class LinearRegression:
     matrix([[13.09701493, 13.69552239, 14.29402985, 14.89253731, 15.49104478,
              15.49104478, 16.08955224, 16.08955224, 16.6880597 , 17.28656716,
              17.88507463]])
-    >>> lr.report()
+    >>> lr.report.show()
     sheet:Model Summary
     ===================
-     Constant |  Beta  | Sigma^2 | T-value
-    ----------+--------+---------+---------
-     12.4985  | 0.5985 |  0.101  | 14.6981 
-
-    sheet:F-test
-    ============
-        Args    | Sum Squr | DF | Mean Squr | F-value 
-    ------------+----------+----+-----------+----------
-     Regression | 21.8183  | 1  |  21.8183  | 216.0336 
-      Residual  |  0.909   | 9  |    0.0    |          
-       Total    | 22.7273  | 10 |           |          
+       R    |  R²  | Adj-R² |   DW  
+    --------+------+--------+--------
+     0.9798 | 0.96 | 0.9556 | 3.4255 
+    sheet:ANOVA
+    ===========
+       Source   | df |   Sum Square   |  Mean Square  |       F       |  Sig 
+    ------------+----+----------------+---------------+---------------+--------
+     Regression | 1  | 21.8183175034  | 21.8183175034 | 216.033587103 | 0.0000 
+      Residual  | 9  | 0.908955223881 |     0.101     |               |        
+       Total    | 10 | 22.7272727273  |               |               |        
+    sheet:Coefficients
+    ==================
+      Method  |      Beta      |    t    | Sig
+    ----------+----------------+---------+------
+     Constant | 12.4985074627  | 54.7277 | 0.0  
+        X1    | 0.598507462687 | 14.6981 | 0.0  
+    sheet:Residual Correlation
+    ==========================
+     Variable | Spearman | t | Sig
+    ----------+----------+---+------
+    sheet:Method Performance
+    ========================
+      R²ₐ   | AIC  |  Cₚ
+    --------+------+-----
+     0.9556 | 0.95 | 0.0 
     >>> lr([3])
     matrix([[14.29402985]])
     >>>
@@ -67,10 +84,11 @@ class LinearRegression:
         Beijing: China People University Press. 2015.
     
     '''
-    def __init__(self, engine='Numpy', beta=None, weight=None):
+    def __init__(self, engine='Numpy', beta=None, weight=None, constant=True):
         self._engine = _str2engine(engine)
         self._beta = self._engine.mat(beta)
         self._W = self._engine.mat(weight)
+        self._C = constant
         self._report = DataSet()
 
     @property
@@ -94,6 +112,12 @@ class LinearRegression:
         self._beta = self._engine.mat(new_beta)
 
     @property
+    def constant(self):
+        if self._C == 1:
+            return True
+        return False
+
+    @property
     def SSE(self):
         if hasattr(self, '_SSE'):
             return self._SSE
@@ -112,7 +136,21 @@ class LinearRegression:
     def __call__(self, x):
         return self.predict(x)
 
+    def _mul(self, a, b):
+        return self._engine.multiply(a, b)
+
+    def _mean(self, x):
+        return self._engine.mean(x)
+
+    def _pow(self, x, power=2):
+        if isinstance(power, int):
+            return reduce(self._mul, [x] * power)
+        x = mat(x.tolist())
+        return x ** 0.5
+        
+
     def _get_weight(self, W, cols, X):
+        
         if W is None:
             return self._engine.diag([1] * X.shape[0])
 
@@ -133,8 +171,185 @@ class LinearRegression:
             assert all(map(is_math, W)), 'sequence of weight should be number inside.'
             assert len(W) == X.shape[0], 'weight should have same lengh with data.'
             return self._engine.diag(W)
+
+    def _stepwise(self, X, Y, W, enter, drop, verbal=True):
+        print(' - Step 0 Enter Variable: %s' % X.columns[0])
+        use, useless = X.columns[:1], X.columns[1:]
+        for step, new in enumerate(useless, 1):
+            testify = use + [new]
+            self._fit(X[testify], Y, W, report='basic')
+            if self._report.Coefficients.data.Sig[-1] <= enter:
+                print(' - Step %d Enter Variable: %s' % (step, new))
+                keep_use = set(self._backward(testify, X, Y, W, drop, False))
+                drop_use = list(set(use) - keep_use)
+                use = list(keep_use)
+                useless.extend(drop_use)
+                if drop_use != []:
+                    print(' - Step %d Delete Variable: %s' % (step, '|'.join(drop_use)))
+        else:
+            self.fit(X[use], Y, W)
+            return use
+                                  
+
+    def _backward(self, variables, X, Y, W, enter, verbal=True):
+        step = 0
+        while len(variables) != 0:
+            self._fit(X[variables], Y, W, report='basic')
+            report = self._report.Coefficients.data
+            coef_max = max(report.Sig[self._C:])
+            if coef_max <= enter:
+                return variables
+            dropout = variables.pop(report.Sig[self._C:].index(coef_max))
+            if verbal is True:
+                print(' - Step %d Delete Variable: %s' % (step, dropout))
+        else:
+            warn('there is no significant variable inside the dataset(X).')
+
+    def _forward(self, variables, X, Y, W, enter, verbal=True):
+        use = []
+        for step, variable in enumerate(variables):
+            self._fit(X[use + variable], Y, W, report='basic')
+            if self._report.Coefficients.data.Sig[-1] <= enter:
+                use.append(variable)
+                if verbal is True:
+                    print(' - Step %d Enter Variable: %s' % (step, variable))
+        else:
+            return use     
         
-    def fit(self, X, Y, W=None, **kwrds):
+    def _fit(self, X, Y, W=None, **kwrds):
+        if hasattr(X, 'columns'):
+            kwrds['variables'] = list(X.columns)
+        X, Y = self._engine.mat(mat(X)), self._engine.mat(mat(Y))
+        y_, c = self._fit_ls(X, Y, W, kwrds['variables'])
+        self._create_report(y_, c, X, Y, **kwrds)
+
+    def _fit_ls(self, x, y, w, cols):
+        '''train model with (weight) least square method
+
+        Parameter
+        ---------
+        x : matrix-like
+        y : matrix-like
+        w : dict, array-like & bool
+        cols : str in list
+
+        Returns
+        -------
+        y_hat : matrix-like
+        c : array-like
+        '''
+        if self.constant is True:
+            cols.insert(0, 'Constant')
+            x = self._engine.column_stack([[1] * x.shape[0], x])
+        w = self._get_weight(w, cols, x)
+        self._beta = x.T.dot(w).dot(x).I.dot(x.T).dot(w).dot(y)
+        c = x.T.dot(x).I.tolist()
+        y_hat = self._beta.T.dot(x.T)
+        return y_hat, [sqrt(abs(c[i][i])) for i in range(x.shape[1])]
+
+    def _create_report(self, y_hat, c, x, y, **kwrds):
+        self._report = DataSet()
+        self._res = y - mat(y_hat.tolist()).T 
+        y_var = y_hat - self._mean(y)
+        self._SSR = sum(self._pow(y_var))
+        self._SSE = sum(self._pow(self._res))
+
+        R2 = round(self._SSR / (self._SSE+self._SSR), 4)
+        Cp = kwrds.get('Cp', self._SSE)
+        n, p = x.shape
+        cols = kwrds.get('variables', ['X%d' % i for i in range(1, p+1)])
+
+        if kwrds.get('report', 'entire').lower() in ('basic', 'entire'):
+            self._report.add(self._Summary(R2, n, p), 'Model Summary')
+            self._report.add(self._ANOVA(n, p), 'ANOVA')
+            self._report.add(self._Coeff(c, n, p, cols), 'Coefficients')
+        if kwrds.get('report', 'entire').lower() in ('advance', 'entire'):
+            self._report.add(self._Corr(x, n ,p, cols), 'Residual Correlation')
+            self._report.add(self._Perf(R2, n, p, Cp), 'Performance')
+            self._report.add(self._Outliers(x, y_hat, n, p), 'Outliers')
+            
+    def _Summary(self, R2, n, p):
+        rho_up = [v1[0] * v2[0] for v1, v2 in zip(self._res, self._res[1:])]
+        rho_low = map(lambda x: x[0]**2, self._res[1:])
+        table = Frame(None, ['R', u'R\u00B2', u'Adj-R\u00B2', 'DW'])
+        table.append([round(sqrt(R2), 4), R2,
+                      round(1-((1-R2)*(n-1))/(n-p-1.0), 4),
+                      round(2 - 2*sum(rho_up) / sum(rho_low), 4)])
+        return table
+
+    def _ANOVA(self, n, p):
+        M, N = p, n - p - 1.0
+        F = round((self._SSR/M) / (self._SSE/N), 4)
+        sig = 1 - Fcdf(F, M, N)
+        table = Frame(None,
+                ['Source', 'df', 'Sum Square', 'Mean Square', 'F', 'Sig'],
+                miss_value='')
+        table.append(['Regression', int(M), self._SSR, self._SSR/M, F, '%.4f' % sig])
+        table.append(['Residual', int(N), self._SSE, round(self._SSE/N, 4)])
+        table.append(['Total', int(N+M), self._SSE+self._SSR])
+        return table
+
+    def _Coeff(self, c, n, p, cols):
+        sigma_hat = sqrt(self._SSE / (n - p -1.0))
+        betas = self._beta.T.tolist()[0]
+        t = [round(beta_ / (c_ * sigma_hat), 4) for c_, beta_ in zip(c, betas)]
+        sigs = map(lambda x: round(2 * Tcdf(min(x, -x), n-p), 4), t)
+        table = Frame(None, ['Method', 'Beta', 't', 'Sig'])
+        for col, beta_, t_, sig_ in zip(cols, betas, t, sigs):
+            table.append([col, beta_, t_, sig_])
+        return table
+
+    def _Corr(self, X, n, p, cols):
+        abs_res = abs(self._res).tolist()
+        table = Frame(None, ['Variable', 'Spearman', 't', 'Sig'])
+        for i, col_ in enumerate(cols[self._C:]):
+            seq = X[:, i].T.tolist()[0]
+            rs = round(corr(seq, abs_res, 'spearman'), 4)
+            t = round(sqrt(n - 2) * rs / sqrt(1 - rs**2), 4)
+            sig = 2 * round(Tcdf(min(t, -t), n-2), 4)
+            table.append([col_, rs, t, sig])
+        return table
+
+    def _Perf(self, R2, n ,p, Cp):
+        assert isinstance(Cp, (dict, list, tuple, float))
+        if isinstance(Cp, dict):
+            m, SSEm = Cp['m'], Cp['SSE']
+        if isinstance(Cp, (list, tuple)):
+            m, SSEm = Cp
+        if isinstance(Cp, (int, float)):
+            m, SSEm = (p, self._SSE)
+        Cp = round((n - m - 1.0) * self._SSE / SSEm - float(n) + 2.0 * p, 3)
+        RMSE = round(sqrt(self._mean(self._pow(self._res))), 6)
+
+        table = Frame(None, [u'R\u00B2\u2090', 'AIC', u'C\u209A', 'RMSE'])
+        table.append([round(1 - (n-1) / (n-p-1.0) * (1 - R2), 4),
+                      round(n * log(self._SSE) + 2 * p, 2), Cp, RMSE])
+        return table
+
+    def _Outliers(self, X, Y_h, n, p):
+        H = X.dot(X.T.dot(X).I).dot(X.T).tolist()
+        hs = mat([H[i][i] for i in range(n)])
+        sigma_hat = sqrt(self._SSE / (n - p))
+        SRE = self._res / (sigma_hat * (self._pow(1 - hs, 0.5) ))
+        up, down = n - p - 2, n - p - 1.0
+        SRE_del = self._mul(SRE, self._pow(up / (down - self._pow(SRE)), 0.5))
+        CookDis = self._pow(self._res) / ((p + 1) * sigma_hat ** 2) * hs / self._pow(1 - hs)
+        mean_h = 3 * (p+1.0) / n
+
+        table = Frame(None, ['Index', 'y_', 'error', 'hi', 'SRE(i)', 'CookDis', 'Influential', 'Outlier'])
+        for i, (y, e, h, sre, d) in enumerate(zip(Y_h.tolist()[0], self._res.T.tolist()[0],
+                                    hs.T.tolist()[0], SRE_del.T.tolist()[0],
+                                   CookDis.T.tolist()[0])):
+
+            record = [i, round(y, 4), round(e, 4), round(h, 3), round(sre, 3), round(d, 3), '', '']
+            if h > mean_h:
+                record[6] = 'YES'
+            if sre > 3 or d > 1:
+                record[7] = 'YES'
+            table.append(record)
+        return table
+
+    def fit(self, X, Y, W=None, method='enter', **kwrds):
         '''
         Parameter
         ---------
@@ -154,7 +369,15 @@ class LinearRegression:
 
             array-like -> [W1, W2, W3, ..., Wn]. The model will build the matrix
             in light of the weight array.
-            
+
+        method : str (default='Enter')
+            'enter' -> enter all variables to train model
+            'backward' -> use backward method to select suitable variables
+            'foreward' -> use foreward method to select suitable variables
+            'stepwise' -> use stepwise method to select suitable variables
+
+        constant : bool (default=True)
+            add a constant variable into model or not
 
         Cp: dict, 2D-tuple (default=None)
             (m, SSEm) -> when this parameter fills with 2D-tuple, the first
@@ -162,6 +385,14 @@ class LinearRegression:
             other position is the SSE of Full-Regression-model. Get SSE from 
             other model with statement as ">>> lr.SSE"
             {'SSE': value, 'm': value} -> fill with dict.
+
+        Report : str (default='entire')
+            'basic' -> testify the model with following tables:
+                        "Model Summary", "ANOVA" & "Coefficients"
+            'advanced' -> testify the model with following tables:
+                        "Residual Correlation", "Performance" & "Outliers"
+            'entire' -> build and testify the model with a full report including
+                        all above tables
 
         Formulas
         --------
@@ -173,100 +404,50 @@ class LinearRegression:
         He X & Liu W. Applied Regression Analysis. China People's University
         Publication House. 2015.
         '''
-        if hasattr(X, 'columns'):
-            kwrds['variables'] = X.columns
-        X, Y = mat(X), mat(Y)
-        X_, Y_ = self._engine.mat(X), self._engine.mat(Y)
-        n, p = X.shape
-        cols = kwrds.get('variables', ['X%d' % i for i in range(1, p+1)])
-        if kwrds.get('C', True) is True:
-            cols.insert(0, 'Constant')
-            X_ = self._engine.column_stack([[1] * X_.shape[0], X_])
-        
-        W = self._get_weight(W, cols, X)
-        self._fit_mle(X_, Y_, W)
-        
-        y_hat = self._beta.T.dot(X_.T) # Engine.mat
-        self._res = Y - mat(y_hat.tolist()).T # DaPy.mat
-        y_bar = self._engine.mean(Y_)
-        self._SSR = sum(mat((y_hat-y_bar).tolist()) ** 2)
-        self._SSE = sum(self._res ** 2)
-        R2 = round(self._SSR / (self._SSE+self._SSR), 4)
-                    
-        self._report.add(self.GetSummary(R2, n, p), 'Model Summary')
-        self._report.add(self.GetANOVA(n, p), 'ANOVA')
-        self._report.add(self.GetCoeff(X_, n, p, cols), 'Coefficients')
-        self._report.add(self.GetCorr(X, n ,p, cols), 'Residual Correlation')
-        self._report.add(self.GetPerf(R2, n, p, kwrds.get('Cp', self._SSE)),
-                         'Method Performance')
+        assert isinstance(method, (str, unicode)), 'method parameter should be a str'
+        assert method.lower() in ('enter', 'backward', 'foreward', 'stepwise')
+        self._C = kwrds.get('constant', 1)
+        if hasattr(X, 'columns') is False:
+            kwrds['variables'] = ['C_%d' % i for i in range(mat(X).shape.Col)]
+        if method.lower() == 'enter':
+            self._fit(X, Y, W, **kwrds)
+            return
 
-    def GetSummary(self, R2, n, p):
-        rho_up = [v1[0] * v2[0] for v1, v2 in zip(self._res, self._res[1:])]
-        rho_low = map(lambda x: x[0]**2, self._res[1:])
-        table = Frame(None, ['R', u'R\u00B2', u'Adj-R\u00B2', 'DW'])
-        table.append([round(sqrt(R2), 4), R2,
-                      round(1-((1-R2)*(n-1))/(n-p-1.0), 4),
-                      round(2 - 2*sum(rho_up) / sum(rho_low), 4)])
-        return table
+        assert hasattr(X, 'columns'), 'X should have variable names.'
+        if method.lower() == 'backward':
+            return self._backward(list(X.columns), X, Y, W, kwrds.get('enter', 0.05))
 
-    def GetANOVA(self, n, p):
-        M, N = p, n - p - 1.0
-        F = (self._SSR/M) / (self._SSE/N)
-        sig = 1 - Fcdf(F, M, N)
-        table = Frame(None,
-                ['Source', 'df', 'Sum Square', 'Mean Square', 'F', 'Sig.'],
-                miss_value='')
-        table.append(['Regression', int(M), self._SSR, self._SSR/M, F, '%.4f' % sig])
-        table.append(['Residual', int(N), self._SSE, round(self._SSE/N, 4)])
-        table.append(['Total', int(N+M), self._SSE+self._SSR])
-        return table
+        if method.lower() == 'stepwise':
+            enter, drop = kwrds.get('enter', 0.1), kwrds.get('drop', 0.15)
+            return self._stepwise(X, Y, W, enter, drop)
 
-    def GetCoeff(self, X, n, p, cols):
-        c = X.T.dot(X).I.tolist()
-        if cols[0] == 'Constant':
-            c = [sqrt(c[i][i]) for i in range(int(p)+1)]
-        else:
-            c = [sqrt(c[i][i]) for i in range(int(p))]
-        sigma_hat = sqrt(self._SSE / (n - p -1.0))
-        betas = self._beta.T.tolist()[0]
-        t = [round(beta_ / (c_ * sigma_hat), 4) for c_, beta_ in zip(c, betas)]
-        sigs = map(lambda x: round(2 * Tcdf(min(x, -x), n-p), 4), t)
-        table = Frame(None, ['Method', 'Beta', 't', 'Sig.'])
-        for col, beta_, t_, sig_ in zip(cols, betas, t, sigs):
-            table.append([col, beta_, t_, sig_])
-        return table
+        if method.lower() == 'foreward':
+            return self._foreward(list(X.columns), X, Y, W, kwrds.get('enter', 0.05), **kwrds)
 
-    def GetCorr(self, X, n, p, cols):
-        abs_res = abs(self._res.T).T.tolist()
-        table = Frame(None, ['Variable', 'Spearman', 't', 'Sig.'])
-        for i, col_ in enumerate(cols[len(cols) // X.shape[1]:]):
-            seq = X[:, i].T.tolist()[0]
-            rs = round(corr(seq, abs_res, 'spearman'), 4)
-            t = round(sqrt(n - 2) * rs / sqrt(1 - rs**2), 4)
-            sig = 2 * round(Tcdf(min(t, -t), n-2), 4)
-            table.append([col_, rs, t, sig])
-        return table
+    def drop_outliers(self, X, Y, **kwrds):
+        X, Y = Frame(X), Frame(Y, 'Y')
+        dropout = SeriesSet(None, list(X.columns))
+        while "YES" in self.report['Outliers']['Outlier']:
+            delete_index = self.report['Outliers'].select('Outlier == "YES"')['Index']
+            pop_x, pop_y = X.pop(delete_index), Y.pop(delete_index)
+            dropout.extend(column_stack([pop_x, pop_y]))
+            self._fit(X, Y, report='advance', **kwrds)
+            print(" - Total Delete Records: %d" % dropout.shape.Ln)
 
-    def GetPerf(self, R2, n ,p, Cp):
-        table = Frame(None, [u'R\u00B2\u2090', 'AIC', u'C\u209A'])
-
-        assert isinstance(Cp, (dict, list, tuple, float))
-        if isinstance(Cp, dict):
-            m, SSEm = Cp['m'], Cp['SSE']
-        if isinstance(Cp, (list, tuple)):
-            m, SSEm = Cp
-        if isinstance(Cp, (int, float)):
-            m, SSEm = (p, self._SSE)
-        Cp = round((n - m - 1.0) * self._SSE / SSEm - n + 2 * p, 3)
-        table.append([round(1 - (n-1) / (n-p-1.0) * (1 - R2), 4),
-                      round(n * log(self._SSE) + 2 * p, 2), Cp])
-        return table
-                     
-    def _fit_mle(self, X, Y, W):
-        self._beta = X.T.dot(W).dot(X).I.dot(X.T).dot(W).dot(Y)
+        self._fit(X, Y, report='entire', **kwrds)
+        ds = DataSet(column_stack([X, Y]), 'Normal')
+        ds.add(dropout, 'Abnormal')
+        return ds
 
     def predict(self, X):
         if not isinstance(X, mat):
             X = mat(X)
-        X = self._engine.column_stack([[1] * X.shape[0], X])
+        if self.constant is True:
+            X = self._engine.column_stack([[1] * X.shape[0], X])
         return self._beta.T.dot(mat(X).T)
+
+    def performance(self, X, Y):
+        result, target = mat(self.predict(X).tolist()), mat(Y)
+        return ' - Regression RMSE: %.4f' % sqrt(self._engine.mean((target - result) ** 2))
+
+

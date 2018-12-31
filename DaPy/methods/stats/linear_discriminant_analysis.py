@@ -1,5 +1,8 @@
-from DaPy import Frame, DataSet, mat, cov, mean
+from DaPy.core import Frame, DataSet, Matrix as mat
+from DaPy.matlib import cov, mean
+from DaPy.operation import column_stack, row_stack
 from DaPy.methods.tools import _str2engine, _engine2str
+from DaPy.methods.functions import Accuracy, Kappa
 
 __all__ = ['LinearDiscriminantAnalysis']
 
@@ -7,6 +10,8 @@ class LinearDiscriminantAnalysis:
     def __init__(self, engine='numpy', solve='Linear'):
         self._engine = _str2engine(engine)
         self._solve = solve
+        self._confumat = None
+        self._report = DataSet()
         if solve.upper() == 'FISHER' and self.engine != 'numpy':
             raise AttributeError('numpy supports Fisher solution only.')
 
@@ -17,6 +22,14 @@ class LinearDiscriminantAnalysis:
     @property
     def C(self):
         return self._C
+
+    @property
+    def report(self):
+        return self._report
+
+    @property
+    def confumat(self):
+        return self._confumat
 
     @property
     def engine(self):
@@ -30,6 +43,50 @@ class LinearDiscriminantAnalysis:
         '''
         self._engine = _str2engine(value)
 
+    def _create_report(self, **kwrds):
+        self._report = DataSet()
+        if self._solve.upper() == 'FISHER':
+            self._report.add(self._Info(kwrds['shape']), 'Model Summary')
+            self._report.add(self._Summary(), 'Model Information')
+        self._report.add(self._Perf(kwrds['X']), 'Performance')
+
+    def _Summary(self):
+        table = Frame(None, ['Function', 'Eigenvalue', 'Rate (%)', 'Cumulative (%)'])
+        acf = 0
+        for i, (val, valrate) in enumerate(zip(self._value, self._valrate), 1):
+            acf += valrate
+            table.append(['Func%d'%i, round(val, 4), round(valrate * 100, 4), round(acf * 100, 4)])
+        return table
+    
+    def _Info(self, shape):
+        table = Frame()
+        table.append_col(['X%d' % i for i in range(1, shape+1)], 'Variables')
+        for i, vec in enumerate(self._vector, 1):
+            table.append_col(vec.tolist()[0], 'Func%d' % i)
+        return table
+
+    def _Perf(self, X):
+        if self._confumat is None:
+            self._confumat = self._calculate_confumat(X)
+        table = Frame(None, ['Method', 'Accuracy (%)', 'Kappa'], miss_value='-')
+        table.append([self._solve.upper(), Accuracy(self._confumat), Kappa(self._confumat)])
+        return table
+        
+    def _calculate_confumat(self, X):
+        variable_num = len(X)
+        confu_mat = self._engine.zeros((variable_num+1, variable_num+1))
+        predict_y = [y_.tolist() for y_ in map(self.predict, X)]
+        predict_group = []
+        for group in predict_y:
+            predict_group.append([line.index(max(line))for line in group])
+        for i in range(variable_num):
+            for j in range(variable_num):
+                confu_mat[i][j] = predict_group[i].count(j)
+            confu_mat[i][-1] = sum(confu_mat[i])
+        for j in range(variable_num+1):
+            confu_mat[-1][j] = sum(confu_mat[:, j])
+        return confu_mat        
+
     def _calculate_xbar(self, X):
         return [self._engine.mean(x, axis=0) for x in X]
 
@@ -39,14 +96,14 @@ class LinearDiscriminantAnalysis:
         Sp = (self._engine.mat(reduce(self._engine.add, S)) / df)
         return Sp
 
-    def _solve_linear(self, X):
+    def _fit_linear(self, X):
         X_bar = self._calculate_xbar(X)
         Sp = self._calculate_Sp(X).I
         I = [Sp.dot(x.T) for x in X_bar]
         C = [(-0.5) * x.dot(Sp).dot(x.T) for x in X_bar]
         return I, C
 
-    def _solve_fisher(self, X):
+    def _fit_fisher(self, X, acr=1.):
         size, col = map(len, X), len(X[0].tolist()[0])
         X_bar = self._calculate_xbar(X)
         X_T = reduce(self._engine.add,
@@ -64,42 +121,59 @@ class LinearDiscriminantAnalysis:
             E += in_diff.dot(in_diff.T)
         Sp_ = E / (size[0] - col)
         delta = E.I.dot(H.T)
-        value, vector = self._engine.linalg.eig(delta)
-        for v, t in zip(value, vector):
-            if v >= 0:
-                print v, Sp_.dot(t.T).I
+        values, vectors = self._engine.linalg.eig(delta)
+        vectors = [vec for val, vec in zip(values, vectors) if val > 0]
+        values = [val for val in values if val >=0]
+        values_rate = [float(val) / sum(values) for val in values]
+        acr_ = 0
+        for r, valrate in enumerate(values_rate, 1):
+            acr_ += valrate
+            if acr_ >= acr:
+                break
+        return (vectors[:r], values[:r], values_rate[:r], X_bar)
         
     def _predict_linear(self, X):
-        results = [i.T.dot(X.T) + c for i, c in zip(self._I, self._C)]
+        results = [X.dot(i) + c for i, c in zip(self._I, self._C)]
         return self._engine.column_stack(results)
 
-    def fit(self, *X):
+    def _predict_fisher(self, X):
+        results = []
+        for center in self._center:
+            stand_X = X - center
+            results.append(row_stack([vec.dot(stand_X.T) for vec in self._vector]))
+        results = [1.0 / self._engine.sum(vec ** 2, 0) for vec in results]
+        return self._engine.column_stack(results)
+
+    def fit(self, *X, **kwrds):
         '''
         Parameters
         ----------
-        X : a sequence of sample variables which seperated by class already.
+        X : matrix-like
+            a sequence of sample variables which seperated by class already.
+
+        ACR : float (default=0.8)
+            Expected accumulated contribution rate
         '''
         X = map(self._engine.mat, X)
         shape = max([x.shape[1] for x in X])
-        if not all([shape == x.shape[1] for x in X]):
-            raise ValueError('variables between classes should be the same.')
+        assert all([shape == x.shape[1] for x in X]), 'variables between classes should be the same.'
         
         if self._solve.upper() == 'LINEAR':
-            self._I, self._C = self._solve_linear(X)
+            self._I, self._C = self._fit_linear(X)
 
         if self._solve.upper() in ['FISHER', 'TYPICAL']:
-            self._solve_fisher(X)
+            ACR = kwrds.get('ACR', 0.8)
+            (self._vector, self._value, self._valrate, self._center) = self._fit_fisher(X, ACR)
+        self._create_report(shape=shape, X=X)
 
-    def predict(self, X):
+    def predict_proba(self, X):
         X = self._engine.mat(mat(X))
         if self._solve.upper() == 'LINEAR':
-            return self._predict_linear(X)
+            score = self._engine.abs(self._predict_linear(X))
+        if self._solve.upper() == 'FISHER':
+            score = self._engine.abs(self._predict_fisher(X))
+        return score / self._engine.sum(score, 1).reshape((X.shape[0], 1))
                        
-    def predict_proba(self, X):
-        result = self.predict(X).tolist()
-        proba_result = []
-        for line in result:
-            sum_ = sum(map(abs, line))
-            proba_result.append([abs(v) / sum_ for v in line])
-        return proba_result
-
+    def predict(self, X):
+        X_proba = self.predict_proba(X)
+        return X_proba / self._engine.max(X_proba, 1).reshape(X_proba.shape[0], 1)
