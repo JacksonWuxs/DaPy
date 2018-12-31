@@ -19,7 +19,7 @@ data scientists can handle their data and complete the analysis task easily.
 
 Enjoy the tour in data mining!
 
-:Copyright (C) 2018  Xuansheng Wu.
+:Copyright (C) 2018 - 2019  Xuansheng Wu.
 :License: GNU 3.0, see LICENSE for more details.
 '''
 
@@ -42,7 +42,7 @@ from datetime import datetime
 __title__ = 'DaPy'
 __description__ = 'Enjoy the tour in data mining !'
 __url__ = 'http://dapy.kitgram.cn'
-__version__ = '1.7.2.1 Beta'
+__version__ = '1.7.2.2 Beta'
 __build__ = 0x021910
 __author__ = 'Xuansheng Wu（@Jackson Woo)'
 __author_email__ = 'wuxsmail@163.com'

@@ -1,7 +1,7 @@
 from collections import namedtuple, Counter
 from copy import copy
 from .base import is_value, is_iter, is_seq, SeriesSet, Frame, Matrix
-from .base import range, filter, map, pickle, auto_plus_one
+from .base import range, filter, map, zip, pickle, auto_plus_one
 from .io import parse_addr, parse_sql, parse_excel, parse_sav, parse_html
 from .io import write_txt, write_xls, write_html, write_db
 from warnings import warn
@@ -20,7 +20,7 @@ def timer(func):
         start = clock()
         returned = func(*args, **kwrds)
         if show_time is True:
-            print(' - finished "%s" in %.3f seconds.' % (func.func_name,
+            print(' - finished "%s" in %.3f seconds.' % (func.__name__,
                                                                 clock() - start))
         return returned
     return timer_func

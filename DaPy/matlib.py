@@ -1,5 +1,5 @@
 from array import array
-from .core import Matrix, Frame, is_math, is_seq, is_iter, range, filter
+from .core import Matrix, Frame, is_math, is_seq, is_iter, range, filter, zip
 from collections import namedtuple, deque, Iterable, deque
 from warnings import warn
 import math

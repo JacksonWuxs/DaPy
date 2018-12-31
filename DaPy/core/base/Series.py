@@ -1,6 +1,6 @@
 from .tools import is_value, is_math, is_iter, is_seq, _str_types
 from .tools import auto_plus_one
-from .tools import range, filter_ as filter, map_ as map
+from .tools import range, filter_ as filter, map_ as map, zip_ as zip
 from datetime import datetime, timedelta
 
 class BaseSeries:

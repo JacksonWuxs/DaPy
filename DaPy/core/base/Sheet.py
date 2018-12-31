@@ -7,7 +7,7 @@ from .Series import BaseSeries
 
 from .tools import (get_sorted_index, is_iter, is_math, is_seq, is_value,
                     str2str, str2value, transfer_funcs, _str_types, range,
-                    filter_ as filter, map_ as map, auto_plus_one)
+                    filter_ as filter, map_ as map, zip_ as zip, auto_plus_one)
 
 __all__ = ['SeriesSet', 'Frame']
 dims = namedtuple('sheet', ['Ln', 'Col'])

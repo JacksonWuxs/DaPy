@@ -1,6 +1,6 @@
 ﻿from copy import copy
 from .core import DataSet, Frame, SeriesSet, Matrix as mat
-from .core import is_seq, is_math, is_value, range, filter
+from .core import is_seq, is_math, is_value, range, filter, zip
 
 def merge(*datas, **kwrds):
     '''laterally merge multiple datasets into a new dataset.

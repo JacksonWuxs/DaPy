@@ -1,7 +1,8 @@
 from .Sheet import SeriesSet, Frame
 from .Matrix import Matrix
 from .tools import (is_seq, is_iter, is_math, is_value, get_sorted_index,
-                    range, filter_ as filter, map_ as map, pickle, auto_plus_one)
+                    range, filter_ as filter, map_ as map, zip_ as zip,
+                    pickle, auto_plus_one)
 
 __all__ = [
       'SeriesSet', 'Frame', 'Matrix', # 2-dim data structures

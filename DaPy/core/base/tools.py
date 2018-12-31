@@ -48,13 +48,15 @@ if version_info.major == 2:
     _value_types.extend([unicode, long])
     _math_types.append(long)
     _str_types.append(unicode)
-    range, filter_, map_ = xrange, filter, map
+    range, filter_, map_, zip_ = xrange, filter, map, zip
 
 if version_info.major == 3:
     filter_ = lambda fun, seq: list(filter(fun, seq))
     range = range
     def map_(fun, *sequence):
         return list(map(fun, *sequence))
+    def zip_(*seqs):
+        return list(zip(*seqs))
 
 try:
     import cPickle as pickle

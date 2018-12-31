@@ -1,6 +1,7 @@
 from collections import namedtuple, deque
 from copy import copy, deepcopy
-from .tools import is_seq, is_math, is_iter, range, filter_ as filter, map_ as map
+from .tools import is_seq, is_math, is_iter
+from .tools import range, filter_ as filter, map_ as map, zip_ as zip
 from random import random
 from csv import reader
 
