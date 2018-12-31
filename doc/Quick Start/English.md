@@ -6,7 +6,7 @@ and **wine** datasets for classification.
 In the following, we will start a Python shell and then 
 load the wine datasets as an example: 
 ```Python
->>> from DaPy import MachineLearn
+>>> from DaPy import methods
 >>> from DaPy import datasets
 >>> wine, info = datasets.wine()
 ```
@@ -98,7 +98,7 @@ which we fit an estimator to be able to predict the classes to which unseen samp
 In DaPy, an example of an estimator is the class DaPy.MLP that 
 implements *mutilayer perceptrons*: 
 ```Python
->>> mlp = MachineLearn.MLP()
+>>> mlp = methods.MLP()
 >>> mlp.create(input_cell=13, output_cell=3)
  - Create structure: 13 - 12 - 3
 ```
