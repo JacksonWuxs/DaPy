@@ -2,7 +2,7 @@
 
 DaPy - Enjoy the Tour in Data Mining
 ====
-![](https://img.shields.io/badge/Version-1.7.2-green.svg)  ![](https://img.shields.io/badge/Python-2.x-green.svg)![](https://img.shields.io/badge/Python-3.x-red.svg)![](https://img.shields.io/badge/Download-PyPi-green.svg)  ![](https://img.shields.io/badge/License-GNU-blue.svg)
+![](https://img.shields.io/badge/Version-1.7.2 Beta-green.svg)  ![](https://img.shields.io/badge/Python2.x-pass-green.svg)![](https://img.shields.io/badge/Python3.x-testing-red.svg)![](https://img.shields.io/badge/Download-PyPi-green.svg)  ![](https://img.shields.io/badge/License-GNU-blue.svg)
 
 **DaPy**'s easy-to-use API designs and professinal statistical reports of models can help you enjoy the journey of data mining. In order to approach this goal, DaPy provides you some flexible and powerful high-level __data structures__, some __statistical functions__ and __machine learning models__.
 
@@ -130,8 +130,6 @@ Even if it uses Python original data structures, DaPy still has efficiency compa
 ## Version-Log
 * V1.7.2 Beta (2019-01-01)
 
-  HAPPY NEW YEAR :smile::happy:
-
   * Added `get_dummies()` , supports to auto process norminal variables;
   * Added `show_time` attribute, auto timer for DataSet object;
   * Added `boxcox()` , supports Box-Cox transformation to a sequence data;
@@ -145,8 +143,10 @@ Even if it uses Python original data structures, DaPy still has efficiency compa
   * More on `DataSet.merge()`, supports for specifying how to save match keywords and the duplicate keywords.
   * Rename `DataSet.pop_miss_value()` into `DataSet.dropna()`;
   * Refactored `methods`, more stable and more scalable in the future;
+  * Refactored `methods.LinearRegression`, it can prepare a statistic report for you after training;
   * Refactored `BaseSheet.select()`, 5 times faster and more pythonic API design;
   * Refactored `BaseSheet.replace()`, 20 times faster and more pythonic API design;
+  * Supported Python 3.x platform;
   * Fixed a lot of bugs;
 
 * V1.5.3 (2018-11-17)
@@ -164,21 +164,21 @@ Even if it uses Python original data structures, DaPy still has efficiency compa
 * V1.4.1 (2018-08-19)
   - Added `replace()` for high-speed transering your data;
   - Optimized the speed in reading .csv file;
-  - Refactored the `DaPy.machine_learn.MLP`, which can be formed with any layers, any active functions and any cells now;
-  - Refactored the DaPy.Frame and DaPy.SeriesSet in order to improve the efficiency;
+  - Refactored the` methods.MLP`, customized with any layers, any active functions and any cells now;
+  - Refactored the `Frame` and `SeriesSet` to improve the efficiency;
   - Supported to initialize Pandas and Numpy data structures;
   - Fixed some bugs;
 
 * V1.3.3 (2018-06-20)
-  - Added more supported external data types: Excel, SPSS, SQLite3, CSV;
-  - Added `Linear Regression` and `ANOVA` to DaPy.Mathematical_statistics;
-  - Added `DaPy.io.encode()` for better adepting to Chinese;
-  - Optimized the presentations of SeriesSet and Frame in a more beautiful way;
-  - Optimized the DaPy.Matrix so that the speed in calculating is two times faster;
-  - Replaced read_col(), read_frame(), read_matrix() by read();
-  - Refactored the DaPy.DataSet, which can manage multiple sheets at the same time;
-  - Refactored the DaPy.Frame and DaPy.SeriesSet, delete the attribute limitation of types;
-  - Removed DaPy.Table;
+  - Added `methods.LinearRegression` and `methods.ANOVA` ;
+  - Added `io.encode()` for better adepting to Chinese;
+  - Optimized `SeriesSet.__repr__()` and `Frame.__reprt__()` to show data in beautiful way;
+  - Optimized the `Matrix`, so that the speed in calculating is two times faster;
+  - More on `read()` , supports external file as: Excel, SPSS, SQLite3, CSV;
+  - Renamed `DataSet.read_col()`, `DataSet.read_frame()`, `DataSet.read_matrix()` by `DataSet.read()`;
+  - Refactored the `DataSet`, which can manage multiple sheets at the same time;
+  - Refactored the `Frame` and `SeriesSet`, delete the attributes' limitations;
+  - Removed `DaPy.Table`;
 
 * V1.3.2 (2018-04-26)
   - Added more useful functions for DaPy.DataSet;
