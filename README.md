@@ -22,11 +22,11 @@ It should be noticed that DaPy still works on Python 2.x only. We are trying to 
 
 
 
-## What is DaPy?
+## Example
+
+Here is a simple example to show how to use DaPy for works. Our goal in this example is to train a classifier for predict the class that a new record belongs to. Detail information can be read from [here](https://github.com/JacksonWuxs/DaPy/blob/master/doc/Quick%20Start/English.md).
 
 ![](https://github.com/JacksonWuxs/DaPy/blob/master/doc/Quick%20Start/quick_start.gif)
-
-<img src="https://github.com/JacksonWuxs/DaPy/blob/master/doc/Quick%20Start/quick_start.gif">
 
 ## Features
 
