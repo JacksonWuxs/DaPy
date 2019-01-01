@@ -2,7 +2,7 @@
 
 DaPy - Enjoy the Tour in Data Mining
 ====
-![](https://img.shields.io/badge/Version-1.7.2-Beta-green.svg)  ![](https://img.shields.io/badge/Python2.x-pass-green.svg)![](https://img.shields.io/badge/Python3.x-testing-red.svg)![](https://img.shields.io/badge/Download-PyPi-green.svg)  ![](https://img.shields.io/badge/License-GNU-blue.svg)
+![](https://img.shields.io/badge/Version-1.7.2Beta-green.svg)  ![](https://img.shields.io/badge/Python2.x-pass-green.svg)![](https://img.shields.io/badge/Python3.x-testing-red.svg)![](https://img.shields.io/badge/Download-PyPi-green.svg)  ![](https://img.shields.io/badge/License-GNU-blue.svg)
 
 **DaPy**'s easy-to-use API designs and professinal statistical reports of models can help you enjoy the journey of data mining. In order to approach this goal, DaPy provides you some flexible and powerful high-level __data structures__, some __statistical functions__ and __machine learning models__.
 
@@ -26,7 +26,7 @@ It should be noticed that DaPy still works on Python 2.x only. We are trying to 
 
 ![](https://github.com/JacksonWuxs/DaPy/blob/master/doc/Quick%20Start/quick_start.gif)
 
-
+<img src="https://github.com/JacksonWuxs/DaPy/blob/master/doc/Quick%20Start/quick_start.gif">
 
 ## Features
 
