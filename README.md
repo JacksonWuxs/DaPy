@@ -24,7 +24,7 @@ It should be noticed that DaPy still works on Python 2.x only. We are trying to 
 
 ## What is DaPy?
 
-
+![](https://github.com/JacksonWuxs/DaPy/blob/master/doc/Quick%20Start/quick_start.gif)
 
 
 
