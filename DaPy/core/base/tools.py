@@ -174,10 +174,9 @@ def is_seq(obj):
     return False
 
 def auto_plus_one(exists, item, start=1):
-    exists = '|'.join(map(str, exists)) + '|'
-    while True:
-        if not search('%s_%d|' % (item, start), exists):
-            return '%s_%d' % (item, start)
+    exists = '\r\n'.join(map(str, exists)) + ','
+    while search('%s_%d\r\n' % (item, start), exists):
         start += 1
+    return '%s_%d' % (item, start)
 
 

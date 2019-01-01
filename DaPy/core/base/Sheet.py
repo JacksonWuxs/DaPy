@@ -361,7 +361,6 @@ class BaseSheet(object):
         
         if isinstance(new_name, _str_types) and new_name not in self._columns:
             return new_name
-
         return auto_plus_one(self._columns, new_name)
 
     def _check_slice_pos_col(self, i, j):
