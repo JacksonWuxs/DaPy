@@ -20,6 +20,14 @@ pip install -U DaPy
 
 It should be noticed that DaPy still works on Python 2.x only. We are trying to make it avaliable on Python 3 as soon as possible. If you are interesting in using DaPy on Python 3, some of function may cause unexpect issues.
 
+
+
+## What is DaPy?
+
+
+
+
+
 ## Features
 
 **Convinience** and **efficiency** are the cornerstone of DaPy data structures. 
@@ -127,7 +135,10 @@ Even if it uses Python original data structures, DaPy still has efficiency compa
   * Example Notebook :running:
   * Unit Test :calendar:
 
+
+
 ## Version-Log
+
 * V1.7.2 Beta (2019-01-01)
 
   * Added `get_dummies()` , supports to auto process norminal variables;
@@ -194,13 +205,27 @@ Even if it uses Python original data structures, DaPy still has efficiency compa
 
 * V1.2.5 (2018-03-15)
 
-  - First public beta version of DaPy!   
+  - First public beta version of DaPy!  
 
-    # Contributors
 
-    ###### Originator: Jackson Woo
 
-    ###### Maintainor: Jackson Woo & Nick Yang
+
+## Contributors
+
+- ###### Directors:
+
+  Xuansheng WU (@JacksonWoo: wuxsmail@163.com )
+
+- ###### Maintainors  
+
+  1. Feichi YANG (@Nick Yang: yangfeichi@163.com)   
+
+- ###### Developers
+
+  1. Xuansheng WU
+  2. Feichi YANG  
+
+
 
 ## License
 
