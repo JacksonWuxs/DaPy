@@ -1,28 +1,28 @@
-from collections import namedtuple, Counter
+from collections import Counter, namedtuple
 from copy import copy
-from .base import is_value, is_iter, is_seq, SeriesSet, Frame, Matrix
-from .base import range, filter, map, zip, pickle, auto_plus_one
-from .io import parse_addr, parse_sql, parse_excel, parse_sav, parse_html
-from .io import write_txt, write_xls, write_html, write_db
-from warnings import warn
 from os.path import isfile
-from re import search as re_search
 from time import clock
+from warnings import warn
+
+from .base import (Frame, Matrix, SeriesSet, Series, auto_plus_one, is_iter,
+                   is_seq, is_value, map, pickle, range, zip, filter,
+                   LogInfo, LogWarn, LogErr)
+from .io import (parse_addr, parse_excel, parse_html, parse_sav, parse_sql,
+                 write_db, write_html, write_txt, write_xls)
 
 __all__ = ['DataSet', 'show_time']
 
-show_time = True
-logger = True
 
-
-def timer(func):
-    def timer_func(*args, **kwrds):
+def _timer(func):
+    def timer_func(self, *args, **kwrds):
         start = clock()
-        returned = func(*args, **kwrds)
-        if show_time is True:
-            print(' - finished "%s" in %.3f seconds.' % (func.__name__,
-                                                                clock() - start))
+        returned = func(self, *args, **kwrds)
+        if self.log is True:
+            name, spent = func.__name__, clock() - start
+            LogInfo('%s() in %.3fs.' % (name, spent))
         return returned
+    timer_func.__doc__ = func.__doc__
+    timer_func.__name__ = func.__name__
     return timer_func
 
 
@@ -74,9 +74,9 @@ class DataSet(object):
                'count', 'count_element', 'pop_miss_value', 'size', 'shape',
                'extend', 'insert', 'insert_col', 'pick', 'pop', 'pop_col',
                'normalized', 'read', 'reverse', 'replace', 'shuffles','corr',
-               'sort', 'save', 'tomat', 'toframe', 'tocol', 'show', ]
+               'sort', 'save', 'tomat', 'toframe', 'tocol', 'show', 'log']
 
-    def __init__(self, obj=None, sheet='sheet0'):
+    def __init__(self, obj=None, sheet='sheet0', log=True):
         '''
         Parameter
         ---------
@@ -86,7 +86,12 @@ class DataSet(object):
             
         sheet : str (default='sheet0')
             the name of first sheet inside.
+
+        log : bool (default=True)
+            show the time consuming for each operation
         '''
+        self.log = log
+        
         if obj is None:
             self._data = []
             self._sheets = []
@@ -112,8 +117,8 @@ class DataSet(object):
             
         else:
             self._data = list(obj)
-            self._sheets = map(str, sheet)
-            self._types = map(type, self._data)
+            self._sheets = list(map(str, sheet))
+            self._types = list(map(type, self._data))
             if len(set(self._sheets)) != len(self._data):
                 raise ValueError("the number of sheets' names do not enough.")
                         
@@ -140,6 +145,17 @@ class DataSet(object):
             if hasattr(self._data[0], 'columns'):
                 return self._data[0].columns
         return None
+
+    @property
+    def log(self):
+        return self._log
+
+    @log.setter
+    def log(self, value):
+        if value is not True:
+            self._log = False
+        else:
+            self._log = True
 
     @property
     def level(self):
@@ -172,7 +188,7 @@ class DataSet(object):
                 
     @property
     def shape(self):
-        temp = Frame(None, ['Level', 'Sheet', 'Ln', 'Col'], miss_symbol='-')
+        temp = SeriesSet(None, ['Level', 'Sheet', 'Ln', 'Col'], nan='-')
         for i, (sheet, data) in enumerate(zip(self._sheets, self._data)):
             if hasattr(data, 'shape'):
                 temp.append([i, sheet] + list(data.shape))
@@ -259,7 +275,7 @@ class DataSet(object):
             if not hasattr(data, '__getstate__'):
                 unpack_obj[sheet] = data
                 del self._data[i], self._sheets[i], self._types[i]
-                warn('Sheet (%s) can not be pickled, ignored.' % sheet)
+                LogErr('Sheet (%s) can not be pickled, ignored.' % sheet)
                 
         obj = self.__dict__.copy()
         for sheet, data in unpack_obj.items():
@@ -416,13 +432,10 @@ class DataSet(object):
     def _check_sheet_new_name(self, new_name):
         if not new_name:
             return self._check_sheet_new_name('sheet_%d'%len(self._sheets))
-        
         if new_name not in self._sheets:
             return new_name
-
         return auto_plus_one(self._sheets, new_name)
 
-    @timer
     def add(self, item, sheet=None):
         ''' add a new sheet to this dataset
 
@@ -477,8 +490,8 @@ class DataSet(object):
             self._types.append(type(item))
             self._sheets.append(self._check_sheet_new_name(sheet))
 
-    @timer
-    def append(self, item):
+    @_timer
+    def append_row(self, item):
         '''Append a new record ``item`` at the tail of each sheet.
 
         Parameter
@@ -497,19 +510,24 @@ class DataSet(object):
             transformed to the inside miss value.
         '''
         if isinstance(item, DataSet):
-            map(self.append, item._data)
+            map(self.append_row, item._data)
             return
 
         for sheet, data in zip(self._sheets, self._data):
-            if hasattr(data, 'append') is False:
-                warn('sheet: %s has no attribute append(), ignored.' % sheet)
-                continue
-            try:
-                data.append(item)
-            except Exception as e:
-                warn('sheet: %s.append() failed because %s.'%(sheet, e))
+            if hasattr(data, 'append'):
+                try:
+                    data.append(item)
+                except Exception as e:
+                    LogErr('sheet: %s.append() failed because %s.'%(sheet, e))
+            elif hasattr(data, 'append_row'):
+                try:
+                    data.append_row(item)
+                except Exception as e:
+                    LogErr('sheet: %s.append_row() failed because %s.'%(sheet, e))
+            else:
+                LogErr('sheet: %s has no attribute append_row(), ignored.' % sheet)
 
-    @timer
+    @_timer
     def append_col(self, series, variable_name=None):
         '''Append a new variable named ``variable_name`` with a list of data
         ``series`` at the tail of data set.
@@ -531,14 +549,14 @@ class DataSet(object):
 
         for sheet, data in zip(self._sheets, self._data):
             if hasattr(data, 'append_col') is False:
-                warn('sheet: %s has no attribute append_col(), ignored.' % sheet)
+                LogErr('sheet: %s has no attribute append_col(), ignored.' % sheet)
                 continue
             try:
                 data.append_col(series, variable_name)
             except Exception as e:
-                warn('sheet: %s.append() failed because %s.'%(sheet, e))
+                LogErr('sheet: %s.append() failed because %s.'%(sheet, e))
 
-    @timer   
+    @_timer   
     def corr(self, method='pearson'):
         '''Calculate the correlation matrix of your data set.
         SeriesSet structure support this operation only.
@@ -569,13 +587,13 @@ class DataSet(object):
         for sheet, data in zip(self._sheets, self._data):
             if hasattr(data, 'corr'):
                 try:
-                    corrs.append(data.corr(pearson))
+                    corrs.append(data.corr(method))
                     new_title.append(self._sheets[i])
                 except Exception as e:
-                    warn('sheet:%s.corr() failed, because %s' %(sheet, e))                    
+                    LogErr('sheet:%s.corr() failed, because %s' %(sheet, e))                    
         return DataSet(corrs, new_title)
 
-    @timer
+    @_timer
     def count(self, x, point1=None, point2=None):
         '''Find one or more set of identification data in the specified area.
 
@@ -626,15 +644,15 @@ class DataSet(object):
                         counter.append(data.count(x))
                     counter_sheet.append(self._sheets[i])
                 except Exception as e:
-                    warn('sheet:%s.count() faild, '%self._sheets[i] +\
+                    LogErr('sheet:%s.count() faild, '%self._sheets[i] +\
                          'because %s'%e)
         return DataSet(counter, counter_sheet)
 
-    @timer
-    def count_element(self, col='all'):
+    @_timer
+    def count_values(self, sheet=0, col='all'):
         '''Count the frequency of values for each variable.
         You could count only a part of your data set with setting key-word(col)
-        as a iterble inluding column number or variable names.
+        as a iterble inluding the number of column or variable names.
 
         Parameter
         ---------
@@ -674,18 +692,12 @@ class DataSet(object):
            C_3    |   4   |     2     
            C_3    |   5   |     1     
         '''
-        counter = list()
-        counter_sheet = list()
-        for sheet, data in zip(self._sheets, self._data):
-            if hasattr(data, 'count_element'):
-                try:
-                    counter.append(data.count_element(col))
-                    counter_sheet.append(sheet)
-                except Exception as e:
-                    warn('sheet:%s.count_element() failed, because %s'%(sheet, e))
-        return DataSet(counter, counter_sheet)
+        try:
+            return self._data[sheet].count_values(col)
+        except Exception as e:
+            LogErr('sheet:%s.count_values() failed, because %s'%(sheet, e))
 
-    @timer
+    @_timer
     def get_dummies(self, col='all', value=1):
         '''Convert categorical variable into dummy variables
 
@@ -727,10 +739,10 @@ class DataSet(object):
                 try:
                     data.get_dummies(col, value)
                 except Exception as e:
-                    warn('sheet: %s.get_dummies() failed, because %s' % (sheet, e))
-
-    @timer
-    def insert(self, index, item):
+                    LogErr('sheet: %s.get_dummies() failed, because %s' % (sheet, e))
+    
+    @_timer
+    def insert_row(self, index, item):
         '''Insert a new record ``item`` in position ``index``.
 
         Parameter
@@ -755,15 +767,20 @@ class DataSet(object):
             return
 
         for sheet, data in zip(self._sheets, self._data):
-            if hasattr(data, 'insert') is False:
-                warn('sheet: %s has no attribute insert(), ignored.' % sheet)
-                continue
-            try:
-                data.insert(index, item)
-            except Exception as e:
-                warn('sheet: %s.insert() failed because %s.'%(sheet, e))
+            if hasattr(data, 'insert_row'):
+                try:
+                    data.insert_row(index, item)
+                except Exception as e:
+                    LogErr('sheet: %s.append() failed because %s.'%(sheet, e))
+            elif hasattr(data, 'append_row'):
+                try:
+                    data.insert(index, item)
+                except Exception as e:
+                    LogErr('sheet: %s.append_row() failed because %s.'%(sheet, e))
+            else:
+                LogErr('sheet: %s has no attribute append(), ignored.' % sheet)
 
-    @timer
+    @_timer
     def insert_col(self, index, series, variable_name=None):
         '''Insert a new variable named ``variable_name`` with a sequence of data
         ``series`` in position ``index``.
@@ -797,14 +814,14 @@ class DataSet(object):
 
         for sheet, data in zip(self._sheets, self._data):
             if hasattr(data, 'insert_col') is False:
-                warn('sheet: %s has no attribute insert_col(), ignored.' % sheet)
+                LogErr('sheet: %s has no attribute insert_col(), ignored.' % sheet)
                 continue
             try:
                 data.insert_col(index, series, variable_name)
             except Exception as e:
-                warn('sheet: %s.insert_col() failed because %s.'%(sheet, e))          
+                LogErr('sheet: %s.insert_col() failed because %s.'%(sheet, e))          
 
-    @timer
+    @_timer
     def dropna(self, axis=0):
         '''Drop out all the records, which contain miss value, if ``order`` is
         ``LINE``. Drop out all the variables, which contain miss value,
@@ -842,9 +859,9 @@ class DataSet(object):
                 try:
                     data.dropna(axis)
                 except Exception as e:
-                    warn('sheet:%s.dropna() failed because %s' % (sheet, e))
+                    LogErr('sheet:%s.dropna() failed because %s' % (sheet, e))
 
-    @timer
+    @_timer
     def select(self, where):
         '''select the records which obey your conditions.
 
@@ -898,11 +915,11 @@ class DataSet(object):
                     new_data.append(data.select(where))
                     new_sheets.append(sheet)
                 except Exception as e:
-                    warn('sheet:%s.select() failed, because %s'%(sheet, e))
+                    LogErr('sheet:%s.select() failed, because %s'%(sheet, e))
         return DataSet(new_data, new_sheets)
 
-    @timer
-    def pop(self, index=-1):
+    @_timer
+    def pop_row(self, index=-1):
         '''Delete and return the record in position ``index``.
 
         Parameter
@@ -926,16 +943,23 @@ class DataSet(object):
         new_data = list()
         new_sheets = list()
         for i, (sheet, data) in enumerate(zip(self._sheets, self._data)):
-            if hasattr(data, 'pop'):
+            if hasattr(data, 'pop_row'):
+                try:
+                    new_data.append(data.pop_row(index))
+                    new_sheets.append(sheet)
+                except Exception as e:
+                    LogErr('sheet:%s.pop() current record failed, '%self._sheets[i] +\
+                         'because %s'%e)
+            elif hasattr(data, 'pop'):
                 try:
                     new_data.append(data.pop(index))
                     new_sheets.append(sheet)
                 except Exception as e:
-                    warn('sheet:%s.pop() current record failed, '%self._sheets[i] +\
+                    LogErr('sheet:%s.pop() current record failed, '%self._sheets[i] +\
                          'because %s'%e)
         return DataSet(new_data, new_sheets)
 
-    @timer
+    @_timer
     def pop_col(self, col='all'):
         '''Delete and return all the value of each columns in ``variables``.
         Key-word(item) could assignment as a number or the variable name.
@@ -976,11 +1000,11 @@ class DataSet(object):
                     new_data.append(data.pop_col(col))
                     new_sheets.append(sheet)
                 except Exception as e:
-                    warn('sheet:%s.pop_col() current variable failed, '%self._sheets[i] +\
+                    LogErr('sheet:%s.pop_col() current variable failed, '%self._sheets[i] +\
                          'because %s'%e)
         return DataSet(new_data, new_sheets)
 
-    @timer
+    @_timer
     def extend(self, other):
         '''extend your data by another object, new data as new records.
 
@@ -1030,15 +1054,15 @@ class DataSet(object):
 
         for sheet, data in zip(self._sheets, self._data):
             if hasattr(data, 'extend') is False:
-                warn('sheet: %s has no attribute extend(), ignored.' % sheet)
+                LogErr('sheet: %s has no attribute extend(), ignored.' % sheet)
                 continue
             try:
                 data.extend(other)
             except Exception as e:
-                warn('sheet: %s.extend() failed because %s.'%(sheet, e))
+                LogErr('sheet: %s.extend() failed because %s.'%(sheet, e))
 
-    @timer         
-    def extend_col(self, other):
+    @_timer         
+    def join(self, other):
         '''extend your dataset by another object, new data seems as new variables.
 
         This function can help you combine another data set while it considers 
@@ -1062,7 +1086,7 @@ class DataSet(object):
                         [23, 23],
                         [24, 24]],
                         ['C2', 'C3']), sheet='Table2')
-        >>> data['Table1'].extend_col(data['Table2'])
+        >>> data['Table1'].join(data['Table2'])
         >>> data
         sheet:Table1
         ============
@@ -1087,15 +1111,15 @@ class DataSet(object):
             return
 
         for sheet, data in zip(self._sheets, self._data):
-            if hasattr(data, 'extend_col') is False:
-                warn('sheet: %s has no attribute extend_col(), ignored.' % sheet)
+            if hasattr(data, 'join') is False:
+                LogErr('sheet: %s has no attribute extend_col(), ignored.' % sheet)
                 continue
             try:
-                data.extend_col(other)
+                data.join(other)
             except Exception as e:
-                warn('sheet: %s.extend_col() failed because %s.'%(sheet, e))
+                LogErr('sheet: %s.extend_col() failed because %s.'%(sheet, e))
 
-    @timer     
+    @_timer     
     def normalized(self, process='NORMAL', col='all', **kwrds):
         '''Apply a data operation to your data
 
@@ -1175,8 +1199,8 @@ class DataSet(object):
             if hasattr(data, 'normalized'):
                 data.normalized(process, col, **kwrds)
 
-    @timer
-    def map(self, func, col='all'):
+    @_timer
+    def apply(self, func, col='all', inplace=False):
         '''map a process to such a column.
 
         Parameters
@@ -1192,18 +1216,23 @@ class DataSet(object):
         >>> data = example()
         >>> data['A_col']
         [3, 4, 1, 3, 4, 2, 6, 4, 1, 3, 2, 3]
-        >>> data.map(lambda x: x ** 2, 'A_col')
+        >>> data.apply(lambda x: x ** 2, 'A_col')
         >>> data['A_col']
         [9, 16, 1, 9, 16, 4, 36, 16, 1, 9, 4, 9]
         '''
+        response = DataSet()
         for sheet, data in zip(self._sheets, self._data):
-            if hasattr(data, 'map'):
+            if hasattr(data, 'apply'):
                 try:
-                    data.map(func, col)
+                    sub_response = data.apply(func, col, inplace)
+                    if inplace is False:
+                        response.add(sub_response, sheet)
                 except Exception as e:
-                    warn('sheet:%s.map() failed, because %s'%(sheet, e))
+                    LogErr('sheet:%s.apply() failed, because %s'%(sheet, e))
+        if inplace is False:
+            return response
 
-    @timer
+    @_timer
     def merge(self, other, self_key=0, other_key=0, keep_key=True, keep_same=True):
         '''laterally merge another data to exist sheet. 
 
@@ -1253,26 +1282,96 @@ class DataSet(object):
 
         Example
         -------
-        >>> sheet_left = dp.SeriesSet([
-                ['Alan', 35],
-                ['Bob', 27],
-                ['Charlie', 30],
-                ['Daniel', 29]],
-                ['Name', 'Age'])
-        >>> sheet_left.merge(
-                [['Alan', 'M'],
-                ['Bob', 'M'],
-                ['Charlie', 'F'],
-                ['Janny', 'F']],
-                self_key='Name', other_key=0)
-        >>> sheet_left.show()
-           Name  | Age  |   C_0   | C_1 
-        ---------+------+---------+------
-           Alan  |  35  |   Alan  |  M   
-           Bob   |  27  |   Bob   |  M   
-         Charlie |  30  | Charlie |  F   
-          Daniel |  29  |   None  | None 
-           None  | None |  Janny  |  F   
+        >>> left.show()
+           Name  | Age  | gender
+        ---------+------+--------
+           Alan  |  35  |   M    
+           Bob   |  27  |   M    
+         Charlie |  30  |   F    
+          Daniel |  29  |  None  
+           None  | None |   F   
+        >>> right.show()
+           Name  | gender | Age 
+        ---------+--------+------
+           Alan  |   M    |  35  
+           Bob   |   M    |  27  
+         Charlie |   F    |  30  
+          Janny  |   F    |  26  
+           None  |  None  | None
+        >>> # we settle down the self_key=="Name" and other_key=="Name
+        >>> # change different parameters between keep_key and keep_same
+        >>> # results shows below
+        MERGE with keep_key=True and keep_same=True
+           Name  | Age  |  Name_1 | gender | Age_1
+        ---------+------+---------+--------+-------
+           Alan  |  35  |   Alan  |   M    |   35  
+           Bob   |  27  |   Bob   |   M    |   27  
+         Charlie |  30  | Charlie |   F    |   30  
+          Daniel |  29  |   None  |  None  |  None 
+           None  | None |  Janny  |   F    |   26  
+
+        MERGE with keep_key=True and keep_same=False
+           Name  | Age  |  Name_1 | gender
+        ---------+------+---------+--------
+           Alan  |  35  |   Alan  |   M    
+           Bob   |  27  |   Bob   |   M    
+         Charlie |  30  | Charlie |   F    
+          Daniel |  29  |   None  |  None  
+           None  | None |  Janny  |   F    
+
+        MERGE with keep_key=False and keep_same=True
+         Age  | gender | Age_1
+        ------+--------+-------
+          35  |   M    |   35  
+          27  |   M    |   27  
+          30  |   F    |   30  
+          29  |  None  |  None 
+         None |   F    |   26  
+
+        MERGE with keep_key=False and keep_same=False
+         Age  | gender
+        ------+--------
+          35  |   M    
+          27  |   M    
+          30  |   F    
+          29  |  None  
+         None |   F    
+
+        MERGE with keep_key=other and keep_same=True
+         Age  |  Name_1 | gender | Age_1
+        ------+---------+--------+-------
+          35  |   Alan  |   M    |   35  
+          27  |   Bob   |   M    |   27  
+          30  | Charlie |   F    |   30  
+          29  |   None  |  None  |  None 
+         None |  Janny  |   F    |   26  
+
+        MERGE with keep_key=other and keep_same=False
+         Age  |  Name_1 | gender
+        ------+---------+--------
+          35  |   Alan  |   M    
+          27  |   Bob   |   M    
+          30  | Charlie |   F    
+          29  |   None  |  None  
+         None |  Janny  |   F    
+
+        MERGE with keep_key=self and keep_same=True
+           Name  | Age  | gender | Age_1
+        ---------+------+--------+-------
+           Alan  |  35  |   M    |   35  
+           Bob   |  27  |   M    |   27  
+         Charlie |  30  |   F    |   30  
+          Daniel |  29  |  None  |  None 
+           None  | None |   F    |   26  
+
+        MERGE with keep_key=self and keep_same=False
+           Name  | Age  | gender
+        ---------+------+--------
+           Alan  |  35  |   M    
+           Bob   |  27  |   M    
+         Charlie |  30  |   F    
+          Daniel |  29  |  None  
+           None  | None |   F    
         '''
         if isinstance(other, DataSet):
             map(self.merge, other._data,
@@ -1282,15 +1381,15 @@ class DataSet(object):
 
         for sheet, data in zip(self._sheets, self._data):
             if hasattr(data, 'merge') is False:
-                warn('sheet: %s has no attribute merge(), ignored.' % sheet)
+                LogErr('sheet: %s has no attribute merge(), ignored.' % sheet)
                 continue
             try:
                 data.merge(other, self_key, other_key, keep_key, keep_same)
             except Exception as e:
-                warn('sheet: %s.merge() failed because %s.'%(sheet, e))
+                LogErr('sheet: %s.merge() failed because %s.'%(sheet, e))
         
-    @timer
-    def read(self, addr, dtype='col', **kward):
+    @_timer
+    def read(self, addr, dtype='col', **kwrd):
         '''This function could be used in loading data from a file and
         transform it into one of DaPy data structure.
 
@@ -1302,13 +1401,27 @@ class DataSet(object):
         dtype : str (default='col')
             the target data structure you prefer.
 
+        ftype : str (default=None)
+            the file type of this address
+            `None` -> automtotally analysis the file type
+            "web" -> a website address, it will use requests.get to load the website
+                     then use bs4.BeautifulSoup to find <table> tag in the file.
+            "html" -> a local html file
+            "db" -> SQLite3 database file
+            "sav" -> SPSS data file
+            "xls" -> Excel data file
+            "csv" -> Text file with ',' as delimeter
+            "txt" -> Text file with ' ' as delimeter
+            "pkl" -> Python pickle file
+            "mysql" -> MySQL database link
+
         sheet_name : str (default=None)
             the sheet name of new table.
 
-        miss_symbol : str (default='')
+        miss_symbol : str or str in list (default='')
             the miss value symbol in this data file.
 
-        miss_value : any ( default=None)
+        nan : value ( default=nan)
             the miss value symbol in your new data set.
 
         first_line : int (default=1)
@@ -1319,9 +1432,22 @@ class DataSet(object):
             tip: if there is no title in your data, used -1 represented,
               and, it will automatic create it.
 
-        prefer_type : type-object (default=0)
+        sep : str (default=",")
+            the delimiter symbol inside.
 
-        ftype : str (default
+        types : type name in str or dict of columns (default=None):
+            DaPy autometally transfers the str source text into the most
+            suitable data type in efficiency, whereas some of process costs
+            long time. For example, "2018-1-1" is a datetime label, however,
+            it is spend a lot of to time transfer this label into datetime.
+            In some case, you don't need it in datetime, so just set this column
+            type into "str" to save time. The supported data types are "int",
+            "float", "str", "datetime" and "bool".
+            
+            use this keyword as following samples
+            >>> read("addr.csv", types={'A_col': int, 'B_col': float})
+            >>> read("addr.csv", types="float")
+            >>> read("addr.csv", types=["float", "int"])
 
         Examples
         --------
@@ -1329,46 +1455,41 @@ class DataSet(object):
         >>> data = dp.read('your_data_file.csv')
         >>> data.read('another_data_file.xlsx')
         '''
-        miss_symbol = kward.get('miss_symbol', 'NA')
-        miss_value = kward.get('miss_value', None)
-        sheet_name = kward.get('sheet_name', None)
+        nan = kwrd.get('nan', float('nan'))
+        sheet_name = kwrd.get('sheet_name', None)
+        miss_symbol = kwrd.get('miss_symbol', ('?', '??', '', ' ', 'NA', 'None'))
         fpath, fname, fbase, ftype = parse_addr(addr)
-        ftype = kward.get('ftype', ftype)
+        ftype = kwrd.get('ftype', ftype)
+        assert ftype in ('web', 'html', 'htm', 'db', 'sav', 'xls', 'xlsx', 'csv', 'txt', 'pkl', 'mysql')
+        if ftype not in ('web', 'html', 'htm', 'mysql') and not isfile(addr):
+            raise IOError('can not find the target file or auto analysis data source type failed')
         if sheet_name is None:
             sheet_name = fbase
-        if ftype != 'web' and not isfile(addr):
-            raise IOError('can not find the target file.')
-        
         if ftype == 'db':
-            for sheet, name in parse_sql(addr, dtype, miss_symbol, miss_value):
+            for sheet, name in parse_sql(addr, dtype, nan):
                 self.add(sheet, name)
 
         elif ftype == 'sav':
-            self.add(parse_sav(addr, dtype, miss_symbol, miss_value), sheet_name)
+            self.add(parse_sav(addr, dtype, nan), sheet_name)
                 
         elif ftype == 'xls' or ftype == 'xlsx':
-            first_line = kward.get('first_line', 1)
-            title_line = kward.get('title_line', 0)
+            first_line = kwrd.get('first_line', 1)
+            title_line = kwrd.get('title_line', 0)
             for sheet, name in parse_excel(dtype, addr, first_line, title_line,
-                                           miss_symbol, miss_value):
+                                           nan):
                 self.add(sheet, name)
 
         elif ftype == 'txt' or ftype == 'csv':
-            sep = kward.get('sep', ',')
+            sep = kwrd.get('sep', ',')
             if not isinstance(sep, str):
-                split_dic = {'csv':',', 'txt':'\t'}
-                kward['sep'] = split_dic[ftype]
-            
-            if dtype.upper() == 'COL' or dtype.upper() == 'SERIESSET':
-                data = SeriesSet(miss_value=miss_value)
-            elif dtype.upper() == 'FRAME':
-                data = Frame(miss_value=miss_value)
-            elif dtype.upper() == 'MATRIX':
-                data = Matrix()
-            else:
-                raise RuntimeError('dtype should be SeriesSet, Frame or Matrix')
+                sep_dic = {'csv':',', 'txt':'\t'}
+                kwrd['sep'] = sep_dic[ftype]
 
-            data.read_text(addr, **kward)
+            dtype_dic = {'COL': SeriesSet, 'SERIESSET': SeriesSet, 
+                         'MATRIX': Matrix, 'MAT': Matrix, 'Frame': Frame}
+            data = dtype_dic.get(dtype.upper(), SeriesSet)(nan=nan)
+            kwrd['nan'] = miss_symbol
+            data.from_file(addr, **kwrd)
             self._data.append(data)
             self._types.append(type(data))
             self._sheets.append(self._check_sheet_new_name(sheet_name))
@@ -1392,13 +1513,13 @@ class DataSet(object):
                 raise ValueError('there is no tag <table> in the html file.')
             
             for sheet, name in parse_html(\
-                        text, dtype, miss_symbol, miss_value, sheet_name):
-                self.add(sheet, name)
+                        text, dtype, miss_symbol, nan, sheet_name):
+                return self.add(sheet, name)
         else:
             raise ValueError('DaPy singly supports file types as'+\
                              '(xls, xlsx, csv, txt, pkl, db, sav, html, htm).')
 
-    @timer
+    @_timer
     def reverse(self, axis='sheet'):
         '''Reverse your data set or records.
 
@@ -1432,7 +1553,7 @@ class DataSet(object):
 
         raise AttributeError('axis should be "sheet" or "record"')
 
-    @timer
+    @_timer
     def replace(self, *arg):
         '''d.replace(col, condition, target)
            d.replace([c0, co1, ..., c(n)], condition, target)
@@ -1493,7 +1614,7 @@ class DataSet(object):
             if hasattr(data, 'replace'):
                 data.replace(*arg)
 
-    @timer
+    @_timer
     def shuffle(self):
         ''' Mess up your data
         '''
@@ -1503,7 +1624,7 @@ class DataSet(object):
             elif hasattr(data, 'shuffle'):
                 data.shuffle()
 
-    @timer
+    @_timer
     def sort(self, *orders):
         '''Easily sort records with this function.
 
@@ -1537,7 +1658,7 @@ class DataSet(object):
             if hasattr(data, 'sort'):
                 data.sort(*orders)
 
-    @timer
+    @_timer
     def save(self, addr, **kwrds):
         '''Save the DataSet to a file.
 
@@ -1586,8 +1707,11 @@ class DataSet(object):
                     continue
                 if len(self._data) > 1:
                     addr = fpath + fbase + '_' + sheet + '.' + ftype
-                with open(addr, 'w') as f:
+                f = open(addr, 'w')
+                try:
                     write_txt(f, data, newline, delimiter, encode, decode)
+                finally:
+                    f.close()
 
         elif ftype in ('xls', 'xlsx'):
             try:
@@ -1625,7 +1749,7 @@ class DataSet(object):
         else:
             raise ValueError('unrecognized file type')
 
-    @timer
+    @_timer
     def toframe(self):
         '''Transform all of the stored data structure to DaPy.Frame
         '''
@@ -1642,10 +1766,10 @@ class DataSet(object):
                 else:
                     self._data[i] = Frame(data)
             except:
-                warn('sheet:%s can not transform to Frame.'%self._sheets[i])
+                LogErr('sheet:%s can not transform to Frame.'%self._sheets[i])
             self._types[i] = Frame
 
-    @timer
+    @_timer
     def tocol(self):
         '''Transform all of the stored data structure to DaPy.SeriesSet
         '''
@@ -1662,11 +1786,11 @@ class DataSet(object):
                 else:
                     self._data[i] = SeriesSet(data)
             except Exception as e:
-                warn('sheet[%s] can not transform to SeriesSet, ' % self._sheets[i] +\
+                LogErr('sheet[%s] can not transform to SeriesSet, ' % self._sheets[i] +\
                     'because: %s' % e)
             self._types[i] = SeriesSet
 
-    @timer
+    @_timer
     def tomat(self):
         '''Transform all of the stored data structure to DaPy.Matrix
         '''
@@ -1677,7 +1801,7 @@ class DataSet(object):
             try:
                 self._data[i] = Matrix(data)
             except:
-                warn('sheet:%s can not transform to Matrix.'%self._sheets[i])
+                LogErr('sheet:%s can not transform to Matrix.'%self._sheets[i])
             self._types[i] = Matrix
 
     def show(self, lines='all'):

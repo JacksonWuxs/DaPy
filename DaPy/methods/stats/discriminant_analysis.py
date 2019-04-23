@@ -1,13 +1,13 @@
-from DaPy.core import Frame, DataSet, Matrix as mat
+from DaPy.core import DataSet, Matrix as mat, SeriesSet
 from DaPy.matlib import cov, mean
 from DaPy.operation import column_stack, row_stack
-from DaPy.methods.tools import _str2engine, _engine2str
-from DaPy.methods.functions import Accuracy, Kappa
+from DaPy.methods.tools import str2engine, engine2str
+from DaPy.methods.evaluator import Accuracy, Kappa, ConfuMat
 
 __all__ = ['LinearDiscriminantAnalysis']
 
-class LinearDiscriminantAnalysis:
-    def __init__(self, engine='numpy', solve='Linear'):
+class DiscriminantAnalysis:
+    def __init__(self, engine='numpy', solve='FISHER'):
         self._engine = _str2engine(engine)
         self._solve = solve
         self._confumat = None
@@ -51,15 +51,15 @@ class LinearDiscriminantAnalysis:
         self._report.add(self._Perf(kwrds['X']), 'Performance')
 
     def _Summary(self):
-        table = Frame(None, ['Function', 'Eigenvalue', 'Rate (%)', 'Cumulative (%)'])
+        table = SeriesSet(None, ['Function', 'Eigenvalue', 'Rate (%)', 'Cumulative (%)'])
         acf = 0
         for i, (val, valrate) in enumerate(zip(self._value, self._valrate), 1):
             acf += valrate
-            table.append(['Func%d'%i, round(val, 4), round(valrate * 100, 4), round(acf * 100, 4)])
+            table.append_row(['Func%d'%i, round(val, 4), round(valrate * 100, 4), round(acf * 100, 4)])
         return table
     
     def _Info(self, shape):
-        table = Frame()
+        table = SeriesSet()
         table.append_col(['X%d' % i for i in range(1, shape+1)], 'Variables')
         for i, vec in enumerate(self._vector, 1):
             table.append_col(vec.tolist()[0], 'Func%d' % i)
@@ -68,24 +68,18 @@ class LinearDiscriminantAnalysis:
     def _Perf(self, X):
         if self._confumat is None:
             self._confumat = self._calculate_confumat(X)
-        table = Frame(None, ['Method', 'Accuracy (%)', 'Kappa'], miss_value='-')
-        table.append([self._solve.upper(), Accuracy(self._confumat), Kappa(self._confumat)])
+        table = SeriesSet(None, ['Method', 'Accuracy (%)', 'Kappa'], nan='-')
+        table.append_row([self._solve.upper(), Accuracy(self._confumat), Kappa(self._confumat)])
         return table
         
     def _calculate_confumat(self, X):
-        variable_num = len(X)
-        confu_mat = self._engine.zeros((variable_num+1, variable_num+1))
-        predict_y = [y_.tolist() for y_ in map(self.predict, X)]
-        predict_group = []
-        for group in predict_y:
-            predict_group.append([line.index(max(line))for line in group])
-        for i in range(variable_num):
-            for j in range(variable_num):
-                confu_mat[i][j] = predict_group[i].count(j)
-            confu_mat[i][-1] = sum(confu_mat[i])
-        for j in range(variable_num+1):
-            confu_mat[-1][j] = sum(confu_mat[:, j])
-        return confu_mat        
+        Y, y_ = [], []
+        for i, x in enumerate(X):
+            base = [0] * x.shape[1]
+            base[i] = 1
+            Y.extend([base for k in range(x.shape[0])])
+            y_.extend(self.predict(x).tolist())
+        return ConfuMat(mat(Y), mat(y_))        
 
     def _calculate_xbar(self, X):
         return [self._engine.mean(x, axis=0) for x in X]

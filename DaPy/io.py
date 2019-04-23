@@ -9,7 +9,10 @@ def read(addr, dtype='col', **kward):
     '''
     from .core import DataSet
     data = DataSet()
-    data.read(addr, dtype, **kward)
+    data.log = kward.get('log', True)
+    temp = data.read(addr, dtype, **kward)
+    if temp is not None:
+        return temp
     return data
 
 def save(addr, data, **kward):
@@ -24,11 +27,12 @@ def save(addr, data, **kward):
 def encode(code='cp936'):
     '''change the python environment encode
     '''
-    import sys
-    stdi, stdo, stde = sys.stdin, sys.stdout, sys.stderr
-    reload(sys)
-    sys.stdin, sys.stdout, sys.stderr = stdi, stdo, stde
-    sys.setdefaultencoding(code)
-    return
+    from sys import version_info, stdin, stdout, stderr
+    if version_info.major == 2:
+        from sys import setdefaultencoding
+        stdi, stdo, stde = stdin, stdout, stderr
+        reload(sys)
+        stdin, stdout, stderr = stdi, stdo, stde
+        setdefaultencoding(code)
 
 

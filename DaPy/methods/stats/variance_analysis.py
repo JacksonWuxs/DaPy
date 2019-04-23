@@ -1,5 +1,5 @@
 from collections import namedtuple
-from DaPy.core import is_math, Frame, DataSet
+from DaPy.core import is_math, SeriesSet, DataSet, Series
 
 try:
     from scipy.stats import f
@@ -14,18 +14,16 @@ else:
 __all__ = ['ANOVA']
 
 def ANOVA(*classes):
-    if len(classes) <= 1:
-        raise ValueError('ANOVA() expects more than 1 comparing class.')
+    assert len(classes) > 1, 'ANOVA() expects more than 1 comparing class.'
 
     new_classes = list()
     for sequence in classes:
-        sequence = filter(is_math, sequence)
-        if len(sequence) <= 1:
-            raise ValueError('ANOVA() expects more than 1 samples in each class.')
+        sequence = Series(filter(is_math, sequence))
+        assert len(sequence) > 1, 'ANOVA() expects more than 1 samples in each class.'
         new_classes.append(sequence)
 
     n = sum(map(len, new_classes))
-    ni = map(len, new_classes)
+    ni = list(map(len, new_classes))
     r = len(new_classes)
     Ti = map(sum, new_classes)
     G = sum([sum(map(lambda x: x ** 2, sequence)) for sequence in new_classes])
@@ -36,7 +34,7 @@ def ANOVA(*classes):
     MSa = Sa / float(r - 1)
     MSe = Se / float(sum(ni) - r)
     F = MSa / MSe
-    return  DataSet(Frame([
+    return  DataSet(SeriesSet([
         ['Regression', round(Sa, 4), r - 1, round(MSa, 4), round(F, 4), round(1 - Fcdf(F, r-1, n-r), 4)],
         ['Residual', round(Se, 4), n - r, round(MSe), '', ''],
         ['Total', round(Sa + Se, 4), n - 1, '', '', '']],

@@ -21,7 +21,7 @@ def merge(*datas, **kwrds):
     Example
     -------
     >>> import DaPy as dp
-    >>> data1 = dp.Frame([['A', 39, 'F'], ['B', 40, 'F'], ['C', 38, 'M']],
+    >>> data1 = dp.SeriesSet([['A', 39, 'F'], ['B', 40, 'F'], ['C', 38, 'M']],
                           ['Name', 'Age', 'Gender'])
     >>> data2 = dp.Frame([['A', 'F', True], ['B', 'F', False], ['C', 'M', True]],
                           ['Name', 'Gender', 'Married'])
@@ -83,6 +83,11 @@ def delete(data, index, axis=0):
         index = sorted(index, reverse=True)
         new = [line for i, line in enumerate(data) if i not in index]
         return mat(new, False)
+
+def concatenate(tup, axis=0):
+    if axis == 1:
+        return column_stack(tup)
+    return row_stack(tup)
 
 def column_stack(tup):
     '''Stack 1-D data as columns into a 2-D data.

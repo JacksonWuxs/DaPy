@@ -1,7 +1,7 @@
 from collections import namedtuple, deque
 from copy import copy, deepcopy
 from .tools import is_seq, is_math, is_iter
-from .tools import range, filter_ as filter, map_ as map, zip_ as zip
+from .tools import range, filter, map, zip
 from random import random
 from csv import reader
 
@@ -496,6 +496,9 @@ class Matrix(object):
         else:
             self._matrix = table
         self._dim = Matrix.dims(len(table), dim_col)
+
+    def diagonal(self):
+        return [self._matrix[i][i] for i in range(min(self.shape))]
 
     def dot(self, other):
         if hasattr(other, 'shape'):

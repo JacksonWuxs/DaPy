@@ -9,16 +9,16 @@ DaPy - Enjoy the Tour in Data Mining
 [Installation](#installation) | [Features](#features) | [Quick Start](https://github.com/JacksonWuxs/DaPy/blob/master/doc/Quick%20Start/English.md ) | [To Do List](#todo) | [Version Log](#version-log) | [License](#license) | [Guide Book](https://github.com/JacksonWuxs/DaPy/tree/master/doc/Guide%20Book/README.md) | [中文版](https://github.com/JacksonWuxs/DaPy/blob/master/README_Chinese.md)
 
 ## Installation
-The latest version 1.7.2 had been upload to PyPi.
+The latest version 1.8.1 had been upload to PyPi.
 ```
 pip install DaPy
 ```
-Updating your last version to 1.7.2 with PyPi as follow.
+Updating your last version to 1.8.1 with PyPi as follow.
 ```
 pip install -U DaPy
 ```
 
-It should be noticed that DaPy still works on Python 2.x only. We are trying to make it avaliable on Python 3 as soon as possible. If you are interesting in using DaPy on Python 3, some of function may cause unexpect issues.
+It should be noticed that DaPy still works on Python 2.x only. We are trying to make it avaliable on Python 3 as soon as possible. If you are interesting in using DaPy on Python 3, some of functions may cause unexpected issues.
 
 
 
@@ -36,12 +36,13 @@ Since the very beginning, we try to make it supports more Python syntax habits. 
 * Here are just a few of the things that DaPy does well:  
 	- [Efficiently manage diverse data with clearly perceiving approach](https://github.com/JacksonWuxs/DaPy/blob/master/doc/Guide%20Book/English/Features.md#visually-manage-diverse-data)
 	- [Quick insert and delete a mount of new records or new variables](https://github.com/JacksonWuxs/DaPy/blob/master/doc/Guide%20Book/English/Features.md#easily-insert-and-delete-a-large-number-of-data)
-	- [Make it easy to access a part of your dataset, not only by index or variable names, but also by specefic conditions]
+	- [Easy to access a part of your dataset by column name, index or conditions]
 	- [Functional IO tools for loading data from CSV files, Excel files, database and even SPSS files]
 	- [Sort your records by multiple conditions]
 	- [Fast verify your ideas with the built-in analysis models (e.g. `ANOVA`, `MLP`, `Linear Regression`)]
 	- A variety of ways to help you easily perceive your dataset.
   
+
 Even if it uses Python original data structures, DaPy still has efficiency comparable to some libraries which are written by C. We have tested DaPy on the platform with Intel i7-8550U while the Python version is 2.7.15-64Bit. The [dataset](http://www.wuxsweb.cn/Library/DaPy$Test_data/read_csv.csv) has more than 2 million records and total size is 240 MB.  
 
 <table style='text-align:center'>
@@ -87,7 +88,7 @@ Even if it uses Python original data structures, DaPy still has efficiency compa
 
 
 ## TODO  
-:heavy_check_mark: = Done      :running: = Coding & Testing       ​ :calendar:  = Put on the agenda       :thinking: = Not sure
+:heavy_check_mark: = Done      :running: = In Development       ​ :calendar:  = Put On the Agenda       :thinking: = Not Sure
 
 * Data Structures
 
@@ -96,7 +97,7 @@ Even if it uses Python original data structures, DaPy still has efficiency compa
   * SeriesSet (2-D general data structure) :heavy_check_mark:
   * Matrix (2-D mathematical data structure) :heavy_check_mark:
   * Row (1-D general data structure) :heavy_check_mark:
-  * Series (1-D general data structure) :running:
+  * Series (1-D general data structure) :heavy_check_mark:
   * TimeSeries (1-D time sequence data structure)​ :running:
 
 * Statistics
@@ -114,7 +115,8 @@ Even if it uses Python original data structures, DaPy still has efficiency compa
   * Dummy Variables (auto parse norminal variable into dummy variable) :heavy_check_mark:
   * Difference Sequence Data :heavy_check_mark:
   * Normalize Data (log, normal, standard, box-cox):heavy_check_mark:
-  * Drop Dupilicate Records :running:
+  * Drop Duplicate Records :heavy_check_mark:
+  * Group By (analysis the dataset under controlling a group variable):heavy_check_mark:
 
 * Methods
 
@@ -122,6 +124,7 @@ Even if it uses Python original data structures, DaPy still has efficiency compa
   - LR (Linear Regression)  :heavy_check_mark:
   - ANOVA (Analysis of Variance)  :heavy_check_mark:
   - MLP (Multi-Layers Perceptron)  :heavy_check_mark:
+  - DT (Decision Tree):heavy_check_mark:
   - K-Means :running:
   - PCA (Principal Component Analysis) :running:
   - ARIMA (Autoregressive Integrated Moving Average) :calendar:
@@ -139,8 +142,18 @@ Even if it uses Python original data structures, DaPy still has efficiency compa
 
 ## Version-Log
 
+* V1.8.4 (2019-04-23)
+  * Added `BaseSheet.groupby()`, regroup your observations with specific columns;
+  * Added `DataSet.apply()`, mapping a function to the dataset by axis;
+  * Added `DataSet.drop_duplicates()`, automatically dropout the duplicate records in the dataset;
+  * Added a new data structure called `DaPy.Series`;
+  * Added `DaPy.methods.Performance()`, automatically testify the performance of ML model;
+  * Added `DaPy.methods.Kappa()`, calculate the Kappa index with a confusing matrix;
+  * Added `DaPy.methods.ConfuMat()`, calculate the Confusing matrix with your result;
+  * Added `DaPy.methods.DecitionTree()`, implement the C4.5 decision tree algorithm;
+  * Refactored the structure of `DaPy.core.base` package;
+  * More on `BaseSheet.select()`, supports new keywords "limit" and "columns";
 * V1.7.2 Beta (2019-01-01)
-
   * Added `get_dummies()` , supports to auto process norminal variables;
   * Added `show_time` attribute, auto timer for DataSet object;
   * Added `boxcox()` , supports Box-Cox transformation to a sequence data;
@@ -159,7 +172,6 @@ Even if it uses Python original data structures, DaPy still has efficiency compa
   * Refactored `BaseSheet.replace()`, 20 times faster and more pythonic API design;
   * Supported Python 3.x platform;
   * Fixed a lot of bugs;
-
 * V1.5.3 (2018-11-17)
 
   * Added `select()` function for quickly access partial data with some conditions;
@@ -171,7 +183,6 @@ Even if it uses Python original data structures, DaPy still has efficiency compa
   * Refactored `DataSet.save()`, more stable and more flexsible in the future;
   * Rewrite a part of basic mathematical functions;
   * Fixed some bugs;
-
 * V1.4.1 (2018-08-19)
   - Added `replace()` for high-speed transering your data;
   - Optimized the speed in reading .csv file;
@@ -179,7 +190,6 @@ Even if it uses Python original data structures, DaPy still has efficiency compa
   - Refactored the `Frame` and `SeriesSet` to improve the efficiency;
   - Supported to initialize Pandas and Numpy data structures;
   - Fixed some bugs;
-
 * V1.3.3 (2018-06-20)
   - Added `methods.LinearRegression` and `methods.ANOVA` ;
   - Added `io.encode()` for better adepting to Chinese;
@@ -190,19 +200,16 @@ Even if it uses Python original data structures, DaPy still has efficiency compa
   - Refactored the `DataSet`, which can manage multiple sheets at the same time;
   - Refactored the `Frame` and `SeriesSet`, delete the attributes' limitations;
   - Removed `DaPy.Table`;
-
 * V1.3.2 (2018-04-26)
-  - Added more useful functions for DaPy.DataSet;
-  - Added a new data structure called DaPy.Matrix;
+  - Added more useful functions for `DaPy.DataSet`;
+  - Added a new data structure called `DaPy.Matrix`;
   - Added some mathematic formulas (e.g. corr, dot, exp);
   - Added `Multi-Layers Perceptrons` to DaPy.machine_learn;
   - Added some standard dataset;
   - Optimized the loading function significantly;
-
 * V1.3.1 (2018-03-19)
   - Added the function which supports to save data as a csv file;
   - Fixed some bugs in the loading data function;
-
 * V1.2.5 (2018-03-15)
 
   - First public beta version of DaPy!  
@@ -218,12 +225,12 @@ Even if it uses Python original data structures, DaPy still has efficiency compa
 
 - ###### Maintainors  
 
-  1. Feichi YANG (@Nick Yang: yangfeichi@163.com)   
+  1. Xuansheng WU
 
 - ###### Developers
 
   1. Xuansheng WU
-  2. Feichi YANG  
+  2. Feichi YANG  (@Nick Yang: yangfeichi@163.com)  
 
 
 

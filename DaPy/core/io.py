@@ -1,15 +1,16 @@
-from .base import SeriesSet, Frame, Matrix
-from .base import is_seq, is_iter, is_value, is_math
-from .base.tools import str2value
 from os.path import split
 from warnings import warn
 
-def create_sheet(dtype, data, titles, miss_symbol, miss_value):
+from .base import Frame, Matrix, SeriesSet, is_iter, is_math, is_seq, is_value
+from .base import auto_str2value, fast_str2value, STR_TYPE, zip
+
+
+def create_sheet(dtype, data, titles, nan):
     if dtype.upper() in ('COL', 'SERIESSET'):
-        return SeriesSet(data, titles, miss_symbol, miss_value)
+        return SeriesSet(data, titles, nan)
 
     elif dtype.upper() == 'FRAME':
-        return Frame(data, titles, miss_symbol, miss_value)
+        return Frame(data, titles, nan)
 
     elif dtype.upper() == 'MATRIX':
         return Matrix(data, titles)
@@ -36,7 +37,7 @@ def parse_addr(addr):
                              'seems like "test.xls"')
     return file_path, file_name, file_base, file_type
 
-def parse_sql(addr, dtype, miss_symbol, miss_value):
+def parse_sql(addr, dtype, nan):
     try:
         import sqlite3 as sql3
     except ImportError:
@@ -55,12 +56,11 @@ def parse_sql(addr, dtype, miss_symbol, miss_value):
             titles = [title[1] for title in cur.fetchall()]
 
             try:
-                yield (create_sheet(dtype, data, titles, miss_symbol, miss_value),
-                       table)
+                yield (create_sheet(dtype, data, titles, nan), table)
             except UnicodeEncodeError:
                 warn("'ascii' can not encode characters, use dp.io.encode to fix.")
 
-def parse_sav(addr, dtype, miss_symbol, miss_value):
+def parse_sav(addr, dtype, nan):
     try:
         import savReaderWriter
     except ImportError:
@@ -70,9 +70,9 @@ def parse_sav(addr, dtype, miss_symbol, miss_value):
     with savReaderWriter.SavReader(addr) as reader:
         titles = reader.getSavFileInfo()[2]
         data = list(reader)
-        return create_sheet(dtype, data, titles, miss_symbol, miss_value)
+        return create_sheet(dtype, data, titles, nan)
 
-def parse_excel(dtype, addr, first_line, title_line, miss_symbol, miss_value):
+def parse_excel(dtype, addr, first_line, title_line, nan):
     try:
         import xlrd
     except ImportError:
@@ -93,17 +93,18 @@ def parse_excel(dtype, addr, first_line, title_line, miss_symbol, miss_value):
         else:
             titles = None
         try: 
-            yield (create_sheet(dtype, data, titles, miss_symbol, miss_value), sheet.name)
+            yield (create_sheet(dtype, data, titles, nan), sheet.name)
         except UnicodeEncodeError:
             warn('"ascii" can not encode characters, use dp.io.encode() to fix.')
 
-def parse_html(text, dtype, miss_symbol, miss_value, sheetname):
+def parse_html(text, dtype, miss_symbol, nan, sheetname):
     try:
         from bs4 import BeautifulSoup as bs
     except ImportError:
         raise ImportError('DaPy uses "bs4" to parse a .html file, '+\
                           'please try command: pip install bs4.')
-
+    if not is_iter(miss_symbol):
+        miss_symbol = [miss_symbol]
     soup = bs(text, 'html.parser')
     for table in soup.findAll('table'):
         sheet = table.attrs.get('class', [sheetname])[0]
@@ -116,34 +117,36 @@ def parse_html(text, dtype, miss_symbol, miss_value, sheetname):
             for record in table.find('tbody').findAll(['tr', 'div']):
                 current_record = []
                 for value in record.findAll(['td', 'th']):
-                    if value.find(['a', 'div']) is not None:
-                        current_record.append(value.find(['a', 'div']).text)
+                    while value.find(['a', 'div']) is not None:
+                        value = value.find(['a', 'div'])
+                    if value.text in miss_symbol:
+                        current_record.append(nan)
                     else:
-                        current_record.append(value.text)
-                records.append(map(str2value, current_record))
+                        current_record.append(auto_str2value(value.text))
+                if current_record != []:
+                    records.append(current_record)
 
             try:
-                yield (create_sheet(dtype, records, title, miss_symbol, miss_value), sheet)
+                yield (create_sheet(dtype, records, title, nan), sheet)
             except UnicodeEncodeError:
                 warn('"ascii" can not encode characters, use dp.io.encode() to fix.')
-        except AttributeError:
+        except RuntimeError:
             warn('Table "%s" can not be auto parsed.' % sheet)
             
 def write_txt(f, data, newline, delimiter, encode, decode):
     def writeline(f, record):
         msg = delimiter.join(map(str, record)) + newline
-        f.write(msg.decode(decode).encode(encode))
+        f.write(msg)
 
     if hasattr(data, 'columns'):
         writeline(f, data.columns)
 
-    if isinstance(data, (Frame, Matrix, SeriesSet)) or \
-       (is_seq(data) and is_seq(data[0])):
-        for line in filter(is_seq, data):
+    if isinstance(data, SeriesSet):
+        for line in zip(*list(data.values())):
             writeline(f, line)
 
     elif hasattr(data, 'items'):
-        if all(map(is_seq, data.values())):
+        if all(map(is_iter, data.values())):
             writeline(f, data.keys())
             temp = SeriesSet(data)
             for line in temp:
@@ -152,13 +155,13 @@ def write_txt(f, data, newline, delimiter, encode, decode):
         elif all(map(is_value, data.values())):
             for key, value in data.items():
                 writeline(f, [key, value])
-                
+
         else:
             raise ValueError('DaPy can save the object with same value styles only.')
 
-    elif is_seq(data):
+    elif is_iter(data) or isinstance(data, Frame):
         for record in data:
-            if is_seq(record):
+            if is_iter(record):
                 writeline(f, record)
             else:
                 writeline(f, [record])
@@ -169,8 +172,8 @@ def write_txt(f, data, newline, delimiter, encode, decode):
 def write_xls(worksheet, data, decode, encode):
     def writeline(f, i, record):
         for j, value in enumerate(record):
-            if isinstance(value, (str, unicode)):
-                value = value.decode(decode).encode(encode)
+            if isinstance(value, STR_TYPE):
+                value = value
             f.write(i, j, value)
             
     if hasattr(data, 'columns'):
@@ -180,14 +183,13 @@ def write_xls(worksheet, data, decode, encode):
         start = 0
 
     try:
-        if isinstance(data, (Frame, Matrix, SeriesSet)) or \
-           (is_seq(data) and is_seq(data[0])):
+        if isinstance(data, (Frame, Matrix, SeriesSet)):
             for i, row in enumerate(data, start):
                 writeline(worksheet, i, row)
                     
         elif hasattr(data, 'items'):
-            if all(map(is_seq, data.values())):
-                writeline(0, 0, data.keys())
+            if all(map(is_iter, data.values())):
+                writeline(worksheet, 0, data.keys())
                 temp = SeriesSet(data)
                 for i, line in enumerate(temp, 1):
                     writeline(worksheet, i, line)
@@ -199,9 +201,9 @@ def write_xls(worksheet, data, decode, encode):
             else:
                 raise ValueError('DaPy can save the object with same value styles only.')
 
-        elif is_seq(data):
+        elif is_iter(data) and is_iter(data[0]):
             for i, record in enumerate(data, start):
-                if is_seq(record):
+                if is_iter(record):
                     writeline(worksheet, i, record)
                 else:
                     writeline(worksheet, i, [record])
@@ -224,8 +226,8 @@ def write_html(f, data, encode, decode):
 
     f.write('<tbody>')
     if isinstance(data, (Frame, Matrix, SeriesSet)) or \
-       (is_seq(data) and is_seq(data[0])):
-        for line in filter(is_seq, data):
+       (is_iter(data) and is_iter(data[0])):
+        for line in filter(is_iter, data):
             writeline(f, line)
 
     elif hasattr(data, 'items'):
@@ -242,9 +244,9 @@ def write_html(f, data, encode, decode):
         else:
             raise ValueError('DaPy can save the object with same value styles only.')
 
-    elif is_seq(data):
+    elif is_iter(data):
         for record in data:
-            if is_seq(record):
+            if is_iter(record):
                 writeline(f, record)
             else:
                 writeline(f, [record])
@@ -284,8 +286,7 @@ def write_db(conn, sheet, data, if_exists):
                 cols.append('%s REAL' % column)
         cur.execute(u'CREATE TABLE %s(%s)' % (unicode(sheet), ','.join(cols)))
 
-    INSERT = 'INSERT INTO %s VALUES (%s)' % (\
-                sheet, ','.join(['?'] * data.shape.Col))
+    INSERT = 'INSERT INTO %s VALUES (%s)' % (sheet, ','.join(['?'] * data.shape.Col))
     for record in data:
         cur.execute(INSERT, record)
     conn.commit()

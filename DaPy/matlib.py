@@ -1,6 +1,10 @@
 from array import array
-from .core import Matrix, Frame, is_math, is_seq, is_iter, range, filter, zip
+from .core import Matrix, SeriesSet, Series
+from .core import nan, inf
+from .core import range, filter, zip, range
+from .core import is_math, is_seq, is_iter
 from collections import namedtuple, deque, Iterable, deque
+from itertools import repeat
 from warnings import warn
 import math
     
@@ -133,6 +137,14 @@ def create_mat(shape, num):
     matrix.make(shape[0], shape[1], num)
     return matrix
 
+def cumsum(series):
+    series, new = Series(series), Series()
+    init = 0
+    for value in series:
+        init += value
+        new.append(init)
+    return new
+
 def zeros(shape):
     return create_mat(shape, 0)
 
@@ -151,7 +163,7 @@ def log(data, base=2.71828183):
     if is_seq(data):
         if is_seq(data[0]):
             return [map(log, record, [base] * len(record)) for record in data]
-        return map(log, record, [base] * len(record))
+        return list(map(log, data, [base] * len(data)))
     return math.log(data, base)
 
 def boxcox(value, lambda_=1, a=0, k=1):
@@ -207,7 +219,7 @@ def _sum(data, axis=None):
         return _sum([line for line in zip(*data)], axis=1)
 
 def _max(data, axis=None):
-    data = Frame(data)
+    data = SeriesSet(data)
     if axis is None:
         return max(map(max, data))
     if axis == 0:
@@ -303,7 +315,7 @@ def cov(x, y=None, **kwrds):
         Ex = sum(X) / size
     if not Ey:
         Ey = sum(Y) / size
-    return sum([(x-Ex) * (y-Ey) for x, y in zip(X, Y)]) / (size-1)
+    return sum(((x-Ex) * (y-Ey) for x, y in zip(X, Y))) / (size - 1)
 
 def corr(x, y, method='pearson'):
     '''calculate the correlation between X and Y
@@ -349,7 +361,7 @@ def _corr_spearman(x, y):
             last_value, last_rank = value, rank
         return lst
         
-    data = Frame(zip(x, y), ['X', 'Y'])
+    data = SeriesSet({'X': x, 'Y': y})
     n = data.shape.Ln
     data.sort(('X', 'DESC'))
     data.append_col(rank(data.X), 'xRank')
@@ -393,7 +405,9 @@ def quantiles(data, shapes=[0.05,0.1,0.25,0.5,0.75,0.9,0.95]):
     return groups
 
 def distribution(data, breaks=10, x_label=False):
-    groups = [0 for i in range(breaks)]
+    assert isinstance(breaks, int)
+    data = Series(data)
+    groups = [0] * breaks
     maxn, minn = max(data), min(data)
     ranges = maxn - minn
     size = len(data)
@@ -407,6 +421,7 @@ def distribution(data, breaks=10, x_label=False):
         return ([minn+i*ranges/(breaks*2) for i in range(1, breaks+1)],
                 [float(i)/size for i in groups])
     return [float(i)/size for i in groups]
+
 
 def describe(data):
     '''
@@ -459,28 +474,31 @@ def describe(data):
     statistic = namedtuple('STAT',
                            ['Mean', 'S', 'Sn', 'CV', 'Range',
                             'Min', 'Max', 'Skew', 'Kurt'])
-    data = filter(is_math, data)
+    try:
+        data = array('f', x)
+    except:
+        data = array('f', filter(lambda x: is_math(x) and x != nan, data))
     size = float(len(data))
     if size == 0:
-        return statistic(None, None, None, None, None, None, None, None, None)
+        return statistic(*[None] * 9)
 
-    Ex = sum(data) / float(size)
-    Ex2 = sum(map(lambda x: x**2, data)) / size
-    Ex3 = sum(map(lambda x: x**3, data)) / size
-    Ex4 = sum(map(lambda x: x**4, data)) / size
+    Ex = sum(data) / size
+    Ex2 = sum((i ** 2 for i in data)) / size
+    Ex3 = sum((i ** 3 for i in data)) / size
+    Ex4 = sum((i ** 4 for i in data)) / size
 
-    std = (Ex2 - Ex**2)**0.5
+    std = (Ex2 - Ex**2) ** 0.5
     std_n = size / (size - 1.0) * std
-    try:
-        S = (Ex3 - 3*Ex*std**2 - Ex**3) / std ** 1.5
+    if std == 0:
+        S,K = '-','-'
+    else:
+        S = (Ex3 - 3 * Ex * std ** 2 - Ex ** 3) / std ** 1.5
         K = Ex4 / std ** 4 - 3
-    except ZeroDivisionError:
-        S, K = '-', '-'
     min_, max_ = min(data), max(data)
 
-    try:
+    if is_math(min_) and is_math(max_):
         rang = max_ - min_
-    except:
+    else:
         rang = None
     
     if Ex == 0:

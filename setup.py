@@ -1,22 +1,18 @@
 from setuptools import setup, find_packages
-from DaPy import __version__
+from DaPy import __version__, _unittests
 pkg = find_packages()
+_unittests()
 
 setup(
     name='DaPy',
     version=__version__,
-    description='Enjoy your tour in data mining',
+    description='Enjoy your Tour in Data Mining',
     classifiers=[
         'Development Status :: 4 - Beta',
         'Intended Audience :: Developers',
         'License :: OSI Approved :: GNU General Public License v3 (GPLv3)',
         'Programming Language :: Python :: 2',
         'Programming Language :: Python :: 3',
-        'Programming Language :: Python :: 3.3',
-        'Programming Language :: Python :: 3.4',
-        'Programming Language :: Python :: 3.5',
-        'Programming Language :: Python :: 3.6',
-        'Programming Language :: Python :: 3.7',
         'Intended Audience :: Developers',
         'Operating System :: OS Independent',
     ],
@@ -32,8 +28,10 @@ setup(
     package_data={'DaPy.datasets': ['adult/*.*', 'example/*.*', 'iris/*.*', 'wine/*.*']},
     zip_safe=True,
     install_requires=[
-        'xlrd>=1.1.0',     # Used for function DataSet.read()
-        'xlwt>=1.3.0',     # Used for function DataSet.save()
+        'requests',  # Used in DaPy.base.DataSet.DataSet.read()
+        'bs4',      # Used in DaPy.base.io.parse_html()
+        'xlrd >= 1.1.0',     # Used in DaPy.base.io.parse_excel()
+        'xlwt >= 1.3.0',     # Used in DaPy.base.DataSet.DataSet.save()
     ]
 
 )

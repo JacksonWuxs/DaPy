@@ -1,19 +1,23 @@
-from .tools import is_value, is_math, is_iter, is_seq, _str_types
-from .tools import auto_plus_one
-from .tools import range, filter_ as filter, map_ as map, zip_ as zip
 from datetime import datetime, timedelta
 
-class BaseSeries:
+from .constant import STR_TYPE, VALUE_TYPE
+from .tools import filter, map, range, xrange, zip
+from .tools import is_iter, is_math, is_seq, is_value, auto_plus_one
+
+
+class Series(object):
     def __init__(self, data=None, index=None, **kwrds):
         self._column = kwrds.get('column', 'Series')
-        self._miss_symbol = kwrds.get('na', None)
-        assert isinstance(self._column, _str_types), "name should be a str"
+        self._miss_symbol = kwrds.get('nan', None)
+        assert isinstance(self._column, STR_TYPE), "name should be a str"
         assert is_value(self._miss_symbol), "missing value should be a value"
         assert is_iter(index) or index is None, "index object is not iterable"
         assert is_iter(data) or data is None, 'data object is not iterable'
 
         self._index = []
         self._data = self._check_data(data)
+        if index is None and hasattr(data, '_index'):
+            index = data._index
         self._index = self._check_index(index)
         self._miss_value = self.data.count(self._miss_symbol)
         if len(self._index) != len(self._data):
@@ -25,7 +29,7 @@ class BaseSeries:
 
     @column.setter
     def column(self, value):
-        assert isinstance(value, _str_types)
+        assert isinstance(value, STR_TYPE)
         self._column = value
 
     @property
@@ -54,13 +58,13 @@ class BaseSeries:
 
     def _check_index(self, value):
         if value is None:
-            return list(range(len(self._data)))
-        return map(self._autoindex, value)
+            return range(len(self._data))
+        return [self._autoindex(value) for value in value]
 
     def _autoindex(self, index):
         if index is None:
             return self._autoindex(len(self))
-
+        
         if hasattr(self, 'index') and index not in self.index:
             return index
 
@@ -68,8 +72,7 @@ class BaseSeries:
             return self._autoindex(index + 1)
 
         if isinstance(index, datetime):
-            return _autoindex(index + timedelta(days=1))
-        
+            return self._autoindex(index + timedelta(days=1))
         return auto_plus_one(self._index, index)
         
 
@@ -81,23 +84,25 @@ class BaseSeries:
         self._index.__delitem__(self._index.index(index))
 
     def __eq__(self, other):
-        return BaseSeries(map(lambda x: x == other, self), self._index)
+        return Series(map(lambda x: x == other, self), self._index)
 
     def __getitem__(self, index):
-        if isinstance(index, BaseSeries) and len(index) == len(self):
+        if isinstance(index, Series) and len(index) == len(self):
             indexs = [i for i, value in zip(index._index, index) if value is True]
-            return BaseSeries(self.__getitem__(indexs), indexs)
+            return Series(self.__getitem__(indexs), indexs)
         
         if isinstance(index, (list, tuple)):
-            return BaseSeries([self[i] for i in index], index)
-        
+            return Series([self[i] for i in index], index)
+        #print(index, self._index)
         return self._data.__getitem__(self._index.index(index))
 
-    def __getslice__(self, start, stop, step):
-        assert isinstance(step, int), 'step should be a integer'
-        i = self._index.index(start)
-        j = self._index.index(stop)
-        return self._data.__getslice__(i, j, step)
+    def __getslice__(self, start, stop, step=None):
+        assert isinstance(step, int) or step is None, 'step should be an int or None'
+        if isinstance(start, STR_TYPE):
+            start = self._index.index(start)
+        if isinstance(start, STR_TYPE):
+            stop = self._index.index(stop)
+        return Series(self._data[start:stop:step])
 
     def __iter__(self):
         for value in self._data:
@@ -120,91 +125,122 @@ class BaseSeries:
         '''[1, 2, 3] + 3 -> [4, 5, 6]
         '''
         if is_iter(right) is True:
-            return BaseSeries([x + v for x, v in zip(self, right)], self._index)
-        return BaseSeries(map(lambda x: x + right, self), self._index)
+            return Series([x + v for x, v in zip(self, right)], self._index)
+        return Series(map(lambda x: x + right, self), self._index)
 
     def __radd__(self, left):
         '''3 + [1, 2, 3] -> [4, 5, 6]
         '''
         if is_iter(left) is True:
-            return BaseSeries([v + x for x, v in zip(self, left)], self._index)
-        return BaseSeries(map(lambda x: left + x, self), self._index)
+            return Series([v + x for x, v in zip(self, left)], self._index)
+        return Series(map(lambda x: left + x, self), self._index)
 
     def __sub__(self, right):
         '''[1, 2, 3] - 3 -> [-2, -1 ,0]
         '''
         if is_iter(right) is True:
-            return BaseSeries([x - v for x, v in zip(self, right)], self._index)
-        return BaseSeries(map(lambda x: x - right, self), self._index)
+            return Series([x - v for x, v in zip(self, right)], self._index)
+        return Series(map(lambda x: x - right, self), self._index)
         
     def __isub__(self, left):
         '''3 - [1, 2, 3] -> [2, 1, 0]
         '''
         if is_iter(left) is True:
-            return BaseSeries([v - x for x, v in zip(self, left)], self._index)
-        return BaseSeries(map(lambda x: left - x, self), self._index)
+            return Series([v - x for x, v in zip(self, left)], self._index)
+        return Series(map(lambda x: left - x, self), self._index)
 
     def __mul__(self, right):
         '''[1, 2, 3] * 3 -> [3, 6, 9]
         '''
         if is_iter(right) is True:
-            return BaseSeries([x * v for x, v in zip(self, right)], self._index)
-        return BaseSeries(map(lambda x: x * right, self), self._index)
+            return Series([x * v for x, v in zip(self, right)], self._index)
+        return Series(map(lambda x: x * right, self), self._index)
 
     def __imul__(self, left):
         '''3 * [1, 2, 3] -> [3, 6, 9]
         '''
         if is_iter(left) is True:
-            return BaseSeries([v * x for x, v in zip(self, left)], self._index)
-        return BaseSeries(map(lambda x: left * x, self), self._index)
+            return Series([v * x for x, v in zip(self, left)], self._index)
+        return Series(map(lambda x: left * x, self), self._index)
 
     def __div__(self, right):
         '''[1, 2, 3] / 2 -> [0.5, 1, 1.5]
         '''
         if is_iter(right) is True:
-            return BaseSeries([x / v for x, v in zip(self, right)], self._index)
-        return BaseSeries(map(lambda x: x / right, self), self._index)
+            return Series([x / v for x, v in zip(self, right)], self._index)
+        return Series(map(lambda x: x / right, self), self._index)
 
     def __idiv__(self, left):
         '''3 / [1, 2, 3] -> [3, 1.5, 1]
         '''
         if is_iter(left) is True:
-            return BaseSeries([v / x for x, v in zip(self, left)], self._index)
-        return BaseSeries(map(lambda x: left / x, self), self._index)
+            return Series([v / x for x, v in zip(self, left)], self._index)
+        return Series(map(lambda x: left / x, self), self._index)
 
     def __mod__(self, right):
         '''[1, 2, 3] % 3 -> [0, 0, 1]
         '''
         if is_iter(right) is True:
-            return BaseSeries([x % v for x, v in zip(self, right)], self._index)
-        return BaseSeries(map(lambda x: x % right, self), self._index)
+            return Series([x % v for x, v in zip(self, right)], self._index)
+        return Series(map(lambda x: x % right, self), self._index)
 
     def __imod__(self, left):
         '''3 % [1, 2, 3] -> [3, 1, 1]
         '''
         if is_iter(left) is True:
-            return BaseSeries([v % x for x, v in zip(self, left)], self._index)
-        return BaseSeries(map(lambda x: left % x, self), self._index)
+            return Series([v % x for x, v in zip(self, left)], self._index)
+        return Series(map(lambda x: left % x, self), self._index)
 
     def __pow__(self, right):
         '''[1, 2, 3] ** 2 -> [1, 4, 9]
         '''
         if is_iter(right) is True:
-            return BaseSeries([x ** v for x, v in zip(self, right)], self._index)
-        return BaseSeries(map(lambda x: x ** right, self), self._index)
+            return Series([x ** v for x, v in zip(self, right)], self._index)
+        return Series(map(lambda x: x ** right, self), self._index)
 
     def __float__(self):
         '''float([1, 2, 3]) -> [1.0, 2.0, 3.0]
         '''
-        return BaseSeries(map(float, self), self._index)
+        return Series(map(float, self), self._index)
 
     def __abs__(self):
         '''abs([-1, 2, -3]) -> [1, 2, 3]
         '''
-        return BaseSeries(map(abs, self), self._index)
+        return Series(map(abs, self), self._index)
 
     def append(self, value, index=None):
-        pass
+        self.index.append(self._autoindex(index))
+        self._data.append(value)
+
+    def insert(self, position, value, index=None):
+        if index is None and all(map(lambda x: isinstance(x, int), self.index)):
+            self.index.insert(position, position)
+        else:
+            self.index.insert(position, self._autoindex(index))
+        self._data.insert(position, value)
+
+    def extend(self, other):
+        assert hasattr(other, '__iter__')
+        other = Series(other)
+        self.index.extend(other.index)
+        self._data.extend(other)
+
+    def pop(self, index):
+        index = self.index.index(index)
+        self.index.pop(index)
+        return self._data.pop(index)
+
+    def remove(self, value):
+        index = self._data.index(value)
+        del self.index[index], self._data[index]
+
+    def count(self, value):
+        if isinstance(value, VALUE_TYPE):
+            try:
+                return self._data.count(value)
+            except ValueError:
+                return 0
+        return [self.count(value) for value in value]
 
     def apply(self, func, args=(), **kwrds):
         pass
@@ -272,6 +308,9 @@ class BaseSeries:
     def select(self):
         pass
 
+    def tolist(self):
+        return self._data
+
 
 if __name__ == '__main__':
-    s = BaseSeries()
+    s = Series()

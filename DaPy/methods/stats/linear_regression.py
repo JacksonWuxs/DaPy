@@ -6,7 +6,7 @@ from DaPy.core import is_math, is_seq
 from DaPy.matlib import _abs as abs
 from DaPy.matlib import _sum as sum
 from DaPy.matlib import corr, log, mean
-from DaPy.methods.tools import _engine2str, _str2engine
+from DaPy.methods.tools import engine2str, str2engine, _create_plot_reg
 from DaPy.operation import column_stack
 
 from warnings import warn
@@ -89,7 +89,8 @@ class LinearRegression:
         self._beta = self._engine.mat(beta)
         self._W = self._engine.mat(weight)
         self._C = constant
-        self._report = DataSet()
+        self._report = DataSet(log=False)
+        self._plot = None
 
     @property
     def engine(self):
@@ -133,14 +134,18 @@ class LinearRegression:
     def report(self):
         return self._report
 
+    @property
+    def plot(self):
+        return self._plot
+
     def __call__(self, x):
         return self.predict(x)
 
     def _mul(self, a, b):
         return self._engine.multiply(a, b)
 
-    def _mean(self, x):
-        return self._engine.mean(x)
+    def _mean(self, x, axis=None):
+        return self._engine.mean(x, None)
 
     def _pow(self, x, power=2):
         if isinstance(power, int):
@@ -148,7 +153,9 @@ class LinearRegression:
         x = mat(x.tolist())
         return x ** 0.5
         
-
+    def _sum(self, x, axis=None):
+        return self._engine.sum(x, axis)
+    
     def _get_weight(self, W, cols, X):
         
         if W is None:
@@ -203,7 +210,7 @@ class LinearRegression:
             if verbal is True:
                 print(' - Step %d Delete Variable: %s' % (step, dropout))
         else:
-            warn('there is no significant variable inside the dataset(X).')
+            warn('there is no significant variable inside the (X).')
 
     def _forward(self, variables, X, Y, W, enter, verbal=True):
         use = []
@@ -222,6 +229,7 @@ class LinearRegression:
         X, Y = self._engine.mat(mat(X)), self._engine.mat(mat(Y))
         y_, c = self._fit_ls(X, Y, W, kwrds['variables'])
         self._create_report(y_, c, X, Y, **kwrds)
+        self._plot = _create_plot_reg(y_, Y, self._res)
 
     def _fit_ls(self, x, y, w, cols):
         '''train model with (weight) least square method
@@ -248,10 +256,8 @@ class LinearRegression:
         return y_hat, [sqrt(abs(c[i][i])) for i in range(x.shape[1])]
 
     def _create_report(self, y_hat, c, x, y, **kwrds):
-        self._report = DataSet()
-        self._res = y - mat(y_hat.tolist()).T 
-        y_var = y_hat - self._mean(y)
-        self._SSR = sum(self._pow(y_var))
+        self._res = y - mat(y_hat.tolist()).T
+        self._SSR = sum(self._pow(y_hat - self._mean(y)))
         self._SSE = sum(self._pow(self._res))
 
         R2 = round(self._SSR / (self._SSE+self._SSR), 4)
@@ -259,6 +265,7 @@ class LinearRegression:
         n, p = x.shape
         cols = kwrds.get('variables', ['X%d' % i for i in range(1, p+1)])
 
+        self._report = DataSet(log=False)
         if kwrds.get('report', 'entire').lower() in ('basic', 'entire'):
             self._report.add(self._Summary(R2, n, p), 'Model Summary')
             self._report.add(self._ANOVA(n, p), 'ANOVA')
@@ -266,8 +273,10 @@ class LinearRegression:
         if kwrds.get('report', 'entire').lower() in ('advance', 'entire'):
             self._report.add(self._Corr(x, n ,p, cols), 'Residual Correlation')
             self._report.add(self._Perf(R2, n, p, Cp), 'Performance')
+            self._report.add(self._Coll(x, cols), 'Collinearity')
             self._report.add(self._Outliers(x, y_hat, n, p), 'Outliers')
-            
+        self.report.log = True
+        
     def _Summary(self, R2, n, p):
         rho_up = [v1[0] * v2[0] for v1, v2 in zip(self._res, self._res[1:])]
         rho_low = map(lambda x: x[0]**2, self._res[1:])
@@ -326,6 +335,17 @@ class LinearRegression:
                       round(n * log(self._SSE) + 2 * p, 2), Cp, RMSE])
         return table
 
+    def _Coll(self, X, cols):
+        X -= self._mean(X, axis=1)
+        X /= self._engine.std(X, axis=0)
+        C = X.T.dot(X).I.tolist()
+        Cj = [C[i][i] for i in range(len(C[0]))]
+
+        table = Frame(None, ['Variable', 'VIF', 'Tolerance'])
+        for col, Cj_ in zip(cols, Cj):
+            table.append([col, round(Cj_, 1), 1 / Cj_])
+        return table
+    
     def _Outliers(self, X, Y_h, n, p):
         H = X.dot(X.T.dot(X).I).dot(X.T).tolist()
         hs = mat([H[i][i] for i in range(n)])
@@ -435,7 +455,7 @@ class LinearRegression:
             print(" - Total Delete Records: %d" % dropout.shape.Ln)
 
         self._fit(X, Y, report='entire', **kwrds)
-        ds = DataSet(column_stack([X, Y]), 'Normal')
+        ds = DataSet(column_stack([X, Y]), 'Normal', log=False)
         ds.add(dropout, 'Abnormal')
         return ds
 

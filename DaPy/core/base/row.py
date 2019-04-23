@@ -1,58 +1,92 @@
-from copy import copy
 from collections import Iterable
-from .tools import _str_types
+from copy import copy
+from .constant import STR_TYPE, VALUE_TYPE, MATH_TYPE, SEQ_TYPE
+from .tools import range, xrange, map, zip, filter, is_iter
 
 __all__ = ['Row']
 
-class Row:
-    def __init__(self, sheet, i, line):
+class Row(object):
+    def __init__(self, sheet, line):
         self._sheet = sheet
-        self._columns = copy(sheet.columns)
-        self._line = i
-        self._data = line
+        self._line = line
 
-    def __getattr__(self, index):
-        if hasattr(self._data, index):
-            return getattr(self._data, index)
-        return self._data[self._columns.index(index)]
+    @property
+    def sheet(self):
+        return self._sheet
 
-    def __len__(self):
-        return len(self._data)
+    @property
+    def columns(self):
+        return self._sheet.columns
+
+    @property
+    def data(self):
+        _data = self._sheet.data
+        return [_data[title][self._line] for title in self.columns]
 
     def __iter__(self):
-        '''for value in row -> iter values
-        '''
-        for value in self._data:
-            yield value
+        for seq in self._sheet.values():
+            yield seq[self._line]
+
+    def __getattr__(self, index):
+        if index in self.columns:
+            return self.data[self.columns.index(index)]
+        raise AttributeError('has not attribute or column named %s.' % index)
+
+    def __eq__(self, y):
+        if is_iter(y) is True and len(y) == len(self):
+            for left, right in zip(self.data, y):
+                if left != right:
+                    return False
+            return True
+        return False
+
+    def __contains__(self, y):
+        return y in self.data
+
+    def __delitem__(self, y):
+        if y in self.columns:
+            self._sheet.__delitem__(y)
+        else:
+            self._sheet.__delitem__(self.columns[y])
+
+    def __len__(self):
+        return self._sheet.shape.Col
+
+    def __str__(self):
+        return self.__repr__()
 
     def __repr__(self):
-        return '%s' % str(self._data)
+        return '%s' % str(self.data)
 
     def __getitem__(self, index):
         if isinstance(index, int):
-            return self._data[index]
+            return self.data[index]
         
-        if isinstance(index, _str_types):
-            return self._data[self._columns.index(index)]
+        if isinstance(index, STR_TYPE):
+            return self.data[self.columns.index(index)]
         
         if isinstance(index, slice):
             if None == index.start and None == index.stop:
-                return self
+                return self.data
 
             if None == index.start:
-                if isinstance(index.stop, _str_types):
-                    return self._data[:self._columns.index(index.stop)+1]
-                return self._data[:index.stop]
+                if isinstance(index.stop, STR_TYPE):
+                    return self.data[:self.columns.index(index.stop)+1]
+                return self.data[:index.stop]
 
             if None == index.stop:
-                if isinstance(index.start, _str_types):
-                    return self._data[self._columns.index(index.start):]
-                return self._data[index.start:]
+                if isinstance(index.start, STR_TYPE):
+                    return self.data[self.columns.index(index.start):]
+                return self.data[index.start:]
 
-            if isinstance(index.start, _str_types):
-                return self._data[self._columns.index(index.start):
-                                  self._columns.index(index.stop)+1]
-            return self._data[index]
+            if isinstance(index.start, STR_TYPE):
+                return self.data[self.columns.index(index.start):
+                                  self.columns.index(index.stop)+1]
+            return self.data[index]
+
+        if isinstance(index, tuple):
+            return [self.__getitem__(subindex) for subindex in index]
+        
         raise AttributeError('unknow statement row[%s]' % index)
 
     def __setitem__(self, index, value):
@@ -60,12 +94,44 @@ class Row:
             raise NotImplementedError('unsupported set multiple values at the same time')
         
         elif isinstance(index, int):
-            if isinstance(self._sheet, SeriesSet):
-                self._sheet[self._columns[index]][self._line] = value
+            if isinstance(self._sheet.data, OrderedDict):
+                self._sheet.data[self.columns[index]][self._line] = value
             else:
-                self._sheet[self._line][index] = value
-            self._data[index] = value
-            if value == self._sheet._miss_symbol:
-                self._sheet._miss_value[index] += 1            
+                self.data[index] = value
+            if value == self._sheet.nan:
+                self._sheet._missing[index] += 1
+                
         else:
             raise ValueError('unknow statement row[%s] = %s' % (index, value))
+
+    def _get_new_column(self, value):
+        col = [self._sheet.miss_symbol] * self._sheet.shape.Ln
+        col[self._line] = value
+        return col
+    
+    def append(self, value):
+        append_col = self._get_new_column(value)
+        self._sheet.append_col(append_col)
+
+    def count(self, value):
+        return self.data.count(value)
+
+    def extend(self, iterable):
+        extend_col = [[self._sheet.miss_symbol] * len(iterable)\
+                      for i in range(self._sheet.shape.Ln)]
+        extend_col[self._line] = list(iterable)
+        self._sheet.extend_col(extend_col)
+
+    def index(self, value):
+        return self.data.index(value)
+
+    def insert(self, index, value):
+        append_col = self._get_new_column(value)
+        self._sheet.insert_col(index, append_col)
+ 
+    def pop(self, index):
+        return self._sheet.pop_col(index)[self._line]
+
+    def remove(self, value):
+        index = self.data.index(value)
+        self._sheet.pop_col(index)

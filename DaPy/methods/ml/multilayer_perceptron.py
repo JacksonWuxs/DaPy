@@ -5,16 +5,18 @@ from time import clock, localtime
 from DaPy.core import DataSet
 from DaPy.core import Matrix as mat
 from DaPy.core import is_math
-from DaPy.methods.functions import activation
-from DaPy.methods.tools import _engine2str, _str2engine
+from DaPy.core import LogInfo, LogWarn, LogErr
+from DaPy.core.base import STR_TYPE
+from DaPy.methods.functions import activators
+from DaPy.methods.tools import engine2str, str2engine
+from DaPy.methods.evaluator  import ConfuMat, Accuracy, Kappa
 
-from .Layers import Dense_Layer
+from .Layers import Dense, Input
 
 try:
     import cPickle as pkl
 except ImportError:
-    import Pickle as pkl
-
+    import pickle as pkl
 
 CELL = u'\u25CF'.encode('utf-8')
 ONE_CELL = u'\u2460'.encode('utf-8')
@@ -92,13 +94,13 @@ class MLP(object):
             in nagetive movement.
 
         '''
-        
         self._upfactor = upfactor               # Upper Rate
         self._downfactor = downfactor           # Down Rate
         self._alpha = alpha                     # Learning Rate
         self._beta = beta                       # transforming Rate
-        self._layer_list = []
-        self._engine = _str2engine(engine)      # which library for camputing
+        self._layers = []
+        self._engine = str2engine(engine)      # which library for camputing
+        self._activator = activators(self._engine)
         self._size = 0
         self._report = DataSet()
 
@@ -107,7 +109,7 @@ class MLP(object):
         '''Return a diction stored two weight matrix.
         '''
         weights = {}
-        for layer in self._layer_list:
+        for layer in self._layers:
             weights[layer.__repr__()] = layer._weight
         return weights
 
@@ -115,25 +117,28 @@ class MLP(object):
     def engine(self):
         '''Return the calculating tool that you are using
         '''
-        return _engine2str(self._engine)
+        return engine2str(self._engine)
 
     @engine.setter
     def engine(self, value):
         '''Reset the calculating library (DaPy or Numpy)
         '''
-        self._engine = _str2engine(value)
-        for layer in self._layer_list:
-            layer.engine = self._engine
+        self._engine = str2engine(value)
+        self._activator.engine = self._engine
 
     @property
     def report(self):
         return self._report
 
+    @property
+    def layers(self):
+        return self._layers
+
     def __repr__(self):
-        max_size_y = max([layer.shape[1] for layer in self._layer_list]) * 2
-        size_x = [layer.__repr__() for layer in self._layer_list]
+        max_size_y = max([layer.shape[1] for layer in self._layers]) * 2
+        size_x = [layer.__repr__() for layer in self._layers]
         print_col = list()
-        for layer in self._layer_list:
+        for layer in self._layers:
             blank = max_size_y / layer.shape[1]
             normal = [blank * i for i in range(1, 1 + layer.shape[1])]
             bias = - (max_size_y - max(normal) + min(normal)) / 2 
@@ -144,7 +149,7 @@ class MLP(object):
         output += '   '.join([ONE_CELL.center(len(name)) for name in size_x[:-1]]) + '\n'
         for i in range(1, 1 + max_size_y):
             line = ''
-            for j, layer in enumerate(self._layer_list):
+            for j, layer in enumerate(self._layers):
                 if i in print_col[j]:
                     line += CELL.center(len(size_x[j])) + '   '
                 else:
@@ -157,20 +162,24 @@ class MLP(object):
 
     def __getstate__(self):
         obj = self.__dict__.copy()
-        obj['_engine'] = _engine2str(self._engine)
+        del obj['_Error'], obj['_activator'], obj['_report']
+        obj['_engine'] = engine2str(self._engine)
         return obj
 
     def __setstate__(self, dict):
-        self._engine = _str2engine(dict['_engine'])
-        self._layer_list = dict['_layer_list']
+        self._engine = str2engine(dict['_engine'])
+        self._layers = dict['_layers']
         self._alpha = dict['_alpha']
         self._beta = dict['_beta']
         self._upfactor = dict['_upfactor']
         self._downfactor = dict['_downfactor']
+        self._Error = []
+        self._activator = activators(self._engine)
+        self._report = DataSet()
 
     def add_layer(self, layer):
-        self._layer_list.append(layer)
-        self._size = len(self._layer_list)
+        self._layers.append(layer)
+        self._size += 1
         
     def create(self, input_cell, output_cell, hidden_cell=None, func=None):
         ''' Create a new MLP model with multiable hiddent layers.
@@ -201,37 +210,31 @@ class MLP(object):
         >>> mlp.create(9, 4, [2, 2, 3], ['sigm', 'sigm', 'sigm', 'line'])
         ' - Create structure: 9 - 2 - 2 - 3 - 4'
         '''
-        # the layer cells in the list
-        cells = [input_cell]
-        if not hidden_cell:
-            # Formula comes from experience
-            cells.append(int((input_cell + output_cell)**0.5) + randint(1,11))
-        elif isinstance(hidden_cell, int) and hidden_cell > 0:
-            cells.append(hidden_cell)
-        elif all(map(isinstance, hidden_cell, [int] * len(hidden_cell))):
-            cells.extend(list(hidden_cell))
-        else:
-            raise AttributeError('unrecognized symbol `%s`'%hidden_cell)
-        cells.append(output_cell)
-
-        funcs = ['line']
-        if not func:
-            funcs += ['sigm'] * (len(cells) - 1)
-        if isinstance(func, list):
-            for every in func:
-                assert every in activation, ('invalid activation symbol as `%s`, '%every +\
-                                     'tanh, sigm, relu, softmax, radb and line.' )
-                funcs.append(every)
-        if len(funcs) != len(cells):
-            raise ValueError('the number of activation and layers do not match.')
+        cells = self._check_cells(input_cell, hidden_cell, output_cell)
+        funcs = self._check_funcs(func, len(cells) - 1)
+        assert len(funcs) == len(cells) - 1, 'the number of activations and layers do not match.'
         
-        self.add_layer(Dense_Layer(self._engine, cells[0], cells[0], 'Input_Layer', 'line'))
-        for i, cell in enumerate(cells[1:-1]):
-            new_layer = Dense_Layer(self._engine, cells[i], cell, i + 1, funcs[i + 1])
-            self.add_layer(new_layer)
-        self.add_layer(Dense_Layer(self._engine, cells[-2], cells[-1], 'Output_Layer', funcs[-1]))
-        return ' - Create structure: ' + ' - '.join(map(str, cells))
+        self.add_layer(Input(input_cell))
+        for i, (in_, out_, func_) in enumerate(zip(cells[:-1], cells[1:], funcs)):
+            actfun = self._activator.get_actfunc(func_)
+            self.add_layer(Dense(self._engine, in_, out_, actfun))
             
+        LogInfo('Create structure: ' + ' - '.join(['%s:%d' % (layer, layer.shape[1]) for layer in self.layers]))
+
+    def _check_cells(self, input_, hidden, output):
+        if hidden is None:
+            return [input_, int((input_ + output)**0.5) + randint(1,11), output]
+        if isinstance(hidden, int) and hidden > 0:
+            return [input_, hidden, output]
+        if all(map(isinstance, hidden, [int] * len(hidden))):
+            return [input_] + list(hidden) + [output]
+        raise ValueError('hidden layer must be integer or list of integers')
+
+    def _check_funcs(self, funcs, lenth_layer):
+        if funcs is None:
+            return ['tanh'] * (lenth_layer - 1) + ['sigm']
+        return check_activations(funcs)
+    
     def train(self, X, Y, train_time=500, verbose=True, mini_error=0.05):
         '''Fit your model
 
@@ -272,7 +275,7 @@ class MLP(object):
             self._backward(results, Y)
 
             if self._Error[-1] < mini_error:
-                print(' - Early stop with the target error rates.')
+                LogInfo('Early stop with the target error rates.')
                 break
 
             # show out information
@@ -280,40 +283,36 @@ class MLP(object):
                 spent = clock() - start
                 finish_rate = (term/(train_time+1.0))*100
                 last = spent/(finish_rate/100) - spent
-                print('    Completed: %.2f \t'%finish_rate +\
-                      'Remain Time: %.2f s\t'%last +\
-                      'Mean Error: %.2f'%self._Error[-1] + '%')
+                LogInfo('Finished: %.1f\t'%finish_rate + '%' +\
+                      'Rest: %.2fs\t'%last +\
+                      'ME: %.2f'%self._Error[-1] + '%')
                       
             elif term == 5:
                 spent = clock() - start
                 finish_rate = (term/(train_time+1.0))*100
                 last = spent/(finish_rate/100) - spent
-                print(' - Start: ' +\
-                      '-'.join(map(str, localtime()[:3])) + ' ' +\
-                      ':'.join(map(str, localtime()[3:6])) + ' ' +\
-                      'Remain: %.2f s\t'%last +\
-                      'Init Error: %.2f'%self._Error[-1] + '%') 
+                LogInfo('Remain: %.2fs\tInit Error: %.2f' % (last,self._Error[1])) 
                 
-        print(' - Total Spent: %.1f s\tFinal Error: %.4f'%(clock()-start,
+        LogInfo('Total Spent: %.1f s\tFinal Error: %.4f'%(clock()-start,
                                                 self._Error[-1]) + '%')
 
     def _foreward(self, data):
         output = [data, ]
-        for i, layer in enumerate(self._layer_list):
+        for i, layer in enumerate(self._layers):
             output.append(layer.propagation(output[-1]))
         return output
 
     def _backward(self, outputs, y_true):
         error = y_true - outputs[-1]
-        r = self._engine.mean(abs(error))
+        r = self._engine.mean(self._engine.abs(error))
         self._Error.append(r * 100)
-        self._alpha = self.__autoadjustlr()
-        for i, layer in enumerate(self._layer_list[::-1]):
+        self._alpha = self._autoadjustlr()
+        for i, layer in enumerate(self._layers[::-1]):
             error = layer.backward(outputs[self._size - i - 1],
                                    error, outputs[self._size - i],
                                    self._alpha, self._beta)
 
-    def __autoadjustlr(self):
+    def _autoadjustlr(self):
         if self._Error[-1] > self._Error[-2]:
             return self._alpha * self._upfactor
         return self._alpha * self._downfactor
@@ -327,8 +326,7 @@ class MLP(object):
         at the first place, and call self.train() function following.
         '''
         X, Y = mat(X), mat(Y)
-        if self._size == 0:
-            print(self.create(X.shape.Col, Y.shape.Col, hidden_cells, func))
+        self.create(X.shape.Col, Y.shape.Col, hidden_cells, func)
         self.train(X, Y, train_time, verbose, mini_error)
                                         
     def predict_proba(self, data):
@@ -349,11 +347,20 @@ class MLP(object):
     def save(self, addr):
         '''Save your model to a .pkl file
         '''
-        pkl.dump(self, open(addr, 'wb'))
+        if isinstance(fp, STR_TYPE):
+            fp = open(fp, 'wb')
+        try:
+            pkl.dump(self, open(addr, 'wb'))
+        finally:
+            fp.close()
 
-    def load(self, addr):
-        obj = pkl.load(open(addr, 'rb'))
-        self.__setstate__(obj.__getstate__())
+    def load(self, fp):
+        if isinstance(fp, STR_TYPE):
+            fp = open(fp, 'rb')
+        try:
+            self.__setstate__(pkl.load(fp).__getstate__())
+        finally:
+            fp.close()
 
     def plot_error(self):
         '''use matplotlib library to draw the error curve during the training.
@@ -367,40 +374,4 @@ class MLP(object):
             plt.show()
         except ImportError:
             raise ImportError('DaPy uses `matplotlib` to draw picture, try: pip install matplotlib.')
-            
-    def readpkl(self, addr):
-        '''Load your model from a .pkl file
-        '''
-        with open(addr) as f:
-            data = pkl.load(f)
-            
-        for i, weight in enumerate(data['weight']):
-            layer = Layer(self._engine, 0, 0, i, data['func'][i])
-            layer._weight = weight
-            self._layer_list.append(layer)
 
-    def performance(self, data, target, mode='clf'):
-        if len(data) != len(target):
-            raise IndexError("the number of target data is not equal to variable data")
-
-        result, target = mat(self.predict_proba(data)), mat(target)
-        if mode == 'clf':
-            error = 0
-            if all(map(is_math, target)):
-                for i in range(len(data)):
-                    if target[i][0] > 0.5 and result[i][0] < 0.5:
-                        error += 1
-                    if target[i][0] < 0.5 and result[i][0] > 0.5:
-                        error += 1
-            else:
-                for t, r in zip(target, result):
-                    if t.index(max(t)) != r.index(max(r)):
-                        error += 1
-            return ' - Classification Correct: %.4f'%(\
-                (1 - float(error)/len(target))*100) + '%'
-        
-        elif mode == 'reg':
-            return ' - Regression MSE: %.4f' % sqrt(self._engine.mean((target - result) ** 2))
-        
-        else:
-            raise ValueError("`mode` supports `clf` or `reg` only.")
