@@ -1,5 +1,5 @@
 ﻿from copy import copy
-from .core import DataSet, Frame, SeriesSet, Matrix as mat
+from .core import DataSet, Frame, SeriesSet, Matrix as mat, Series
 from .core import is_seq, is_math, is_value, range, filter, zip
 
 def merge(*datas, **kwrds):
@@ -77,20 +77,25 @@ def delete(data, index, axis=0):
             for i in index:
                 del line[i]
             new.append(line)
-        return mat(new, False)
+        return mat(new)
     
     if axis == 0:
         index = sorted(index, reverse=True)
         new = [line for i, line in enumerate(data) if i not in index]
-        return mat(new, False)
+        return mat(new)
 
 def concatenate(tup, axis=0):
+    '''Stack 1-D data as columns or rows into a 2-D SeriesSet
+        concatenate([A, B], axis=0) -> Horizentally combine A & B
+        concatenate([A, B], axis=1) -> Vertically join A & B
+        Detail see: DaPy.column_stack or DaPy.row_stack
+    '''
     if axis == 1:
         return column_stack(tup)
     return row_stack(tup)
 
 def column_stack(tup):
-    '''Stack 1-D data as columns into a 2-D data.
+    '''Stack 1-D data as columns into a 2-D dataset.
 
     Parameters
     ----------
@@ -105,8 +110,8 @@ def column_stack(tup):
     --------
     >>> one = [1, 1, 1]
     >>> two = [2, 2, 2]
-    >>> else = [[3, 3, 3], [4, 4, 4] [5, 5, 5]]
-    >>> np.columns_stack([one, two, else])
+    >>> else_ = [[3, 3, 3], [4, 4, 4] [5, 5, 5]]
+    >>> dp.columns_stack([one, two, else])
     matrix(|1.0  2   3   3   3 |
            |1.0  2   4   4   4 |
            |1.0  2   5   5   5 |)
@@ -121,33 +126,30 @@ def column_stack(tup):
             data = SeriesSet(tup[0])
 
         for other in tup[1:]:
-            data.extend_col(other)
+            data.join(other)
         return data
+
+    if isinstance(tup[0], mat):
+        new = tup[0]
+        for other in tup[1:]:
+            assert is_value(other) is False, 'can not stack a number into a column.'
+            other = mat(other)
+            assert other.shape.Ln == new.shape.Ln
+            for current_row, other_row in zip(new,  other):
+                current_row.extend(other_row)
+        new._dim = mat.dims(new.shape.Ln, new.shape.Col + other.shape.Col)
+        return new
     
     if not isinstance(tup[0], mat):
-        if hasattr(tup[0], 'tolist'):
-            tup[0] = tup[0].tolist()
-        tup[0] = mat(copy(tup[0]), True)
+        tup[0] = mat(copy(tup[0]))
         return column_stack(tup)
-    
-    new = tup[0]
-    for data in tup[1:]:
-        if is_value(data):
-            raise TypeError('can not stack a number into a column.')
-
-        if hasattr(data, 'tolist'):
-            data = data.tolist()
-        if all(map(is_seq, data)):
-            for current, append in zip(new, data):
-                current.extend(append)
-        else:
-            for current, append in zip(new, data):
-                current.append(append)
-    return mat(new)
 
 def row_stack(tup):
     if isinstance(tup, tuple):
         tup = list(tup)
+
+    if isinstance(tup[0], Series):
+        tup[0] = SeriesSet(tup[0])
 
     if isinstance(tup[0], (Frame, SeriesSet)):
         if isinstance(tup[0], Frame):
@@ -162,10 +164,10 @@ def row_stack(tup):
     if not isinstance(tup[0], mat):
         if hasattr(tup[0], 'tolist'):
             tup[0] = tup[0].tolist()
-        tup[0] = mat(copy(tup[0]), True)
+        tup[0] = mat(copy(tup[0]))
         return row_stack(tup)
     
-    new = copy(tup[0]).data
+    new = copy(tup[0]).src
     for data in tup[1:]:
         if is_value(data):
             raise TypeError('can not stack a number into a row.')
@@ -208,7 +210,7 @@ def get_dummies(data, value=1, dtype='mat'):
            ┃0 0 0 1┃
            ┃1 0 0 0┃
            ┗       ┛)
-    >>> get_dummies(list('abdddcadacc'), 'f', 'frame')
+    >>> get_dummies(data=list('abdddcadacc'), value='f', dtype='frame')
      a | c | b | d
     ---+---+---+---
      f | 0 | 0 | 0 
@@ -225,6 +227,7 @@ def get_dummies(data, value=1, dtype='mat'):
     '''
     assert is_value(value), 'parameter should be a value, not %s' % type(value)
     assert is_seq(data), 'converted object should be a sequence'
+    assert str(dtype).lower() in ('frame', 'set', 'mat', 'matrix', 'seriesset')
 
     settle = tuple(set(data))
     dummies = [[0] * len(settle) for i in range(len(data))]
@@ -237,7 +240,7 @@ def get_dummies(data, value=1, dtype='mat'):
         return Frame(dummies, settle)
     if dtype.lower() in ('set', 'seriesset'):
         return SeriesSet(dummies, settle)
-    if dtype.lower() == 'mat':
+    if dtype.lower() in ('mat', 'matrix'):
         return mat(dummies)
 
     

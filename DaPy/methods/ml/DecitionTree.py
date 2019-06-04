@@ -166,7 +166,7 @@ if __name__ == '__main__':
         lensesLabelsTem = SeriesSet(lenses, lensesLabels)
     X, Y = lensesLabelsTem[:'tearRate'], lensesLabelsTem.Target
     mytree = DecisionTree()
-    mytree.fit(X, Y, ['Yes', 'No', 'Unsure'], lensesLabels
+    mytree.fit(X, Y, ['Yes', 'No', 'Unsure'], lensesLabels)
     graph = pydotplus.graph_from_dot_data(mytree.export_graphviz())
     graph.write_pdf(r'C:\Users\JacksonWoo\Desktop\boston.pdf')
 

@@ -6,6 +6,7 @@ from .core import is_math, is_seq, is_iter
 from collections import namedtuple, deque, Iterable, deque
 from itertools import repeat
 from warnings import warn
+from functools import reduce
 import math
     
 __all__ = ['dot', 'multiply', 'exp', 'zeros', 'ones', 'C', 'P',
@@ -67,7 +68,7 @@ def _abs(data):
                 new[i] = map(abs, line)
             except TypeError:
                 new[i] = abs(line)
-        return Matrix(new, check=False)
+        return Matrix(new)
     
     if is_math(data):
         return abs(data)
@@ -112,14 +113,14 @@ def dot(matrix_1, matrix_2):
                         for j in range(col_size_1))
             new_line.append(sumup)
         new_.append(new_line)
-    return Matrix(new_, check=False)
+    return Matrix(new_)
 
 def exp(other):
     if hasattr(other, 'shape'):
         new = [0] * other.shape[0]
         for i, line in enumerate(other):
             new[i] = map(math.exp, line)
-        return Matrix(new, check=False)
+        return Matrix(new)
     
     if is_math(other):
         return math.exp(other)
@@ -133,9 +134,7 @@ def exp(other):
     raise TypeError('expects an iterable or numeric for exp(), got %s'%type(other))
 
 def create_mat(shape, num):
-    matrix = Matrix()
-    matrix.make(shape[0], shape[1], num)
-    return matrix
+    return Matrix().make(shape[0], shape[1], num)
 
 def cumsum(series):
     series, new = Series(series), Series()
@@ -145,6 +144,15 @@ def cumsum(series):
         new.append(init)
     return new
 
+def count(df, value, axis=None):
+    assert axis in (None, 0, 1)
+    if axis == None:
+        if hasattr(container, 'count'):
+            return container.count(value)
+    if axis == 1:
+        if hasattr(container, 'count'):
+            return c
+
 def zeros(shape):
     return create_mat(shape, 0)
 
@@ -152,9 +160,7 @@ def ones(shape):
     return create_mat(shape, 1)
 
 def diag(values):
-    matrix = Matrix()
-    matrix.make_eye(len(values), values)
-    return matrix
+    return Matrix().make_eye(len(values), values)
 
 def diff(seq, lag=1):
     return [seq[i] - seq[i-lag] for i in range(lag, len(seq))]
@@ -264,7 +270,7 @@ def mean(data, axis=None):
     if axis is None:
         if hasattr(data, 'shape'):
             return float(_sum(data, axis)) / _sum(data.shape)
-        if is_seq(data):
+        if is_seq(data) or isinstance(data, Series):
             if is_seq(data[0]):
                 return float(_sum(data, axis)) / (len(data[0]) + len(data))
             return float(_sum(data, axis)) / len(data)
@@ -275,7 +281,16 @@ def mean(data, axis=None):
         size = float(len(data))
     else:
         size = float(len(data[0]))
-    return Matrix([value / size for value in _sum(data, axis)]).T
+        
+    result = Matrix([value / size for value in _sum(data, axis)]).T
+    if result.shape.Ln == result.shape.Col == 1:
+        return result[0][0]
+    return result
+
+def std(data, axis=None):
+    Ex = mean(data)
+    Ex2 = sum((i ** 2 for i in data)) / len(data)
+    return (Ex2 - Ex**2) ** 0.5
 
 def cov(x, y=None, **kwrds):
     '''
@@ -363,9 +378,9 @@ def _corr_spearman(x, y):
         
     data = SeriesSet({'X': x, 'Y': y})
     n = data.shape.Ln
-    data.sort(('X', 'DESC'))
+    data = data.sort(('X', 'DESC'))
     data.append_col(rank(data.X), 'xRank')
-    data.sort(('Y', 'DESC'))
+    data = data.sort(('Y', 'DESC'))
     data.append_col(rank(data.Y), 'yRank')
     return _corr_pearson(data.xRank, data.yRank)
 

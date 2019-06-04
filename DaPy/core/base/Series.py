@@ -1,8 +1,14 @@
+from copy import copy
 from datetime import datetime, timedelta
 
-from .constant import STR_TYPE, VALUE_TYPE
-from .tools import filter, map, range, xrange, zip
-from .tools import is_iter, is_math, is_seq, is_value, auto_plus_one
+try:
+    from numpy import darray
+except ImportError:
+    darray = list
+
+from .constant import STR_TYPE, VALUE_TYPE, SEQ_TYPE
+from .utils import filter, map, range, xrange, zip
+from .utils import is_iter, is_math, is_seq, is_value, auto_plus_one
 
 
 class Series(object):
@@ -35,17 +41,13 @@ class Series(object):
     @property
     def data(self):
         return self._data
-
-    @data.setter
-    def data(self, value):
-        self._data = self._check_data(value)
             
     @property
-    def index(self):
-        return self._index
+    def index_(self):
+        return copy(self._index)
 
-    @index.setter
-    def index(self, value):
+    @index_.setter
+    def index_(self, value):
         self._index = self._check_index(value)
 
     def __repr__(self):
@@ -54,18 +56,20 @@ class Series(object):
     def _check_data(self, value):
         if value is None:
             return list()
-        return list(value)
+        if isinstance(value, list) is False:
+            return list(value)
+        return value
 
     def _check_index(self, value):
         if value is None:
-            return range(len(self._data))
+            value= range(len(self._data))
         return [self._autoindex(value) for value in value]
 
     def _autoindex(self, index):
         if index is None:
             return self._autoindex(len(self))
         
-        if hasattr(self, 'index') and index not in self.index:
+        if hasattr(self, 'index') and index not in self.index_:
             return index
 
         if isinstance(index, int):
@@ -93,8 +97,11 @@ class Series(object):
         
         if isinstance(index, (list, tuple)):
             return Series([self[i] for i in index], index)
-        #print(index, self._index)
-        return self._data.__getitem__(self._index.index(index))
+        if index in set(self._index):
+            return self._data.__getitem__(self._index.index(index))
+        if isinstance(index, int):
+            return self._data.__getitem__(index)
+        raise ValueError('"%s" is not a index in the series' % index)
 
     def __getslice__(self, start, stop, step=None):
         assert isinstance(step, int) or step is None, 'step should be an int or None'
@@ -209,30 +216,36 @@ class Series(object):
         return Series(map(abs, self), self._index)
 
     def append(self, value, index=None):
-        self.index.append(self._autoindex(index))
+        self.index_.append(self._autoindex(index))
         self._data.append(value)
 
+    def abs(self):
+        return self.__abs__()
+
     def insert(self, position, value, index=None):
-        if index is None and all(map(lambda x: isinstance(x, int), self.index)):
-            self.index.insert(position, position)
+        if index is None and all(map(lambda x: isinstance(x, int), self.index_)):
+            self.index_.insert(position, position)
         else:
-            self.index.insert(position, self._autoindex(index))
+            self.index_.insert(position, self._autoindex(index))
         self._data.insert(position, value)
+
+    def index(self, value):
+        return self._data.index(value)
 
     def extend(self, other):
         assert hasattr(other, '__iter__')
         other = Series(other)
-        self.index.extend(other.index)
+        self._index.extend(other.index_)
         self._data.extend(other)
 
     def pop(self, index):
-        index = self.index.index(index)
-        self.index.pop(index)
+        index = self.index_.index(index)
+        self.index_.pop(index)
         return self._data.pop(index)
 
     def remove(self, value):
         index = self._data.index(value)
-        del self.index[index], self._data[index]
+        del self.index_[index], self._data[index]
 
     def count(self, value):
         if isinstance(value, VALUE_TYPE):
@@ -242,8 +255,13 @@ class Series(object):
                 return 0
         return [self.count(value) for value in value]
 
-    def apply(self, func, args=(), **kwrds):
-        pass
+    def apply(self, func, inplace=False):
+        assert inplace in (True, False)
+        assert callable(func), 'func expects callable object'
+
+        if inplace is False:
+            return Series(map(func, self._data), self._index)
+        self.data = map(func, self._data)
 
     def idxmax(self):
         pass
@@ -251,13 +269,10 @@ class Series(object):
     def idxmin(self, skipna=False):
         pass
 
-    def sort(self, **kwrds):
+    def sort(self, key=None, reverse=False):
         pass
 
     def between(self, left, right):
-        pass
-
-    def corr(self, other, method='pearson'):
         pass
 
     def count(self, value, range='all'):
@@ -279,9 +294,6 @@ class Series(object):
         pass
 
     def isna(self):
-        pass
-
-    def items(self):
         pass
 
     def keys(self):
@@ -308,9 +320,15 @@ class Series(object):
     def select(self):
         pass
 
-    def tolist(self):
+    def to_list(self):
         return self._data
 
+    def to_array(self):
+        try:
+            from numpy import array
+        except ImportError:
+            raise ImportError("can't find numpy")
+        else:
+            return array(self._data)
 
-if __name__ == '__main__':
-    s = Series()
+SEQ_TYPE += (Series,)

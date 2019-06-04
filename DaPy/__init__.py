@@ -26,7 +26,7 @@ Enjoy the tour in data mining!
 __all__ = [ 'Frame', 'SeriesSet', 'mat', 'DataSet', 'datasets', 'methods',
             'exp', 'dot', 'multiply', 'zeros', 'ones', 'C', 'P', 'add',
             'diag', 'log', 'boxcox', 'cov', 'corr', 'frequency', 'quantiles',
-            'distribution', 'describe', 'mean', 'abs', 'max', 
+            'distribution', 'describe', 'mean', 'abs', 'max', 'nan', 'inf', 
             'sum', 'diff', 'read', 'encode', 'save', 'delete', 'column_stack',
             'merge', 'row_stack', 'boxcox', 'show_time', 'get_dummies']
 
@@ -43,7 +43,7 @@ from datetime import datetime
 __title__ = 'DaPy'
 __description__ = 'Enjoy the tour in data mining !'
 __url__ = 'http://dapy.kitgram.cn'
-__version__ = '1.9.1'
+__version__ = '1.10.1 - Alpha'
 __build__ = 0x201904
 __author__ = 'Xuansheng Wu (wuxsmail@163.com)'
 __license__ = '''DaPy  Copyright (C) 2018 - 2019 WU Xuansheng'+\
@@ -52,7 +52,7 @@ __license__ = '''DaPy  Copyright (C) 2018 - 2019 WU Xuansheng'+\
               and you are welcome to redistribute it under certain
               conditions; type `show c' for details.'''
 __copyright__ = 'Copyright 2018-2019 Xuansheng Wu.'
-__date__ = datetime(2019, 4, 23)
+__date__ = datetime(2019, 4, 27)
 
 def _unittests():
     from unittest import TestSuite, defaultTestLoader, TextTestRunner

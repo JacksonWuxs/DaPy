@@ -1,29 +1,22 @@
 ﻿from collections import namedtuple
 from math import sqrt
+from functools import reduce
 
+from .distribution import Fcdf, Tcdf
 from DaPy.core import DataSet, Frame, SeriesSet, Matrix as mat
 from DaPy.core import is_math, is_seq
+from DaPy.core.base import LogInfo, LogWarn, STR_TYPE
 from DaPy.matlib import _abs as abs
 from DaPy.matlib import _sum as sum
 from DaPy.matlib import corr, log, mean
 from DaPy.methods.tools import engine2str, str2engine, _create_plot_reg
 from DaPy.operation import column_stack
 
-from warnings import warn
 
 __all__ = ['LinearRegression']
 
-try:
-    from scipy.stats import f, t  
-except ImportError:
-    def unsupportedTest(*args, **kwrds):
-        return '-'
-    Fcdf, Tcdf = unsupportedTest, unsupportedTest
-    warn('DaPy uses `scipy` to compute p-value, try: pip install scipy.')
-else:
-    Fcdf, Tcdf = f.cdf, t.cdf
 
-class LinearRegression:
+class LinearRegression(object):
     '''Linear Regression Model
 
     This class will help you develop a ``Linear Regression Model`` calculated
@@ -85,7 +78,7 @@ class LinearRegression:
     
     '''
     def __init__(self, engine='Numpy', beta=None, weight=None, constant=True):
-        self._engine = _str2engine(engine)
+        self._engine = str2engine(engine)
         self._beta = self._engine.mat(beta)
         self._W = self._engine.mat(weight)
         self._C = constant
@@ -180,19 +173,21 @@ class LinearRegression:
             return self._engine.diag(W)
 
     def _stepwise(self, X, Y, W, enter, drop, verbal=True):
-        print(' - Step 0 Enter Variable: %s' % X.columns[0])
+        LogInfo('Step 0 Enter: %s' % X.columns[0])
         use, useless = X.columns[:1], X.columns[1:]
+        
         for step, new in enumerate(useless, 1):
             testify = use + [new]
             self._fit(X[testify], Y, W, report='basic')
+            
             if self._report.Coefficients.data.Sig[-1] <= enter:
-                print(' - Step %d Enter Variable: %s' % (step, new))
+                LogInfo('Step %d Enter: %s' % (step, new))
                 keep_use = set(self._backward(testify, X, Y, W, drop, False))
                 drop_use = list(set(use) - keep_use)
                 use = list(keep_use)
                 useless.extend(drop_use)
                 if drop_use != []:
-                    print(' - Step %d Delete Variable: %s' % (step, '|'.join(drop_use)))
+                    LogInfo('Step %d Delete: %s' % (step, '|'.join(drop_use)))
         else:
             self.fit(X[use], Y, W)
             return use
@@ -204,13 +199,15 @@ class LinearRegression:
             self._fit(X[variables], Y, W, report='basic')
             report = self._report.Coefficients.data
             coef_max = max(report.Sig[self._C:])
+            
             if coef_max <= enter:
                 return variables
+            
             dropout = variables.pop(report.Sig[self._C:].index(coef_max))
             if verbal is True:
-                print(' - Step %d Delete Variable: %s' % (step, dropout))
+                LogInfo('Step %d Delete: %s' % (step, dropout))
         else:
-            warn('there is no significant variable inside the (X).')
+            LogWarn('there is no significant variable inside the (X).')
 
     def _forward(self, variables, X, Y, W, enter, verbal=True):
         use = []
@@ -219,7 +216,7 @@ class LinearRegression:
             if self._report.Coefficients.data.Sig[-1] <= enter:
                 use.append(variable)
                 if verbal is True:
-                    print(' - Step %d Enter Variable: %s' % (step, variable))
+                    LogInfo('Step %d Enter: %s' % (step, variable))
         else:
             return use     
         
@@ -227,6 +224,8 @@ class LinearRegression:
         if hasattr(X, 'columns'):
             kwrds['variables'] = list(X.columns)
         X, Y = self._engine.mat(mat(X)), self._engine.mat(mat(Y))
+        if Y.shape[0] < Y.shape[1]:
+            Y = Y.T
         y_, c = self._fit_ls(X, Y, W, kwrds['variables'])
         self._create_report(y_, c, X, Y, **kwrds)
         self._plot = _create_plot_reg(y_, Y, self._res)
@@ -249,6 +248,7 @@ class LinearRegression:
         if self.constant is True:
             cols.insert(0, 'Constant')
             x = self._engine.column_stack([[1] * x.shape[0], x])
+            
         w = self._get_weight(w, cols, x)
         self._beta = x.T.dot(w).dot(x).I.dot(x.T).dot(w).dot(y)
         c = x.T.dot(x).I.tolist()
@@ -270,6 +270,7 @@ class LinearRegression:
             self._report.add(self._Summary(R2, n, p), 'Model Summary')
             self._report.add(self._ANOVA(n, p), 'ANOVA')
             self._report.add(self._Coeff(c, n, p, cols), 'Coefficients')
+            
         if kwrds.get('report', 'entire').lower() in ('advance', 'entire'):
             self._report.add(self._Corr(x, n ,p, cols), 'Residual Correlation')
             self._report.add(self._Perf(R2, n, p, Cp), 'Performance')
@@ -280,22 +281,21 @@ class LinearRegression:
     def _Summary(self, R2, n, p):
         rho_up = [v1[0] * v2[0] for v1, v2 in zip(self._res, self._res[1:])]
         rho_low = map(lambda x: x[0]**2, self._res[1:])
-        table = Frame(None, ['R', u'R\u00B2', u'Adj-R\u00B2', 'DW'])
-        table.append([round(sqrt(R2), 4), R2,
-                      round(1-((1-R2)*(n-1))/(n-p-1.0), 4),
-                      round(2 - 2*sum(rho_up) / sum(rho_low), 4)])
+        R = round(sqrt(R2), 4)
+        AdjR2 = round(1-((1-R2)*(n-1))/(n-p-1.0), 4)
+        DW = round(2 - 2*sum(rho_up) / sum(rho_low), 4)
+        table = SeriesSet(None, ['R', u'R\u00B2', u'Adj-R\u00B2', 'DW'])
+        table.append_row([R, R2, AdjR2, DW])
         return table
 
     def _ANOVA(self, n, p):
         M, N = p, n - p - 1.0
         F = round((self._SSR/M) / (self._SSE/N), 4)
         sig = 1 - Fcdf(F, M, N)
-        table = Frame(None,
-                ['Source', 'df', 'Sum Square', 'Mean Square', 'F', 'Sig'],
-                miss_value='')
-        table.append(['Regression', int(M), self._SSR, self._SSR/M, F, '%.4f' % sig])
-        table.append(['Residual', int(N), self._SSE, round(self._SSE/N, 4)])
-        table.append(['Total', int(N+M), self._SSE+self._SSR])
+        table = SeriesSet(None, ['Source', 'df', 'Sum Square', 'Mean Square', 'F', 'Sig'], nan='')
+        table.append_row(['Regression', int(M), self._SSR, self._SSR/M, F, '%.4f' % sig])
+        table.append_row(['Residual', int(N), self._SSE, round(self._SSE/N, 4)])
+        table.append_row(['Total', int(N+M), self._SSE+self._SSR])
         return table
 
     def _Coeff(self, c, n, p, cols):
@@ -303,20 +303,20 @@ class LinearRegression:
         betas = self._beta.T.tolist()[0]
         t = [round(beta_ / (c_ * sigma_hat), 4) for c_, beta_ in zip(c, betas)]
         sigs = map(lambda x: round(2 * Tcdf(min(x, -x), n-p), 4), t)
-        table = Frame(None, ['Method', 'Beta', 't', 'Sig'])
+        table = SeriesSet(None, ['Method', 'Beta', 't', 'Sig'])
         for col, beta_, t_, sig_ in zip(cols, betas, t, sigs):
-            table.append([col, beta_, t_, sig_])
+            table.append_row([col, beta_, t_, sig_])
         return table
 
     def _Corr(self, X, n, p, cols):
         abs_res = abs(self._res).tolist()
-        table = Frame(None, ['Variable', 'Spearman', 't', 'Sig'])
+        table = SeriesSet(None, ['Variable', 'Spearman', 't', 'Sig'])
         for i, col_ in enumerate(cols[self._C:]):
             seq = X[:, i].T.tolist()[0]
             rs = round(corr(seq, abs_res, 'spearman'), 4)
             t = round(sqrt(n - 2) * rs / sqrt(1 - rs**2), 4)
             sig = 2 * round(Tcdf(min(t, -t), n-2), 4)
-            table.append([col_, rs, t, sig])
+            table.append_row([col_, rs, t, sig])
         return table
 
     def _Perf(self, R2, n ,p, Cp):
@@ -329,10 +329,10 @@ class LinearRegression:
             m, SSEm = (p, self._SSE)
         Cp = round((n - m - 1.0) * self._SSE / SSEm - float(n) + 2.0 * p, 3)
         RMSE = round(sqrt(self._mean(self._pow(self._res))), 6)
-
-        table = Frame(None, [u'R\u00B2\u2090', 'AIC', u'C\u209A', 'RMSE'])
-        table.append([round(1 - (n-1) / (n-p-1.0) * (1 - R2), 4),
-                      round(n * log(self._SSE) + 2 * p, 2), Cp, RMSE])
+        R2a = round(1 - (n-1) / (n-p-1.0) * (1 - R2), 4)
+        AIC = round(n * log(self._SSE) + 2 * p, 2)
+        table = SeriesSet(None, [u'R\u00B2\u2090', 'AIC', u'C\u209A', 'RMSE'])
+        table.append_row([R2a, AIC, Cp, RMSE])
         return table
 
     def _Coll(self, X, cols):
@@ -341,9 +341,9 @@ class LinearRegression:
         C = X.T.dot(X).I.tolist()
         Cj = [C[i][i] for i in range(len(C[0]))]
 
-        table = Frame(None, ['Variable', 'VIF', 'Tolerance'])
+        table = SeriesSet(None, ['Variable', 'VIF', 'Tolerance'])
         for col, Cj_ in zip(cols, Cj):
-            table.append([col, round(Cj_, 1), 1 / Cj_])
+            table.append_row([col, round(Cj_, 1), 1 / Cj_])
         return table
     
     def _Outliers(self, X, Y_h, n, p):
@@ -356,7 +356,7 @@ class LinearRegression:
         CookDis = self._pow(self._res) / ((p + 1) * sigma_hat ** 2) * hs / self._pow(1 - hs)
         mean_h = 3 * (p+1.0) / n
 
-        table = Frame(None, ['Index', 'y_', 'error', 'hi', 'SRE(i)', 'CookDis', 'Influential', 'Outlier'])
+        table = SeriesSet(None, ['Index', 'y_', 'error', 'hi', 'SRE(i)', 'CookDis', 'Influential', 'Outlier'])
         for i, (y, e, h, sre, d) in enumerate(zip(Y_h.tolist()[0], self._res.T.tolist()[0],
                                     hs.T.tolist()[0], SRE_del.T.tolist()[0],
                                    CookDis.T.tolist()[0])):
@@ -366,7 +366,7 @@ class LinearRegression:
                 record[6] = 'YES'
             if sre > 3 or d > 1:
                 record[7] = 'YES'
-            table.append(record)
+            table.append_row(record)
         return table
 
     def fit(self, X, Y, W=None, method='enter', **kwrds):
@@ -424,11 +424,12 @@ class LinearRegression:
         He X & Liu W. Applied Regression Analysis. China People's University
         Publication House. 2015.
         '''
-        assert isinstance(method, (str, unicode)), 'method parameter should be a str'
+        assert isinstance(method, STR_TYPE), 'method parameter should be a str'
         assert method.lower() in ('enter', 'backward', 'foreward', 'stepwise')
         self._C = kwrds.get('constant', 1)
         if hasattr(X, 'columns') is False:
             kwrds['variables'] = ['C_%d' % i for i in range(mat(X).shape.Col)]
+
         if method.lower() == 'enter':
             self._fit(X, Y, W, **kwrds)
             return
@@ -449,13 +450,13 @@ class LinearRegression:
         dropout = SeriesSet(None, list(X.columns))
         while "YES" in self.report['Outliers']['Outlier']:
             delete_index = self.report['Outliers'].select('Outlier == "YES"')['Index']
-            pop_x, pop_y = X.pop(delete_index), Y.pop(delete_index)
+            pop_x, pop_y = X.pop_row(delete_index), Y.pop_row(delete_index)
             dropout.extend(column_stack([pop_x, pop_y]))
             self._fit(X, Y, report='advance', **kwrds)
-            print(" - Total Delete Records: %d" % dropout.shape.Ln)
+            LogInfo("Total Delete Records: %d" % dropout.shape.Ln)
 
         self._fit(X, Y, report='entire', **kwrds)
-        ds = DataSet(column_stack([X, Y]), 'Normal', log=False)
+        ds = DataSet(column_stack([SeriesSet(X), Y]), 'Normal', log=False)
         ds.add(dropout, 'Abnormal')
         return ds
 

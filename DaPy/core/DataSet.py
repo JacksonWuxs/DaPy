@@ -213,7 +213,7 @@ class DataSet(object):
 
         temp = DataSet()
         for sheet, data in zip(self._sheets, self._data):
-            if hasattr(data, name):
+            if hasattr(data, name) or (hasattr(data, 'columns') and name in data.columns):
                 temp.add(data.__getattr__(name), sheet)
 
         if temp.level == 0:
@@ -585,12 +585,11 @@ class DataSet(object):
         corrs = list()
         new_title = list()
         for sheet, data in zip(self._sheets, self._data):
-            if hasattr(data, 'corr'):
-                try:
-                    corrs.append(data.corr(method))
-                    new_title.append(self._sheets[i])
-                except Exception as e:
-                    LogErr('sheet:%s.corr() failed, because %s' %(sheet, e))                    
+            try:
+                corrs.append(data.corr(method))
+                new_title.append(sheet)
+            except Exception as e:
+                LogErr('sheet:%s.corr() failed, because %s' %(sheet, e))                    
         return DataSet(corrs, new_title)
 
     @_timer
@@ -1107,17 +1106,18 @@ class DataSet(object):
         24 | 24 
         '''
         if isinstance(other, DataSet):
-            map(self.extend_col, other._data)
+            for left, right in zip(self._data, other._data):
+                left.join(right)
             return
 
         for sheet, data in zip(self._sheets, self._data):
             if hasattr(data, 'join') is False:
-                LogErr('sheet: %s has no attribute extend_col(), ignored.' % sheet)
+                LogErr('sheet: %s has no attribute join(), ignored.' % sheet)
                 continue
             try:
                 data.join(other)
             except Exception as e:
-                LogErr('sheet: %s.extend_col() failed because %s.'%(sheet, e))
+                LogErr('sheet: %s.join() failed because %s.'%(sheet, e))
 
     @_timer     
     def normalized(self, process='NORMAL', col='all', **kwrds):
@@ -1479,14 +1479,14 @@ class DataSet(object):
                                            nan):
                 self.add(sheet, name)
 
-        elif ftype == 'txt' or ftype == 'csv':
-            sep = kwrd.get('sep', ',')
+        elif ftype in ('txt', 'csv'):
+            sep = kwrd.get('sep')
             if not isinstance(sep, str):
                 sep_dic = {'csv':',', 'txt':'\t'}
                 kwrd['sep'] = sep_dic[ftype]
 
             dtype_dic = {'COL': SeriesSet, 'SERIESSET': SeriesSet, 
-                         'MATRIX': Matrix, 'MAT': Matrix, 'Frame': Frame}
+                         'MATRIX': Matrix, 'MAT': Matrix, 'FRAME': Frame}
             data = dtype_dic.get(dtype.upper(), SeriesSet)(nan=nan)
             kwrd['nan'] = miss_symbol
             data.from_file(addr, **kwrd)
@@ -1699,7 +1699,7 @@ class DataSet(object):
         decode = kwrds.get('decode', 'utf-8')
         ftype = kwrds.get('ftype', ftype)
         
-        if ftype == 'csv' or ftype == 'txt':
+        if ftype in ('csv', 'txt'):
             newline = kwrds.get('newline', '\n')
             delimiter = kwrds.get('delimiter', ',')
             for data, sheet in zip(self._data, self._sheets):
@@ -1735,7 +1735,6 @@ class DataSet(object):
             with sql.connect(addr) as conn:
                 for data, sheet in zip(self._data, self._sheets):
                     write_db(conn, sheet, data, kwrds.get('if_exists', 'fail'))
-                
 
         elif ftype == 'html':
             with open(addr, 'w') as f:

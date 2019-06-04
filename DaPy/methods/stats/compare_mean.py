@@ -1,12 +1,15 @@
-from DaPy.matlib import mean, std, sqrt
+from DaPy.matlib import mean, std
+from math import sqrt
 from DaPy.core import Series
-from scipy.stats import t as t_dist
+from .distribution import Tcdf
+from collections import namedtuple
 
-def ttest(x, mu=0, sigma=1):
-      x = Series(x)
-      sample_mu = mean(x)
-      sample_sigma = std(x)
+IndTTest = namedtuple('IndependentTTest', ['T', 'n', 'center', 'pvalue'])
+
+def IndependentTTest(x, center=0, alpha=.05):
       n = len(x)
-      t = (sample_mu - mu) / (sample_sigma / sqrt(n))
-      pvalue = t_dist.isf(alpha / 2.0, df=n-1)
-      return t, p
+      mu = mean(x)
+      sigma = sum(map(lambda x: (x - mu) ** 2, x)) / (n - 1)
+      t = (mu - center) / sqrt(sigma / (n - 1))
+      pvalue = Tcdf(t, n-1)
+      return IndTTest(t, n, center, round(pvalue, 4))

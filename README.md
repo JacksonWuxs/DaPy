@@ -2,22 +2,17 @@
 
 DaPy - Enjoy the Tour in Data Mining
 ====
-![](https://img.shields.io/badge/Version-1.7.2Beta-green.svg)  ![](https://img.shields.io/badge/Python2.x-pass-green.svg)![](https://img.shields.io/badge/Python3.x-testing-red.svg)![](https://img.shields.io/badge/Download-PyPi-green.svg)  ![](https://img.shields.io/badge/License-GNU-blue.svg)
+![](https://img.shields.io/badge/Version-1.9.2Beta-green.svg)  ![](https://img.shields.io/badge/Python2.x-pass-green.svg)![](https://img.shields.io/badge/Python3.x-testing-red.svg)![](https://img.shields.io/badge/Download-PyPi-green.svg)  ![](https://img.shields.io/badge/License-GNU-blue.svg)
 
 **DaPy**'s easy-to-use API designs and professinal statistical reports of models can help you enjoy the journey of data mining. In order to approach this goal, DaPy provides you some flexible and powerful high-level __data structures__, some __statistical functions__ and __machine learning models__.
 
 [Installation](#installation) | [Features](#features) | [Quick Start](https://github.com/JacksonWuxs/DaPy/blob/master/doc/Quick%20Start/English.md ) | [To Do List](#todo) | [Version Log](#version-log) | [License](#license) | [Guide Book](https://github.com/JacksonWuxs/DaPy/tree/master/doc/Guide%20Book/README.md) | [中文版](https://github.com/JacksonWuxs/DaPy/blob/master/README_Chinese.md)
 
 ## Installation
-The latest version 1.8.1 had been upload to PyPi.
+The latest version 1.9.1 had been updated to PyPi.
 ```
 pip install DaPy
 ```
-Updating your last version to 1.8.1 with PyPi as follow.
-```
-pip install -U DaPy
-```
-
 It should be noticed that DaPy still works on Python 2.x only. We are trying to make it avaliable on Python 3 as soon as possible. If you are interesting in using DaPy on Python 3, some of functions may cause unexpected issues.
 
 

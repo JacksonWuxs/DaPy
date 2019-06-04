@@ -7,20 +7,19 @@ from logging import (info as LogInfo, warning as LogWarn,
                      error as LogErr, basicConfig, INFO)
 
 basicConfig(level=INFO, format=' - %(message)s')
+sysVersion = version_info.major
 
 nan = float('nan')
-inf = float('inf')   
-VALUE_TYPE = [type(None), int, float, str, complex,
-                datetime, struct_time, bool]
-STR_TYPE = [str]
+inf = float('inf')
+STR_TYPE = [str, bytes]
 MATH_TYPE = [int, float, complex]
-SEQ_TYPE = [list, tuple, deque, array, set, frozenset]
+VALUE_TYPE = [bool, type(None)] 
+SEQ_TYPE = [list, tuple, deque, array, set, frozenset, bytearray]
 
 try:
     import cPickle as pickle
 except ImportError:
     import pickle
-
 
 try:
     from numpy import ndarray
@@ -35,13 +34,14 @@ if version_info.major == 2:
     VALUE_TYPE.extend([unicode, long])
     MATH_TYPE.append(long)
     STR_TYPE.append(unicode)
+   
 
 try:
     import cPickle as pickle
 except ImportError:
     import pickle
 
-VALUE_TYPE = tuple(VALUE_TYPE)
+VALUE_TYPE = tuple(VALUE_TYPE + STR_TYPE + MATH_TYPE)
 STR_TYPE = tuple(STR_TYPE)
 MATH_TYPE = tuple(MATH_TYPE)
 SEQ_TYPE = tuple(SEQ_TYPE)

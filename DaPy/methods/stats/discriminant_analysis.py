@@ -6,9 +6,9 @@ from DaPy.methods.evaluator import Accuracy, Kappa, ConfuMat
 
 __all__ = ['LinearDiscriminantAnalysis']
 
-class DiscriminantAnalysis:
+class DiscriminantAnalysis(object):
     def __init__(self, engine='numpy', solve='FISHER'):
-        self._engine = _str2engine(engine)
+        self._engine = str2engine(engine)
         self._solve = solve
         self._confumat = None
         self._report = DataSet()
@@ -35,13 +35,13 @@ class DiscriminantAnalysis:
     def engine(self):
         '''Return the calculating tool that you are using
         '''
-        return _engine2str(self._engine)
+        return engine2str(self._engine)
 
     @engine.setter
     def engine(self, value):
         '''Reset the calculating library (DaPy or Numpy)
         '''
-        self._engine = _str2engine(value)
+        self._engine = str2engine(value)
 
     def _create_report(self, **kwrds):
         self._report = DataSet()

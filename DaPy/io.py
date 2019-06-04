@@ -27,12 +27,12 @@ def save(addr, data, **kward):
 def encode(code='cp936'):
     '''change the python environment encode
     '''
-    from sys import version_info, stdin, stdout, stderr
-    if version_info.major == 2:
-        from sys import setdefaultencoding
-        stdi, stdo, stde = stdin, stdout, stderr
+    import sys
+    if sys.version_info.major == 2:
+        stdi, stdo, stde = sys.stdin, sys.stdout, sys.stderr
         reload(sys)
-        stdin, stdout, stderr = stdi, stdo, stde
+        sys.stdin, sys.stdout, sys.stderr = stdi, stdo, stde
+        from sys import setdefaultencoding
         setdefaultencoding(code)
 
 

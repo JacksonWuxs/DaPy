@@ -212,6 +212,13 @@ def is_iter(obj):
     else:
         return False
 
+def isnan(value):
+    if isinstance(value, float):
+        if value > 0 or value < 0 or value == 0:
+            return False
+        return True
+    return False
+
 def is_seq(obj):
     ''' Determine that if a variable is a sequence object
     '''
@@ -223,14 +230,17 @@ def is_empty(obj):
     '''determine whether a object is empty'''
     if hasattr(obj, 'empty'):
         return obj.empty
+    
     if isinstance(obj, (dict, list, deque, Counter, OrderedDict, set)):
         if obj in (dict(), list(), deque(), Counter(), OrderedDict(), set()):
             return True
         return False
+    
     if hasattr(obj, '__len__'):
         if len(obj) == 0:
             return True
         return False
+    
     if is_iter(obj):
         return False
     raise TypeError('can not determine whether %s is empty' % type(obj))

@@ -1,7 +1,7 @@
-from collections import Iterable
+from collections import Iterable, OrderedDict
 from copy import copy
 from .constant import STR_TYPE, VALUE_TYPE, MATH_TYPE, SEQ_TYPE
-from .tools import range, xrange, map, zip, filter, is_iter
+from .utils import range, xrange, map, zip, filter, is_iter
 
 __all__ = ['Row']
 
@@ -61,9 +61,9 @@ class Row(object):
     def __getitem__(self, index):
         if isinstance(index, int):
             return self.data[index]
-        
+
         if isinstance(index, STR_TYPE):
-            return self.data[self.columns.index(index)]
+            return self._sheet._data[index][self._line]
         
         if isinstance(index, slice):
             if None == index.start and None == index.stop:
@@ -94,11 +94,17 @@ class Row(object):
             raise NotImplementedError('unsupported set multiple values at the same time')
         
         elif isinstance(index, int):
-            if isinstance(self._sheet.data, OrderedDict):
-                self._sheet.data[self.columns[index]][self._line] = value
+            if isinstance(self._sheet.data, dict):
+                self._sheet._data[self.columns[index]][self._line] = value
             else:
                 self.data[index] = value
             if value == self._sheet.nan:
+                self._sheet._missing[index] += 1
+
+        elif isinstance(index, STR_TYPE):
+            self._sheet._data[index][self._line] = value
+            if self._sheet._isnan(value):
+                index = self.columns[index]
                 self._sheet._missing[index] += 1
                 
         else:
@@ -135,3 +141,9 @@ class Row(object):
     def remove(self, value):
         index = self.data.index(value)
         self._sheet.pop_col(index)
+
+    def tolist(self):
+        return self.data
+
+
+SEQ_TYPE += (Row,)

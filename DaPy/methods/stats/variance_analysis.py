@@ -1,15 +1,6 @@
 from collections import namedtuple
 from DaPy.core import is_math, SeriesSet, DataSet, Series
-
-try:
-    from scipy.stats import f
-except ImportError:
-    def unsupportedTest(*args, **kwrds):
-        return '-'
-    Fcdf = UnsupportTest
-    warn('DaPy uses scipy to compute p-value, try: pip install scipy.')
-else:
-    Fcdf = f.cdf
+from .distribution import Fcdf
 
 __all__ = ['ANOVA']
 

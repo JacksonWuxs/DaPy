@@ -172,8 +172,6 @@ def write_txt(f, data, newline, delimiter, encode, decode):
 def write_xls(worksheet, data, decode, encode):
     def writeline(f, i, record):
         for j, value in enumerate(record):
-            if isinstance(value, STR_TYPE):
-                value = value
             f.write(i, j, value)
             
     if hasattr(data, 'columns'):
@@ -182,7 +180,7 @@ def write_xls(worksheet, data, decode, encode):
     else:
         start = 0
 
-    try:
+    if True:
         if isinstance(data, (Frame, Matrix, SeriesSet)):
             for i, row in enumerate(data, start):
                 writeline(worksheet, i, row)
@@ -211,8 +209,8 @@ def write_xls(worksheet, data, decode, encode):
         else:
             raise ValueError('DaPy can save a sequence object, dict-like object ' +\
                              'and sheet-like object only.')
-    except ValueError:
-        warn('.xls format only allows 65536 lines per sheet.')
+##    except ValueError:
+##        warn('.xls format only allows 65536 lines per sheet.')
 
 def write_html(f, data, encode, decode):
     def writeline(f, record):
@@ -278,6 +276,7 @@ def write_db(conn, sheet, data, if_exists):
     if sheet not in tables:
         cols = []
         for column, records in data.items():
+            column = column.replace(' ', '').replace('-', '').replace(':', '')
             if not all(map(is_math, records)):
                 cols.append('%s STRING' % column)
             elif all(map(isinstance, records, [float] * data.shape.Ln)):
