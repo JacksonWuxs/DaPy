@@ -3,6 +3,7 @@ from .core import Matrix, SeriesSet, Series
 from .core import nan, inf
 from .core import range, filter, zip, range
 from .core import is_math, is_seq, is_iter
+from .core.base import STR_TYPE
 from collections import namedtuple, deque, Iterable, deque
 from itertools import repeat
 from warnings import warn
@@ -344,7 +345,7 @@ def corr(x, y, method='pearson'):
         the method used to calculate correlation.
         ("pearson" and "spearman" are supported).
     '''
-    assert isinstance(method, (str, unicode)), 'method should be a str or unicode'
+    assert isinstance(method, STR_TYPE), 'method should be a str or unicode'
     assert method in ('pearson', 'spearman'), 'method should be "pearson" or "spearman"'
     if method.lower() == 'pearson':
         return _corr_pearson(x, y)

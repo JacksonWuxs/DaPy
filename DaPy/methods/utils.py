@@ -6,7 +6,16 @@ __all__ = ['_label', 'score_binary_clf']
 
 _binary_perf_result = namedtuple('binary_clf', ['TP', 'FN', 'FP', 'TN'])
 
-def _create_plot_reg(y_hat, y, res):
+def check_input_data(data, engine):
+    assert hasattr(engine, 'mat')
+    data = engine.mat(data)
+    if data.shape[0] < data.shape[1]:
+        data = data.T
+    if hasattr(data, 'astype'):
+        data = data.astype('float32')
+    return data    
+
+def plot_reg(y_hat, y, res):
     try:
         from matplotlib import pyplot as plt
     except ImportError:
@@ -41,7 +50,7 @@ def _create_plot_reg(y_hat, y, res):
             wspace=0.2, hspace=0.8)
     return plt
 
-def _tolist(lst):
+def tolist(lst):
     if hasattr(lst, 'tolist'):
         return lst.tolist()
     elif hasattr(lst, 'list'):

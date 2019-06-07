@@ -8,11 +8,12 @@ __all__ = ['str2value', 'get_sorted_index', 'hash_sort',
            'range', 'xrange', 'map', 'zip', 'filter']
 
 if version_info.major == 2:
-    from itertools import izip, imap, ifilter
+    from itertools import izip, imap, ifilter, izip_longest as zip_longest
     from string import split
     range, xrange, map, zip, filter = range, xrange, imap, izip, ifilter
 
 if version_info.major == 3:
+    from itertools import zip_longest
     xrange = range
     range = lambda x: list(xrange(x))
     split, map, filter, zip = str.split, map, filter, zip

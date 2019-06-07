@@ -8,7 +8,7 @@ from DaPy.core import is_math
 from DaPy.core import LogInfo, LogWarn, LogErr
 from DaPy.core.base import STR_TYPE
 from DaPy.methods.functions import activators
-from DaPy.methods.tools import engine2str, str2engine
+from DaPy.methods.utils import engine2str, str2engine
 from DaPy.methods.evaluator  import ConfuMat, Accuracy, Kappa
 
 from .Layers import Dense, Input

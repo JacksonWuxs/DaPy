@@ -9,7 +9,7 @@ from DaPy.core.base import LogInfo, LogWarn, STR_TYPE
 from DaPy.matlib import _abs as abs
 from DaPy.matlib import _sum as sum
 from DaPy.matlib import corr, log, mean
-from DaPy.methods.tools import engine2str, str2engine, _create_plot_reg
+from DaPy.methods.utils import engine2str, str2engine, plot_reg, check_input_data
 from DaPy.operation import column_stack
 
 
@@ -40,31 +40,52 @@ class LinearRegression(object):
     >>> lr.report.show()
     sheet:Model Summary
     ===================
-       R    |  R²  | Adj-R² |   DW  
-    --------+------+--------+--------
-     0.9798 | 0.96 | 0.9556 | 3.4255 
+       R    |  R²  |  Adj-R² |   DW  
+    --------+------+---------+--------
+     0.9798 | 0.96 |  0.9556 | 3.4255 
     sheet:ANOVA
     ===========
-       Source   | df |   Sum Square   |  Mean Square  |       F       |  Sig 
-    ------------+----+----------------+---------------+---------------+--------
-     Regression | 1  | 21.8183175034  | 21.8183175034 | 216.033587103 | 0.0000 
-      Residual  | 9  | 0.908955223881 |     0.101     |               |        
-       Total    | 10 | 22.7272727273  |               |               |        
+       Source   | df |     Sum Square     |    Mean Square    |    F     |  Sig  
+    ------------+----+--------------------+-------------------+----------+--------
+     Regression | 1  | 21.81831750339431  | 21.81831750339431 | 216.0333 | 0.0000 
+      Residual  | 9  | 0.9089563142024417 |       0.101       |          |        
+       Total    | 10 | 22.727273817596753 |                   |          |        
     sheet:Coefficients
     ==================
       Method  |      Beta      |    t    | Sig
-    ----------+----------------+---------+------
-     Constant | 12.4985074627  | 54.7277 | 0.0  
-        X1    | 0.598507462687 | 14.6981 | 0.0  
+    ----------+----------------+---------+-----
+     Constant | 12.4985074627  | 54.7277 | 0.0 
+        X1    | 0.598507462687 | 14.6981 | 0.0 
     sheet:Residual Correlation
     ==========================
-     Variable | Spearman | t | Sig
-    ----------+----------+---+------
-    sheet:Method Performance
-    ========================
-      R²ₐ   | AIC  |  Cₚ
-    --------+------+-----
-     0.9556 | 0.95 | 0.0 
+     Variable | Spearman |    t    |  Sig  
+    ----------+----------+---------+--------
+        X1    | -0.0394  | -0.1183 | 0.9084 
+    sheet:Performance
+    =================
+     R²ₐ | AIC  | Cₚ |   RMSE  
+    --------+------+------+----------
+     0.9556 | 0.95 | 0.0  | 0.287459 
+    sheet:Collinearity
+    ==================
+     Variable | VIF |   Tolerance  
+    ----------+-----+---------------
+     Constant | 0.1 | 10.9999996722 
+    sheet:Outliers
+    ==============
+     Index |    y_   |  error  |   hi  | SRE(i) | CookDis | Influential | Outlier
+    -------+---------+---------+-------+--------+---------+-------------+---------
+       0   |  13.097 |  -0.097 | 0.275 | -0.359 |  0.027  |             |         
+       1   | 13.6955 |  0.3045 | 0.157 | -0.333 |  0.011  |             |         
+       2   |  14.294 |  -0.294 | 0.072 | -0.317 |  0.004  |             |         
+       3   | 14.8925 |  0.1075 |  0.02 | -0.308 |  0.001  |             |         
+       4   |  15.491 |  -0.491 |  0.0  | -0.305 |   0.0   |             |         
+       5   |  15.491 |  0.509  |  0.0  | -0.305 |   0.0   |             |         
+       6   | 16.0896 | -0.0896 | 0.014 | -0.307 |  0.001  |             |         
+       7   | 16.0896 | -0.0896 | 0.014 | -0.307 |  0.001  |             |         
+       8   | 16.6881 |  0.3119 |  0.06 | -0.315 |  0.004  |             |         
+       9   | 17.2866 | -0.2866 | 0.139 | -0.329 |   0.01  |             |         
+       10  | 17.8851 |  0.1149 | 0.251 | -0.353 |  0.023  |             |         
     >>> lr([3])
     matrix([[14.29402985]])
     >>>
@@ -81,7 +102,7 @@ class LinearRegression(object):
         self._engine = str2engine(engine)
         self._beta = self._engine.mat(beta)
         self._W = self._engine.mat(weight)
-        self._C = constant
+        self._constant = constant
         self._report = DataSet(log=False)
         self._plot = None
 
@@ -95,7 +116,7 @@ class LinearRegression(object):
     def engine(self, value):
         '''Reset the calculating library (DaPy or Numpy)
         '''
-        self._engine = _str2engine(value)
+        self._engine = str2engine(value)
 
     @property
     def beta(self):
@@ -107,7 +128,7 @@ class LinearRegression(object):
 
     @property
     def constant(self):
-        if self._C == 1:
+        if self._constant == 1:
             return True
         return False
 
@@ -198,12 +219,12 @@ class LinearRegression(object):
         while len(variables) != 0:
             self._fit(X[variables], Y, W, report='basic')
             report = self._report.Coefficients.data
-            coef_max = max(report.Sig[self._C:])
+            coef_max = max(report.Sig[self._constant:])
             
             if coef_max <= enter:
                 return variables
             
-            dropout = variables.pop(report.Sig[self._C:].index(coef_max))
+            dropout = variables.pop(report.Sig[self._constant:].index(coef_max))
             if verbal is True:
                 LogInfo('Step %d Delete: %s' % (step, dropout))
         else:
@@ -221,14 +242,9 @@ class LinearRegression(object):
             return use     
         
     def _fit(self, X, Y, W=None, **kwrds):
-        if hasattr(X, 'columns'):
-            kwrds['variables'] = list(X.columns)
-        X, Y = self._engine.mat(mat(X)), self._engine.mat(mat(Y))
-        if Y.shape[0] < Y.shape[1]:
-            Y = Y.T
         y_, c = self._fit_ls(X, Y, W, kwrds['variables'])
         self._create_report(y_, c, X, Y, **kwrds)
-        self._plot = _create_plot_reg(y_, Y, self._res)
+        self._plot = plot_reg(y_, Y, self._res)
 
     def _fit_ls(self, x, y, w, cols):
         '''train model with (weight) least square method
@@ -249,18 +265,18 @@ class LinearRegression(object):
             cols.insert(0, 'Constant')
             x = self._engine.column_stack([[1] * x.shape[0], x])
             
-        w = self._get_weight(w, cols, x)
-        self._beta = x.T.dot(w).dot(x).I.dot(x.T).dot(w).dot(y)
-        c = x.T.dot(x).I.tolist()
+        weight = self._get_weight(w, cols, x)
+        self._beta = x.T.dot(weight).dot(x).I.dot(x.T).dot(weight).dot(y)
+        constant = x.T.dot(x).I.tolist()
         y_hat = self._beta.T.dot(x.T)
-        return y_hat, [sqrt(abs(c[i][i])) for i in range(x.shape[1])]
+        return y_hat, [sqrt(abs(constant[i][i])) for i in range(x.shape[1])]
 
     def _create_report(self, y_hat, c, x, y, **kwrds):
         self._res = y - mat(y_hat.tolist()).T
         self._SSR = sum(self._pow(y_hat - self._mean(y)))
         self._SSE = sum(self._pow(self._res))
 
-        R2 = round(self._SSR / (self._SSE+self._SSR), 4)
+        R2 = round(self._SSR / (self._SSE + self._SSR), 4)
         Cp = kwrds.get('Cp', self._SSE)
         n, p = x.shape
         cols = kwrds.get('variables', ['X%d' % i for i in range(1, p+1)])
@@ -283,7 +299,8 @@ class LinearRegression(object):
         rho_low = map(lambda x: x[0]**2, self._res[1:])
         R = round(sqrt(R2), 4)
         AdjR2 = round(1-((1-R2)*(n-1))/(n-p-1.0), 4)
-        DW = round(2 - 2*sum(rho_up) / sum(rho_low), 4)
+        DW = (2 - 2*sum(rho_up) / sum(rho_low)).tolist()
+        DW = round(DW[0][0], 4)
         table = SeriesSet(None, ['R', u'R\u00B2', u'Adj-R\u00B2', 'DW'])
         table.append_row([R, R2, AdjR2, DW])
         return table
@@ -311,7 +328,7 @@ class LinearRegression(object):
     def _Corr(self, X, n, p, cols):
         abs_res = abs(self._res).tolist()
         table = SeriesSet(None, ['Variable', 'Spearman', 't', 'Sig'])
-        for i, col_ in enumerate(cols[self._C:]):
+        for i, col_ in enumerate(cols[self._constant:]):
             seq = X[:, i].T.tolist()[0]
             rs = round(corr(seq, abs_res, 'spearman'), 4)
             t = round(sqrt(n - 2) * rs / sqrt(1 - rs**2), 4)
@@ -355,11 +372,12 @@ class LinearRegression(object):
         SRE_del = self._mul(SRE, self._pow(up / (down - self._pow(SRE)), 0.5))
         CookDis = self._pow(self._res) / ((p + 1) * sigma_hat ** 2) * hs / self._pow(1 - hs)
         mean_h = 3 * (p+1.0) / n
-
         table = SeriesSet(None, ['Index', 'y_', 'error', 'hi', 'SRE(i)', 'CookDis', 'Influential', 'Outlier'])
-        for i, (y, e, h, sre, d) in enumerate(zip(Y_h.tolist()[0], self._res.T.tolist()[0],
-                                    hs.T.tolist()[0], SRE_del.T.tolist()[0],
-                                   CookDis.T.tolist()[0])):
+        for i, (y, e, h, sre, d) in enumerate(zip(Y_h.tolist()[0],
+                                                  self._res.T.tolist()[0],
+                                                  hs.tolist()[0],
+                                                  SRE_del.tolist()[0],
+                                                  CookDis.tolist()[0])):
 
             record = [i, round(y, 4), round(e, 4), round(h, 3), round(sre, 3), round(d, 3), '', '']
             if h > mean_h:
@@ -426,15 +444,20 @@ class LinearRegression(object):
         '''
         assert isinstance(method, STR_TYPE), 'method parameter should be a str'
         assert method.lower() in ('enter', 'backward', 'foreward', 'stepwise')
-        self._C = kwrds.get('constant', 1)
-        if hasattr(X, 'columns') is False:
-            kwrds['variables'] = ['C_%d' % i for i in range(mat(X).shape.Col)]
+        self._constant = kwrds.get('constant', 1)
+
+        if hasattr(X, 'columns'):
+            kwrds['variables'] = list(X.columns)
+        X = check_input_data(X, self._engine)
+        Y = check_input_data(Y, self._engine)
+        kwrds.setdefault('variables',
+                         ['X%d' % (i + 1) for i in range(X.shape[1])])
 
         if method.lower() == 'enter':
             self._fit(X, Y, W, **kwrds)
             return
 
-        assert hasattr(X, 'columns'), 'X should have variable names.'
+        assert hasattr(X, 'columns'), 'X should must variable names.'
         if method.lower() == 'backward':
             return self._backward(list(X.columns), X, Y, W, kwrds.get('enter', 0.05))
 
@@ -461,11 +484,10 @@ class LinearRegression(object):
         return ds
 
     def predict(self, X):
-        if not isinstance(X, mat):
-            X = mat(X)
+        X = check_input_data(X, self._engine)
         if self.constant is True:
             X = self._engine.column_stack([[1] * X.shape[0], X])
-        return self._beta.T.dot(mat(X).T)
+        return self._beta.T.dot(X.T)
 
     def performance(self, X, Y):
         result, target = mat(self.predict(X).tolist()), mat(Y)

@@ -1,6 +1,6 @@
 from warnings import filterwarnings
 from DaPy.core.base import STR_TYPE
-from DaPy.methods.tools import engine2str, str2engine
+from DaPy.methods.utils import engine2str, str2engine
 filterwarnings('ignore')
 
 ACTIVATIONS = ('sigm', 'tanh', 'line', 'radb', 'relu', 'softmax')

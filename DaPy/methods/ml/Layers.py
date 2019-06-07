@@ -2,7 +2,7 @@ from math import sqrt
 from random import gauss, randint, uniform
 
 from DaPy.core.base import Matrix, STR_TYPE
-from DaPy.methods.tools import engine2str, str2engine
+from DaPy.methods.utils import engine2str, str2engine
 
 
 class Layer(object):

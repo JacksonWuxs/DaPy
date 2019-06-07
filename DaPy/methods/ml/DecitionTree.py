@@ -1,7 +1,8 @@
 from collections import OrderedDict, Counter, defaultdict
 from math import log
-from DaPy import mat, concatenate, SeriesSet
+from DaPy import mat, concatenate, SeriesSet, io, Series
 from copy import copy, deepcopy
+from pprint import pformat
 
 class DecisionTree(object):
     def __init__(self, max_depth=None):
@@ -12,6 +13,9 @@ class DecisionTree(object):
 
     def __getitem__(self, key):
         return self._root[key]
+
+    def __repr__(self):
+        return pformat(self._root)
     
     @property
     def n_features(self):
@@ -37,70 +41,76 @@ class DecisionTree(object):
         size = float(len(data))
         labels = Counter(data)
         shannon = 0.0
-        for key,value in labels.items():
+        for key, value in labels.items():
             prob = value / size
             shannon -= prob * log(prob, 2)
         return shannon
     
-    def _get_best_feature(self, X, Y, minInfo=0.0):
+    def _get_best_feature(self, X, Y, tol_gain_ratio=0.0001):
         size = float(X.shape[0])
-        baseEntropy = self._cal_shannon(Y)
-        bestInfoGain, bestFeature = minInfo, X.shape[1] - 1
-        for index in range(X.shape[1]):
-            feature = X[X.columns[index]]
-            values = set(feature)
-            thisEntropy = 0.0
-            for value in values:
-                subY = [Y[i] for i,row in zip(Y.index, X) if row[index] == value]
-                prob = len(subY) / size
-                thisEntropy += prob * self._cal_shannon(subY)
-            infoGain = baseEntropy - thisEntropy
-            if infoGain > bestInfoGain:
-                bestInfoGain, bestFeature = infoGain, index
-        return bestFeature, infoGain
+        base_entropy = self._cal_shannon(Y)
+        best_gain_ratio, best_feature = tol_gain_ratio, -1
+        
+        for feature in X.columns:
+            if feature == '__target__':
+                continue
+            
+            current_entropy, current_iv = 0.0, 0.00001
+            for feature_value, subset_feature in X.iter_groupby(feature):
+                prob = subset_feature.shape[0] / size
+                subset_shannon = self._cal_shannon(subset_feature['__target__'])
+                current_entropy -= prob * subset_shannon
+                current_iv -= prob * log(prob, 2)
+            gain_ratio = (base_entropy - current_entropy) / abs(current_iv)
+            if gain_ratio > best_gain_ratio:
+                best_gain_ratio, best_feature = gain_ratio, feature
+                
+        return best_feature, best_gain_ratio
 
     def _create_tree(self, X, Y, feature_name):
-        if len(set(Y)) == 0:
-            return self._class_name[Y[0]]
-        if X.shape[1] == 0:
-            value = Counter(Y).most_common()[0][0]
-            if isinstance(value, int) or str(value).isdigit():
-                value = self._class_name[int(value)]
-            return value
+        if len(set(Y)) == 1:
+            return Y[0]
         
-        bestFeature, bestShannon = self._get_best_feature(X, Y)
-        bestLabel = feature_name.pop(bestFeature)
-        shannonHistory = self._shannon.setdefault(bestLabel, [0.0, 0])
-        shannonHistory[0] += bestShannon
-        shannonHistory[1] += 1
+        if X.shape[1] == 1 and X.columns[0] == '__target__':
+            return Counter(Y).most_common()[0][0]
+        
+        best_feature, best_info_gain = self._get_best_feature(X, Y)
+        if isinstance(best_feature, int):
+            return Counter(Y).most_common()[0][0]
+
+        feature_name.remove(best_feature)
+        self._shannon.setdefault(best_feature,
+                                 [best_info_gain, 1])
         subColumn = X.columns
-        subColumn.pop(bestFeature)
+        subColumn.remove(best_feature)
         subX = X[subColumn]
         subtree = {}
+        feature_column = X[best_feature]
 
-        for value in set(X[X.columns[bestFeature]]):
-            equal_value_index = [i for i,_value in enumerate(X[X.columns[bestFeature]]) if _value == value]
-            x, y = subX[equal_value_index], Y[[Y.index[i] for i in equal_value_index]]
+        for value in set(feature_column):
+            equal_value_index = [i for i, _ in enumerate(feature_column) if _ == value]
+            x = subX[equal_value_index]
+            y = subX[equal_value_index]['__target__']
             subtree[value] = self._create_tree(x, y, deepcopy(feature_name))
-        return {bestLabel: subtree}
+        return {best_feature: subtree}
 
+    def fit(self, X, Y):
+        X, Y = SeriesSet(X), Y
+        feature_name = X.columns
+        # we combine the X and Y in a dataset
+        X.append_col(Y, '__target__')
 
-    def fit(self, X, Y, class_name=None, feature_name=None):
-        if feature_name is None:
-            feature_name = ['Feature(%d)' % i for i in range(X.shape[1])]
-        if class_name is None:
-            class_name = ['Class(%d)' % i for i in range(len(set(Y)))]
-        X = SeriesSet(X, feature_name)
         self._feature_name = copy(feature_name)
-        self._class_name = copy(class_name)
+        self._class_name = ['Class=%s' % value for value in Y]
         self._root = self._create_tree(X, Y, feature_name)
+        return self
 
     def predict_once(self, row):
         node = self._root
         for i in range(self.n_features):
             feature = list(node.keys())[0]
             compare_value = row[self._feature_name.index(feature)]
-            for value,subnode in node[feature].items():
+            for value, subnode in node[feature].items():
                 if compare_value == value:
                     if isinstance(subnode, dict) is False:
                         return subnode
@@ -109,14 +119,14 @@ class DecisionTree(object):
             raise ValueError('cannot get the result')
 
     def predict(self, X):
-        assert X.shape[1] != self.n_features
+        assert X.shape[1] == self.n_features
         return [self.predict_once(row) for row in X]
 
     def export_graphviz(self, outfile=None):
         global nodeNum, doc
         doc = ''
         doc += 'digraph Tree{\n'
-        doc += 'node [shape=box, style="rounded", color="black", fontname=helvetica] ;\n'
+        doc += 'node [shape=box, style="rounded", fontname=helvetica] ;\n'
         doc += 'edge [fontname=helvetica] ;\n'
         nodeNum = 0
         
@@ -131,18 +141,19 @@ class DecisionTree(object):
             
         def plotTree(tree, father, relation):
             global nodeNum
-            firstStr = list(tree.keys())[0]
-            plotNode(firstStr, nodeNum)
-            plotRelation(father, nodeNum, relation)
-            subTree = tree[firstStr]
-            fatherNode = nodeNum
-            for key,value in subTree.items():
-                nodeNum += 1
-                if isinstance(value, dict):
-                    plotTree(value, fatherNode, key)
-                else:
-                    plotNode(value, nodeNum)
-                    plotRelation(fatherNode, nodeNum, key)
+            if len(tree) > 0:
+                firstStr = list(tree.keys())[0]
+                plotNode(firstStr, nodeNum)
+                plotRelation(father, nodeNum, relation)
+                subTree = tree[firstStr]
+                fatherNode = nodeNum
+                for key,value in subTree.items():
+                    nodeNum += 1
+                    if isinstance(value, dict):
+                        plotTree(value, fatherNode, key)
+                    else:
+                        plotNode(value, nodeNum)
+                        plotRelation(fatherNode, nodeNum, key)
         
         plotTree(self._root, '', 'ROOT')
         doc += '}'
@@ -150,7 +161,6 @@ class DecisionTree(object):
             return doc
         outfile.write(doc)
 
-    @property
     def most_important_feature(self, top='all'):
         assert isinstance(top, int) or str(top).lower() == 'all'
         if str(top).lower() == 'all':
@@ -160,17 +170,32 @@ class DecisionTree(object):
         
 
 if __name__ == '__main__':
-    with open('lenses.txt') as fr:
-        lenses = [inst.strip().split('\t') for inst in fr.readlines()]
-        lensesLabels = ['age', 'prescript', 'astigmatic', 'tearRate', 'Target']
-        lensesLabelsTem = SeriesSet(lenses, lensesLabels)
-    X, Y = lensesLabelsTem[:'tearRate'], lensesLabelsTem.Target
+    test_data = SeriesSet({
+        'color': ['green', 'dark', 'dark', 'green', 'white',
+                  'green', 'dark', 'dark', 'dark', 'green',
+                  'white', 'white', 'green', 'white', 'dark', 'white', 'green'],
+        'root': ['fully rolled', 'fully rolled', 'fully rolled', 'fully rolled', 'fully rolled', 'slightly rolled ','slightly rolled ', 'slightly rolled ',
+                 'slightly rolled ', 'straight', 'slightly rolled ', 'fully rolled', 'slightly rolled ', 'slightly rolled ','slightly rolled ', 'fully rolled', 'fully rolled'],
+                 
+        'response': ['boom', 'low', 'boom', 'low', 'boom', 'boom', 'boom', 'boom',
+                 'low', 'clear', 'clear', 'boom', 'boom', 'low', 'boom', 'boom', 'low'],
+        'texture': ['clear'] * 6 + ['slightly paste', 'clear', 'slightly paste', 'clear', 'paste', 'paste',
+                 'slightly paste', 'slightly paste', 'clear', 'paste', 'slightly paste'],
+        'navel': ['dent'] * 5 + ['slightly dent'] * 4 + ['flat'] * 3 + ['dent'] * 2 + \
+                ['slightly dent', 'flat', 'slightly dent'],
+        'touch': ['hard slip'] * 5 + ['soft sticky ', 'soft sticky ', 'hard slip', 'hard slip', 'soft sticky ', 'hard slip',
+                 'soft sticky ', 'hard slip', 'hard slip', 'soft sticky ', 'hard slip', 'hard slip'],
+        'good': ['good'] * 8 + ['bad'] * 9})
+    test_data = test_data[['color', 'root', 'response',  'texture',  'navel', 'touch', 'good']]
+    print(test_data.show())
+    X, Y = test_data[:'touch'], test_data['good']
     mytree = DecisionTree()
-    mytree.fit(X, Y, ['Yes', 'No', 'Unsure'], lensesLabels)
+    mytree.fit(X, Y)
+    import pydotplus
     graph = pydotplus.graph_from_dot_data(mytree.export_graphviz())
     graph.write_pdf(r'C:\Users\JacksonWoo\Desktop\boston.pdf')
-
-
+    print(mytree)
+    print(mytree.predict(X))
 
 
 

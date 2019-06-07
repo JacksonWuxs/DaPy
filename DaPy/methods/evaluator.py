@@ -2,7 +2,7 @@
 from DaPy.core import LogInfo, LogWarn, LogErr
 from DaPy.matlib import zeros, mean
 from math import sqrt
-from .tools import clf_label
+from .utils import clf_label
 
 def ConfuMat(Y, y_, labels=None):
     '''calculate confution Matrix'''

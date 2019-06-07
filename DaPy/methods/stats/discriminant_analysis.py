@@ -1,7 +1,7 @@
 from DaPy.core import DataSet, Matrix as mat, SeriesSet
 from DaPy.matlib import cov, mean
 from DaPy.operation import column_stack, row_stack
-from DaPy.methods.tools import str2engine, engine2str
+from DaPy.methods.utils import str2engine, engine2str
 from DaPy.methods.evaluator import Accuracy, Kappa, ConfuMat
 
 __all__ = ['LinearDiscriminantAnalysis']

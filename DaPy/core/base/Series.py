@@ -96,9 +96,11 @@ class Series(object):
             return Series(self.__getitem__(indexs), indexs)
         
         if isinstance(index, (list, tuple)):
-            return Series([self[i] for i in index], index)
-        if index in set(self._index):
-            return self._data.__getitem__(self._index.index(index))
+            index = list(map(self.index_.index, index))
+            sequence = map(self._data.__getitem__, index)
+            return Series(sequence, index)
+        if index in set(self.index_):
+            return self._data.__getitem__(self.index_.index(index))
         if isinstance(index, int):
             return self._data.__getitem__(index)
         raise ValueError('"%s" is not a index in the series' % index)
