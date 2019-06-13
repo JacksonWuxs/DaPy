@@ -1,6 +1,6 @@
 ﻿from copy import copy
 from .core import DataSet, Frame, SeriesSet, Matrix as mat, Series
-from .core import is_seq, is_math, is_value, range, filter, zip
+from .core import is_seq, is_math, is_value, range, filter, zip, xrange
 
 def merge(*datas, **kwrds):
     '''laterally merge multiple datasets into a new dataset.
@@ -229,17 +229,22 @@ def get_dummies(data, value=1, dtype='mat'):
     assert is_seq(data), 'converted object should be a sequence'
     assert str(dtype).lower() in ('frame', 'set', 'mat', 'matrix', 'seriesset')
 
-    settle = tuple(set(data))
+    set_data = set(data)
+    settle = dict(zip(sorted(set_data), xrange(len(set_data))))
     dummies = [[0] * len(settle) for i in range(len(data))]
+
     for record, original in zip(dummies, data):
-        record[settle.index(original)] = value
-        
-    if isinstance(dtype, str) is False:
+        record[settle[original]] = value
+
+    if callable(dtype):
         return dtype(record)
+    
     if dtype.lower() == 'frame':
         return Frame(dummies, settle)
+    
     if dtype.lower() in ('set', 'seriesset'):
         return SeriesSet(dummies, settle)
+    
     if dtype.lower() in ('mat', 'matrix'):
         return mat(dummies)
 

@@ -1,5 +1,5 @@
 ﻿from DaPy.core import Matrix, SeriesSet, Series
-from DaPy.core import LogInfo, LogWarn, LogErr
+from DaPy.core import LogInfo, LogWarn, LogErr, is_seq
 from DaPy.matlib import zeros, mean
 from math import sqrt
 from .utils import clf_label
@@ -10,19 +10,20 @@ def ConfuMat(Y, y_, labels=None):
         y_ = clf_label(y_, labels)
     if Y.shape[1] != 1:
         Y = clf_label(Y, labels)
-    Y = [value[0] if isinstance(value, list) else value for value in Y]
+    Y = [value[0] if is_seq(value) else value for value in Y]
     y_ = [value[0] if isinstance(value, list) else value for value in y_]
     labels = list(set(Y) | set(y_))
     confu = zeros((len(labels) + 1, len(labels) + 1))
     temp = SeriesSet({'Y': Y, 'y': y_})
     
     for i, l1 in enumerate(labels):
+        subtemp = temp.select(lambda row: row[0] == l1)
         for j, l2 in enumerate(labels):
-            confu[i][j] = len(temp.select(lambda row: row[0] == l1 and row[1] == l2))
-        confu[i][-1] = sum(confu[i])
+            confu[i, j] = len(subtemp.select(lambda row: row[1] == l2))
+        confu[i, -1] = sum(confu[i])
         
     for j in range(len(labels) + 1):
-        confu[-1][j] = sum(confu[:, j].tolist())
+        confu[-1, j] = sum(confu[:, j].tolist()[0])
     return confu
 
 def Accuracy(confumat):
@@ -40,31 +41,30 @@ def Kappa(confumat):
 def Performance(predictor, data, target, mode='reg'):
     assert mode in ('clf', 'reg'), "`mode` must be `clf` or `reg` only."
     assert len(data) == len(target),"the number of target data is not equal to variable data"
-    target = Series(target)
     
     if mode == 'clf':
         if hasattr(predictor, 'predict_proba'):
             result = Matrix(predictor.predict_proba(data))
-
-        predict = Matrix(predictor.predict(data).tolist())
-        confuMat = ConfuMat(result, target)
+        else:
+            result = Matrix(predictor.predict(data).tolist())
+        confuMat = ConfuMat(target, result)
         LogInfo('Classification Accuracy: %.4f' % Accuracy(confuMat) + '%')
         LogInfo('Classification Kappa: %.4f' % Kappa(confuMat))
         return confuMat
     
     elif mode == 'reg':
         predict = Series(predictor.predict(data).tolist())
-        mean_abs_err = score.MAE(target, predict)
-        mean_sqrt_err = score.MSE(target, predict)
-        R2 = score.R2_score(target, predict)
-        mean_abs_percent_erro = score.MAPE(target, predict)
+        mean_abs_err = Score.MAE(target, predict)
+        mean_sqrt_err = Score.MSE(target, predict)
+        R2 = Score.R2_score(target, predict)
+        mean_abs_percent_erro = Score.MAPE(target, predict)
         LogInfo('Regression MAE: %.4f' % mean_abs_err)
         LogInfo('Regression MSE: %.4f' % mean_sqrt_err)
         LogInfo('Regression MAPE: %.4f' % mean_abs_percent_erro)
         LogInfo(u'Regression R²: %.4f' % R2)
         
 
-class score:
+class Score(object):
     
     '''performace score to evalulate a regressor'''
 

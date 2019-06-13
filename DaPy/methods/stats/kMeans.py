@@ -20,11 +20,11 @@ from DaPy.matlib import _abs as abs
 from DaPy.matlib import _sum as sum
 from DaPy.matlib import corr, log, mean
 from DaPy.methods.activation import UnsupportTest
-from DaPy.methods.tools import _engine2str, _str2engine
+from DaPy.methods.tools import engine2str, str2engine
 
 warn('this model is developing, it is still unstable right now!')
 
-class kMeans:
+class kMeans(object):
     def __init__(self, engine):
         pass
 
@@ -34,17 +34,21 @@ class kMeans:
     def fit(self, k, data):
         dataMat = mat(data)
         m, n = dataMat.shape
-        centroids = mat(zeros((k, n)))  # create centroid mat
-        for j in range(n):  # create random cluster centers, within bounds of each dimension
+        # create centroid mat
+        centroids = mat(zeros((k, n)))
+        # create random cluster centers, within bounds of each dimension
+        for j in range(n):  
             minJ = min(dataMat[:, j])
             rangeJ = float(max(dataMat[:, j]) - minJ)
             centroids[:, j] = mat(minJ + rangeJ * random.rand(k, 1))
 
-        clusterAssment = self._engine.zeros((m, 2))  # create mat to assign data points to a centroid, also holds SE of each point
+        # create mat to assign data points to a centroid, also holds SE of each point
+        clusterAssment = self._engine.zeros((m, 2))  
         clusterChanged = True
         while clusterChanged:
             clusterChanged = False
-            for i in range(m):  # for each data point assign it to the closest centroid
+            # for each data point assign it to the closest centroid
+            for i in range(m):  
                 minDist = inf
                 minIndex = -1
                 for j in range(k):
@@ -55,17 +59,14 @@ class kMeans:
                 if clusterAssment[i, 0] != minIndex:
                     clusterChanged = True
                 clusterAssment[i, :] = minIndex, minDist ** 2
-            for cent in range(k):  # recalculate centroids
-                ptsInClust = dataMat[nonzero(clusterAssment[:, 0].A == cent)[0]]  # get all the point in this cluster
-                centroids[cent, :] = mean(ptsInClust, axis=0)  # assign centroid to mean
+
+            # recalculate centroids
+            for cent in range(k):
+                # get all the point in this cluster
+                ptsInClust = dataMat[nonzero(clusterAssment[:, 0].A == cent)[0]]
+                # assign centroid to mean
+                centroids[cent, :] = mean(ptsInClust, axis=0)  
         return centroids, dp.SeriesSet(clusterAssment[:, 0].tolist())
 
 
-if __name__ == '__main__':
-    dp.io.encode('utf-8')
-    data = dp.read('total.xls')
-    data = data.select('PLAYER is not None and SALARY is not None and GP >= 30').data
-    k = kMeans()
-    centroids, clusterAssment = k.fit(3, data['FP', 'PIE'])
-    print dp.Frame(dp.column_stack([data['PLAYER', 'SALARY'], clusterAssment])).show()
 

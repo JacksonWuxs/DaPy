@@ -147,11 +147,11 @@ class DataSet(object):
         return None
 
     @property
-    def log(self):
+    def logging(self):
         return self._log
 
-    @log.setter
-    def log(self, value):
+    @logging.setter
+    def logging(self, value):
         if value is not True:
             self._log = False
         else:
@@ -437,7 +437,7 @@ class DataSet(object):
         return auto_plus_one(self._sheets, new_name)
 
     def add(self, item, sheet=None):
-        ''' add a new sheet to this dataset
+        ''' add a new sheet to the current dataset
 
         Parameter
         ---------
@@ -489,7 +489,40 @@ class DataSet(object):
             self._data.append(item)
             self._types.append(type(item))
             self._sheets.append(self._check_sheet_new_name(sheet))
+            
+    @_timer
+    def apply(self, func, col='all', inplace=False):
+        '''map a process to such a column.
 
+        Parameters
+        ----------
+        func : callable
+            the function that you need to process the data
+
+        col : str, str in list (default='all')
+            the columns that you expect to process
+
+        Example
+        -------
+        >>> data = example()
+        >>> data['A_col']
+        [3, 4, 1, 3, 4, 2, 6, 4, 1, 3, 2, 3]
+        >>> data.apply(lambda x: x ** 2, 'A_col')
+        >>> data['A_col']
+        [9, 16, 1, 9, 16, 4, 36, 16, 1, 9, 4, 9]
+        '''
+        response = DataSet()
+        for sheet, data in zip(self._sheets, self._data):
+            if hasattr(data, 'apply'):
+                try:
+                    sub_response = data.apply(func, col, inplace)
+                    if inplace is False:
+                        response.add(sub_response, sheet)
+                except Exception as e:
+                    LogErr('sheet:%s.apply() failed, because %s'%(sheet, e))
+        if inplace is False:
+            return response
+        
     @_timer
     def append_row(self, item):
         '''Append a new record ``item`` at the tail of each sheet.
@@ -518,14 +551,14 @@ class DataSet(object):
                 try:
                     data.append(item)
                 except Exception as e:
-                    LogErr('sheet: %s.append() failed because %s.'%(sheet, e))
+                    LogErr('%s.append() failed because %s.'%(sheet, e))
             elif hasattr(data, 'append_row'):
                 try:
                     data.append_row(item)
                 except Exception as e:
-                    LogErr('sheet: %s.append_row() failed because %s.'%(sheet, e))
+                    LogErr('%s.append_row() failed because %s.'%(sheet, e))
             else:
-                LogErr('sheet: %s has no attribute append_row(), ignored.' % sheet)
+                LogErr('%s has no attribute append_row(), ignored.' % sheet)
 
     @_timer
     def append_col(self, series, variable_name=None):
@@ -549,12 +582,12 @@ class DataSet(object):
 
         for sheet, data in zip(self._sheets, self._data):
             if hasattr(data, 'append_col') is False:
-                LogErr('sheet: %s has no attribute append_col(), ignored.' % sheet)
+                LogErr('%s has no attribute append_col(), ignored.' % sheet)
                 continue
             try:
                 data.append_col(series, variable_name)
             except Exception as e:
-                LogErr('sheet: %s.append() failed because %s.'%(sheet, e))
+                LogErr('%s.appendcol() failed because %s.'%(sheet, e))
 
     @_timer   
     def corr(self, method='pearson'):
@@ -582,15 +615,13 @@ class DataSet(object):
            C_col    |  0.119814309454 |        1        | -0.790569415042 
            A_col    | -0.351822820287 | -0.790569415042 |        1          
         '''
-        corrs = list()
-        new_title = list()
+        corr_ds = DataSet()
         for sheet, data in zip(self._sheets, self._data):
             try:
-                corrs.append(data.corr(method))
-                new_title.append(sheet)
+                corr_ds.add(data.corr(method), sheet)
             except Exception as e:
-                LogErr('sheet:%s.corr() failed, because %s' %(sheet, e))                    
-        return DataSet(corrs, new_title)
+                LogErr('%s.corr() failed because %s' % (sheet, e))                    
+        return corr_ds
 
     @_timer
     def count(self, x, point1=None, point2=None):
@@ -632,23 +663,34 @@ class DataSet(object):
         ============
         {3: 3, None: 2}
         '''
-        counter = list()
-        counter_sheet = list()
-        for i, data in enumerate(self._data):
+        count_ds = DataSet()
+        for sheet, data in zip(self._sheets, self._data):
             if hasattr(data, 'count'):
                 try:
                     try:
-                        counter.append(data.count(x, point1, point2))
+                        count_ds.add(data.count(x, point1, point2), sheet)
                     except TypeError:
-                        counter.append(data.count(x))
-                    counter_sheet.append(self._sheets[i])
+                        count_ds.add(data.count(x), sheet)
                 except Exception as e:
-                    LogErr('sheet:%s.count() faild, '%self._sheets[i] +\
-                         'because %s'%e)
-        return DataSet(counter, counter_sheet)
+                    LogErr('%s.count() faild because %s' % (sheet, e))
+        return count_ds
 
     @_timer
-    def count_values(self, sheet=0, col='all'):
+    def copy(self):
+        '''return a copy of this dataset'''
+        copy_ds = DataSet()
+        for name, sheet in zip(self._data, self._sheets):
+            try:
+                if hasattr(sheet, 'copy'):
+                    copy_ds.add(sheet, name)
+                else:
+                    copy_ds.add(copy(sheet), name)
+            except Exception as e:
+                LogErr('%s.copy() faild, %s' % (name, e))
+        return copy_ds
+
+    @_timer
+    def count_values(self, col=None):
         '''Count the frequency of values for each variable.
         You could count only a part of your data set with setting key-word(col)
         as a iterble inluding the number of column or variable names.
@@ -671,7 +713,7 @@ class DataSet(object):
                                [3, 3, None, 5],
                                [7, 8, 9, 10]])
         >>> data.tocol()
-        >>> data.count_element('all').show()
+        >>> data.count_element(col='all').show()
         sheet:sheet0
         ============
          Variable | Value | Frequency
@@ -691,13 +733,19 @@ class DataSet(object):
            C_3    |   4   |     2     
            C_3    |   5   |     1     
         '''
-        try:
-            return self._data[sheet].count_values(col)
-        except Exception as e:
-            LogErr('sheet:%s.count_values() failed, because %s'%(sheet, e))
+        count_ds = DataSet()
+        for name, sheet in zip(self._data, self._sheets):
+            try:
+                if hasattr(sheet, 'count_values'):
+                    count_ds.add(sheet.count_values(col), sheet)
+                else:
+                    LogErr('%s has no attribute count_values, ignored' % name)
+            except Exception as e:
+                LogErr('%s.copy() faild, %s' % (name, e))
+        return count_ds
 
     @_timer
-    def get_dummies(self, col='all', value=1):
+    def get_dummies(self, col=None, value=1):
         '''Convert categorical variable into dummy variables
 
         Parameters
@@ -733,13 +781,15 @@ class DataSet(object):
            D   |  4  |    0    |    0    |    0    |    1    
            C   |  1  |    0    |    1    |    0    |    0    
          '''
-        for sheet, data in zip(self._sheets, self._data):
-            if hasattr(data, 'get_dummies'):
-                try:
-                    data.get_dummies(col, value)
-                except Exception as e:
-                    LogErr('sheet: %s.get_dummies() failed, because %s' % (sheet, e))
-    
+        for name, sheet in zip(self._sheets, self._data):
+            try:
+                if hasattr(sheet, 'get_dummies'):
+                    sheet.get_dummies(col, value)
+                else:
+                    LogErr('%s has no attribute get_dummies, ignored' % name)
+            except Exception as e:
+                LogErr('%s.get_dummies() faild, %s' % (name, e))
+                                 
     @_timer
     def insert_row(self, index, item):
         '''Insert a new record ``item`` in position ``index``.
@@ -762,7 +812,7 @@ class DataSet(object):
         [1, 2, 3, 'insert_item', 4, 5, 6]
         '''
         if isinstance(item, DataSet):
-            map(self.insert, [index] * item.level, item._data)
+            map(self.insert_row, [index] * item.level, item._data)
             return
 
         for sheet, data in zip(self._sheets, self._data):
@@ -770,14 +820,9 @@ class DataSet(object):
                 try:
                     data.insert_row(index, item)
                 except Exception as e:
-                    LogErr('sheet: %s.append() failed because %s.'%(sheet, e))
-            elif hasattr(data, 'append_row'):
-                try:
-                    data.insert(index, item)
-                except Exception as e:
-                    LogErr('sheet: %s.append_row() failed because %s.'%(sheet, e))
+                    LogErr('%s.insert_row() failed because %s.'%(sheet, e))
             else:
-                LogErr('sheet: %s has no attribute append(), ignored.' % sheet)
+                LogErr('%s has no attribute insert_row(), ignored.' % sheet)
 
     @_timer
     def insert_col(self, index, series, variable_name=None):
@@ -818,7 +863,7 @@ class DataSet(object):
             try:
                 data.insert_col(index, series, variable_name)
             except Exception as e:
-                LogErr('sheet: %s.insert_col() failed because %s.'%(sheet, e))          
+                LogErr('%s.insert_col() failed because %s.'%(sheet, e))          
 
     @_timer
     def dropna(self, axis=0):
@@ -1120,7 +1165,7 @@ class DataSet(object):
                 LogErr('sheet: %s.join() failed because %s.'%(sheet, e))
 
     @_timer     
-    def normalized(self, process='NORMAL', col='all', **kwrds):
+    def normalized(self, process='NORMAL', col=None, **kwrds):
         '''Apply a data operation to your data
 
         Parameters
@@ -1198,39 +1243,6 @@ class DataSet(object):
         for i, data in enumerate(self._data):
             if hasattr(data, 'normalized'):
                 data.normalized(process, col, **kwrds)
-
-    @_timer
-    def apply(self, func, col='all', inplace=False):
-        '''map a process to such a column.
-
-        Parameters
-        ----------
-        func : callable
-            the function that you need to process the data
-
-        col : str, str in list (default='all')
-            the columns that you expect to process
-
-        Example
-        -------
-        >>> data = example()
-        >>> data['A_col']
-        [3, 4, 1, 3, 4, 2, 6, 4, 1, 3, 2, 3]
-        >>> data.apply(lambda x: x ** 2, 'A_col')
-        >>> data['A_col']
-        [9, 16, 1, 9, 16, 4, 36, 16, 1, 9, 4, 9]
-        '''
-        response = DataSet()
-        for sheet, data in zip(self._sheets, self._data):
-            if hasattr(data, 'apply'):
-                try:
-                    sub_response = data.apply(func, col, inplace)
-                    if inplace is False:
-                        response.add(sub_response, sheet)
-                except Exception as e:
-                    LogErr('sheet:%s.apply() failed, because %s'%(sheet, e))
-        if inplace is False:
-            return response
 
     @_timer
     def merge(self, other, self_key=0, other_key=0, keep_key=True, keep_same=True):
@@ -1381,16 +1393,42 @@ class DataSet(object):
 
         for sheet, data in zip(self._sheets, self._data):
             if hasattr(data, 'merge') is False:
-                LogErr('sheet: %s has no attribute merge(), ignored.' % sheet)
+                LogErr('%s has no attribute merge(), ignored.' % sheet)
                 continue
             try:
                 data.merge(other, self_key, other_key, keep_key, keep_same)
             except Exception as e:
-                LogErr('sheet: %s.merge() failed because %s.'%(sheet, e))
+                LogErr('%s.merge() failed because %s.'%(sheet, e))
+
+    @_timer
+    def drop(self, index=-1, axis=0):
+        '''remove a column or a row in the dataset
+
+        Parameters
+        ----------
+        index : int or str (default=-1)
+            the row row index or column index to remove
+
+        axis : 0, 1 (default=0)
+            the remove the index along witch axis
+            0 means row, 1 means column
+
+        Return
+        ------
+        None
+        '''
+        for sheet, data in zip(self._sheets, self._data):
+            if hasattr(data, 'drop') is True:
+                try:
+                    data.drop(index, axis)
+                except Exception as e:
+                    LogErr('%s.drop() failed because %s'%(sheet, e))
+            else:
+                LogErr('%s has no attribute drop(), ignored.' % sheet)
         
     @_timer
     def read(self, addr, dtype='col', **kwrd):
-        '''This function could be used in loading data from a file and
+        '''This function could be used with loading data from a file and
         transform it into one of DaPy data structure.
 
         Parameters

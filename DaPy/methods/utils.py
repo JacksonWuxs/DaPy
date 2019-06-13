@@ -1,6 +1,7 @@
 from DaPy.core import Frame, is_iter
 from DaPy.matlib import describe
 from collections import namedtuple
+from operator import itemgetter
 
 __all__ = ['_label', 'score_binary_clf']
 
@@ -73,6 +74,7 @@ def str2engine(obj):
     return engine
 
 def clf_label(sequence, groupby=None):
+    sequence = tolist(sequence)
     if not groupby:
         groupby = dict()
     elif isinstance(groupby, list):
@@ -81,8 +83,8 @@ def clf_label(sequence, groupby=None):
         raise TypeError('groupby shoud input a list of label names or dict object.')
 
     labelled = list()
-    for record in _tolist(sequence):
-        label = record.index(max(record))
+    for record in sequence:
+        label = max(enumerate(record), key=itemgetter(1))[0]
         labelled.append(groupby.get(label, label))
     return labelled
     

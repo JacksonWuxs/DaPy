@@ -2,7 +2,7 @@ from math import sqrt
 from random import randint
 from time import clock, localtime
 
-from DaPy.core import DataSet
+from DaPy.core import DataSet, Series
 from DaPy.core import Matrix as mat
 from DaPy.core import is_math
 from DaPy.core import LogInfo, LogWarn, LogErr
@@ -262,12 +262,13 @@ class MLP(object):
         None
         '''
         X = mat(X)
-        Y = mat(Y)                       # Target Matrix
+        Y = mat(Y)                              # Target Matrix
         self._Error = [1,]                      # Mistakes Recorder
         mini_error = mini_error * 100
         n, p = X.shape
-        start = clock()                          # Training Start
-
+                                  
+        # Training Start
+        start = clock()
         for term in range(1, train_time + 1): # Make a Loop
             # Foreward Propagating
             results = self._foreward(X)
@@ -303,7 +304,11 @@ class MLP(object):
         return output
 
     def _backward(self, outputs, y_true):
-        error = y_true - outputs[-1]
+        try:
+            error = y_true - outputs[-1]
+        except Exception as e:
+            print(type(y_true), type(outputs[-1]), y_true.shape, outputs[-1].shape)
+            raise e
         r = self._engine.mean(self._engine.abs(error))
         self._Error.append(r * 100)
         self._alpha = self._autoadjustlr()
@@ -331,26 +336,45 @@ class MLP(object):
                                         
     def predict_proba(self, data):
         '''
-        Predict your own data with fitting model
+        Predict your own data with fitted model
 
         Paremeter
         ---------
-        data rix
+        data : matrix
             The new data that you expect to predict.
 
         Return
         ------
         Matrix: the predict result of your data.
         '''
-        return mat(self._foreward(mat(data))[-1])
+        proba = self._foreward(mat(data))[-1]
+        return mat(proba / self._engine.sum(proba, axis=0).T)
+
+    def predict(self, data):
+        '''
+        Predict your data with fitted model and return the label
+
+        Parameter
+        ---------
+        data : matrix
+            the data that you expect to predict
+
+        Return
+        ------
+        Series : the labels of each record
+        '''
+        result_proba = self.predict_proba(data)
+        return Series(result_proba.argmax(axis=0))
 
     def save(self, addr):
         '''Save your model to a .pkl file
         '''
-        if isinstance(fp, STR_TYPE):
-            fp = open(fp, 'wb')
+        if isinstance(addr, STR_TYPE):
+            fp = open(addr, 'wb')
+        else:
+            fp = addr
         try:
-            pkl.dump(self, open(addr, 'wb'))
+            pkl.dump(self, fp)
         finally:
             fp.close()
 

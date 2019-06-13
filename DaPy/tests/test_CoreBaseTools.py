@@ -1,8 +1,8 @@
 from unittest import TestCase
 from collections import OrderedDict
 from datetime import datetime
-from DaPy.core.base.tools import (
-    auto_str2value, get_sorted_index, hash_sort, auto_plus_one,
+from DaPy.core.base.utils import (
+    auto_str2value, argsort, hash_sort, auto_plus_one,
     is_value, is_math, is_iter, is_seq
 )
 
@@ -20,8 +20,7 @@ class Test_Tools(TestCase):
         self.assertEqual(auto_str2value('no'), False)
         
     def test_GetSortedIndex(self):
-        func = get_sorted_index
-        self.assertEqual(func([3, 1, 2, 6, 4, 2, 1, 3]),
+        self.assertEqual(argsort([3, 1, 2, 6, 4, 2, 1, 3]),
                          [1, 6, 2, 5, 0, 7, 4, 3])
 
     def test_hash_sort(self):

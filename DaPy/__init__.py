@@ -32,6 +32,7 @@ __all__ = [ 'Frame', 'SeriesSet', 'mat', 'DataSet', 'datasets', 'methods',
 
 from .core import Frame, SeriesSet, DataSet, Matrix as mat, Series
 from .core import nan, inf, LogInfo, LogWarn, LogErr
+from .core import argsort
 from .matlib import exp, dot, multiply, zeros, ones, C, P, add, diag, log, boxcox
 from .matlib import cov, corr, frequency, quantiles, _sum as sum, diff, cumsum
 from .matlib import distribution, describe, mean, _abs as abs, _max as max

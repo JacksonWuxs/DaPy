@@ -1,88 +1,92 @@
 <img src="https://github.com/JacksonWuxs/DaPy/blob/master/doc/material/DaPy.png">
+<i>This open source framework fluently implements your ideas for data mining.</i>
 
-DaPy - Enjoy the Tour in Data Mining
-====
-![](https://img.shields.io/badge/Version-1.9.2Beta-green.svg)  ![](https://img.shields.io/badge/Python2.x-pass-green.svg)![](https://img.shields.io/badge/Python3.x-testing-red.svg)![](https://img.shields.io/badge/Download-PyPi-green.svg)  ![](https://img.shields.io/badge/License-GNU-blue.svg)
+# DaPy - Enjoy the Tour in Data Mining
 
-**DaPy**'s easy-to-use API designs and professinal statistical reports of models can help you enjoy the journey of data mining. In order to approach this goal, DaPy provides you some flexible and powerful high-level __data structures__, some __statistical functions__ and __machine learning models__.
+![](https://img.shields.io/badge/Version-1.10.1-green.svg)  ![](https://img.shields.io/badge/Python2-pass-green.svg)![](https://img.shields.io/badge/Python3-pass-green.svg)![](https://img.shields.io/badge/Download-PyPi-green.svg)  ![](https://img.shields.io/badge/License-GNU-blue.svg)
 
-[Installation](#installation) | [Features](#features) | [Quick Start](https://github.com/JacksonWuxs/DaPy/blob/master/doc/Quick%20Start/English.md ) | [To Do List](#todo) | [Version Log](#version-log) | [License](#license) | [Guide Book](https://github.com/JacksonWuxs/DaPy/tree/master/doc/Guide%20Book/README.md) | [中文版](https://github.com/JacksonWuxs/DaPy/blob/master/README_Chinese.md)
+[中文版](https://github.com/JacksonWuxs/DaPy/blob/master/README_Chinese.md)
 
-## Installation
-The latest version 1.9.1 had been updated to PyPi.
-```
-pip install DaPy
-```
-It should be noticed that DaPy still works on Python 2.x only. We are trying to make it avaliable on Python 3 as soon as possible. If you are interesting in using DaPy on Python 3, some of functions may cause unexpected issues.
+### Overview
 
+DaPy is a data analysis library designed with ease of use in mind, which lets you quickly implement your thoughts by providing well-designed **data structures** and abundant  **professional ML models**. In short, this project can help you complete data mining tasks step by step, such as loading data, preprocessing data, feature engineering, developing models, model evaluation and result export. 
 
+### Example
 
-## Example
-
-Here is a simple example to show how to use DaPy for works. Our goal in this example is to train a classifier for predict the class that a new record belongs to. Detail information can be read from [here](https://github.com/JacksonWuxs/DaPy/blob/master/doc/Quick%20Start/English.md).
+This example simply shows you what DaPy can do for you. Our goal in this example is to train a classifier to predict the class that a new record belongs to. Detail information can be read from [here](https://github.com/JacksonWuxs/DaPy/blob/master/doc/Quick%20Start/English.md).
 
 ![](https://github.com/JacksonWuxs/DaPy/blob/master/doc/Quick%20Start/quick_start.gif)
 
-## Features
+### Install
 
-**Convinience** and **efficiency** are the cornerstone of DaPy data structures. 
-Since the very beginning, we try to make it supports more Python syntax habits. Therefore you can adapt to DaPy quickly. In addition, we do our best to simplify the formulas or mathematical models in it, so that it can be easy to use and helps you to implement your idea fluentely.
+The latest version 1.10.1 had been updated to PyPi.
+```
+pip install DaPy
+```
+Some of functions in DaPy depend on requirements.
 
-* Here are just a few of the things that DaPy does well:  
-	- [Efficiently manage diverse data with clearly perceiving approach](https://github.com/JacksonWuxs/DaPy/blob/master/doc/Guide%20Book/English/Features.md#visually-manage-diverse-data)
-	- [Quick insert and delete a mount of new records or new variables](https://github.com/JacksonWuxs/DaPy/blob/master/doc/Guide%20Book/English/Features.md#easily-insert-and-delete-a-large-number-of-data)
-	- [Easy to access a part of your dataset by column name, index or conditions]
-	- [Functional IO tools for loading data from CSV files, Excel files, database and even SPSS files]
-	- [Sort your records by multiple conditions]
-	- [Fast verify your ideas with the built-in analysis models (e.g. `ANOVA`, `MLP`, `Linear Regression`)]
-	- A variety of ways to help you easily perceive your dataset.
-  
+- **xlrd **: loading data from .xls file【Necessary】
+- **xlwt**: export data to a .xls file【Necessary】
+- **repoze.lru**: speed up loading data from .csv file【Necessary】
+- **savReaderWrite**: loading data from .sav file【Option】
+- **bs4.BeautifulSoup**: auto downloading data from a website【Option】
+- **numpy**: dramatically increase the efficiency of ML models【Recommand】 
 
-Even if it uses Python original data structures, DaPy still has efficiency comparable to some libraries which are written by C. We have tested DaPy on the platform with Intel i7-8550U while the Python version is 2.7.15-64Bit. The [dataset](http://www.wuxsweb.cn/Library/DaPy$Test_data/read_csv.csv) has more than 2 million records and total size is 240 MB.  
+### Features
 
-<table style='text-align:center'>
-<thead>
-    <th>Programs</th>
-    <th>DaPy(V1.5.3)</th>
-    <th>Pandas(V0.23.4)</th>
-    <th>Numpy(V1.15.1)</th>
-</thead>
-<tbody>
-<tr>
-	<td>Loading</td>
-	<td>12.85s (3.2x)</td>
-	<td> 4.02s (1.0x)</td>
-  	<td>22.63s (5.6x)</td>
-</tr>
-<tr>
-	<td>Traversing</td>
-	<td>0.09s (1.9x)</td>
-	<td>1.15s (14.4x)</td>
-	<td>0.08s (1.0x)</td>
-</tr>
-<tr>
-	<td>Sorting</td>
-	<td>0.97s (1.7x)</td>
-	<td>0.25s (1.0x)</td>
-	<td>3.03s (9.2x)</td>
-</tr>
-<tr>
-	<td>Saving</td>
-	<td>7.20s (3.5x)</td>
-	<td>7.60s (3.7x)</td>
-	<td>2.05s (1.0x)</td>
-</tr>
-<tr>
-	<td>Total</td>
-	<td>21.11s (1.6x)</td>
-	<td>13.02s (1.0x)</td>
-	<td>27.79s (2.1x)</td>
-</tr>
-</tbody>
-</table>   
+We hope DaPy is an user-friendly tool. Therefore, *easy-to-use* is the cornerstone of DaPy. Also, we hope it can be used in some real-world tasks, thereby we are keeping an eye on its *efficiency*. 
+
+Here are just a few of things that DaPy is easy to use:  
+
+- Variety of ways to visualize data
+
+- Easy imagine data structure (just like operating a 2D table)
+- SQL-like APIs to process data
+- Flexible IO tools for loading and saving data (e.g. Website, Excel, Sqlite3, SPSS, Text)
+- Built-in basic models (e.g. Decision Tree, Multilayer Perceptron, Linear Regression, ...)
+
+DaPy has comparable efficiency to some exists libraries. Following dialog shows a testing result running on Python3. We used pandas.load_csv with python engine and the data has 432 thousands rows and 7 columns.
+
+![](https://github.com/JacksonWuxs/DaPy/blob/master/doc/material/result.png)
+
+### Example Useages
+
+- Loading Source Data
+  - Load data from a local csv, sav, sqlite3 or xls file: ```sheet = DaPy.read(file_addr)```
+  - Display the first five and the last five records: ```sheet.show(lines=5)```
+- Preprocessing Data
+  - Remove duplicate records: ```sheet.drop_duplicates(col, keep='first')```
+  - Merge external features from another table: ```sheet.merge(sheet2, left_key='ID', other_key='ID', keep_key='self', keep_same=False)```
+  - Use linear interpolation to fill in NaN or remove them: ```sheet.fillna(method='linear')``` , ```sheet.dropna(axis=0)```
+  - Remove some meaningless columns (e.g. *ID*): ```sheet.drop('ID', axis=1)```
+  - Sort records by some columns: ```sheet = sheet.sort('Age', 'DESC')```
+- Explore Data
+  - Summary the statistic information of each column: ```sheet.info```
+  - Count distribution of categorical variable: ```sheet.count_values('gender')```
+  - Find differences of the labels in categorical variables: ```sheet.groupby('city')```
+  - Calculate the correlation between the continuous variables: ```sheet.corr(['age', 'income'])```
+- Feature Engineering
+  - Constructing some meaningful variables to use date time: ```sheet.label_date('birth')```
+  - Transfer categorical variables into dummy variables: ```sheet.get_dummies(['city', 'education'])```
+  - Standardize some normal continuous variables: ```sheet.normalized(col='age')```
+  - Special processing for some special variables: ```sheet.normalized('log', col='salary')```
+  - Create new variables by some business logical formulas: ```sheet.apply(func=tax_rate, col=['salary', 'income'])```
+  - Difference process to make time-series stable: ```DaPy.diff(sheet.income)```
+  - Constructing cross terms: ```sheet.get_cross_terms(col=['income', 'age', 'gender', 'education'])```
+- Developing Models
+  - Choose a model and initialize it: ```m = MLP()```, ```m = LinearRegression()```, ```m = DecisionTree()``` or  ```m = DiscriminantAnalysis()``` 
+  - Train the model parameters: ```m.fit(X_train, Y_train)```
+- Model Evaluation
+  - Evaluate model with  parameter tests: ```m.report.show()```
+  - Evaluate model with  visualization: ```m.plot_error()``` or ```DecisionTree.export_graphviz()```
+  - Evaluate model with test set: ```DaPy.methods.Performance(m, X_test, Y_test, mode)```.
+- Saving Result
+  - Save the model: ```m.save(addr)```
+  - Save the final dataset: ```sheet.save(addr)```
 
 
-## TODO  
+### TODO  
+
 :heavy_check_mark: = Done      :running: = In Development       ​ :calendar:  = Put On the Agenda       :thinking: = Not Sure
 
 * Data Structures
@@ -125,24 +129,48 @@ Even if it uses Python original data structures, DaPy still has efficiency compa
   - ARIMA (Autoregressive Integrated Moving Average) :calendar:
   - SVM ( Support Vector Machine) :thinking:
   - Bayes Classifier :thinking:
-  - MIC (Maximal information coefficient) :thinking:   
 
 * Others
 
   * Manual :running:
   * Example Notebook :running:
-  * Unit Test :calendar:
+  * Unit Test :running:
 
+### Contributors
 
+- ###### Directors:
 
-## Version-Log
+  Xuansheng WU (@JacksonWoo: wuxsmail@163.com )
 
-* V1.8.4 (2019-04-23)
+- ###### Developers
+
+  1. Xuansheng WU
+  2. Feichi YANG  (@Nick Yang: yangfeichi@163.com)  
+
+### Version-Log
+
+* V1.10.1 (2019-06-13)
+  * Added ```SeriesSet.update()```, update some values of specific records;
+  * Added ```BaseSheet.tolist()``` and ```BaseSheet.toarray()```, transfer your data to list or numpy.array;
+  * Added ```BaseSheet.query()```, select records with a python statement in string;
+  * Added ```SeriesSet.dropna()```, drop rows or variables which contain NaN;
+  * Added ```SeriesSet.fillna()```, fill missing values in the dataset with constant value or linear model;
+  * Added ```SeriesSet.label_date()```, transfer a datetime object to several columns;
+  * Added ```DaPy.Row```, a view of a row record of the original data;
+  * Added ```DaPy.methods.DecitionTree```, classifier implemented with C4.5 algorithm;
+  * Added ```DaPy.methods.SignTest```, supported some of sign test algorithms;
+  * Refactored the structure of ```DaPy.core.base``` package;
+  * Optimized ```BaseSheet.groupby()```, 18 times faster than ever before;
+  * Optimized ```BaseSheet.select()```, 14 times faster than ever before;
+  * Optimized ```BaseSheet.sort()```, 2 times faster than ever before;
+  * Optimized ```dp.save()```, 1.6 times faster than ever before to saving data to a .csv;
+  * Optimized ```dp.read()```, 10% faster than ever before to loading data from .csv;
+* V1.9.2 (2019-04-23)
   * Added `BaseSheet.groupby()`, regroup your observations with specific columns;
   * Added `DataSet.apply()`, mapping a function to the dataset by axis;
   * Added `DataSet.drop_duplicates()`, automatically dropout the duplicate records in the dataset;
-  * Added a new data structure called `DaPy.Series`;
-  * Added `DaPy.methods.Performance()`, automatically testify the performance of ML model;
+  * Added `DaPy.Series`, a new data structure to obtain a sequence of data;
+  * Added `DaPy.methods.Performance()`, automatically testify the performance of ML models;
   * Added `DaPy.methods.Kappa()`, calculate the Kappa index with a confusing matrix;
   * Added `DaPy.methods.ConfuMat()`, calculate the Confusing matrix with your result;
   * Added `DaPy.methods.DecitionTree()`, implement the C4.5 decision tree algorithm;
@@ -153,13 +181,12 @@ Even if it uses Python original data structures, DaPy still has efficiency compa
   * Added `show_time` attribute, auto timer for DataSet object;
   * Added `boxcox()` , supports Box-Cox transformation to a sequence data;
   * Added `diff()`, supports calculate the differences to a sequence data;
-  * Added `DataSet.map()`, maps a function to a specific variable;
-  * Added `methods.LDA`, supports DIscriminant Analysis on two methods (Fisher & Linear);
+  * Added `DaPy.methods.LDA`, supports DIscriminant Analysis on two methods (Fisher & Linear);
   * Added `row_stack()`, supports to combine multiple data structures with out DataSet;
   * Added `Row` structure for handling a record in sheet;
   * Added `report` attribute to all classes in `methods`,  you can read a statistical report after training a model;
   * More on `read()`, supports to auto parse data from a web address;
-  * More on `DataSet.merge()`, supports for specifying how to save match keywords and the duplicate keywords.
+  * More on `SeriesSet.merge()`, more options when we merge to SeriesSets;
   * Rename `DataSet.pop_miss_value()` into `DataSet.dropna()`;
   * Refactored `methods`, more stable and more scalable in the future;
   * Refactored `methods.LinearRegression`, it can prepare a statistic report for you after training;
@@ -169,11 +196,12 @@ Even if it uses Python original data structures, DaPy still has efficiency compa
   * Fixed a lot of bugs;
 * V1.5.3 (2018-11-17)
 
-  * Added `select()` function for quickly access partial data with some conditions;
-  * Added more supported external data types: html and SQLite3 for saving data;
-  * Added `delete()` and `column_stack()` for deleting and merging a un-DaPy object;
-  * Added `P()` and `C()` for calculating permutation numbers and combination numbers;
+  * Added `select()`, quickly access partial data with some conditions;
+  * Added `delete()`, delete data along the axis from a un-DaPy object;
+  * Added `column_stack()`, merging several un-DaPy objects together;
+  * Added `P()` & `C()` , calculating permutation numbers and combination numbers;
   * Added new syntax, therefore users can view values in a column with statement as `data.title`.
+  * Optimized ```DaPy.save()```, supported external saving data types: html and SQLite3;
   * Refactored `BaseSheet`, less codes and more flexsible in the future;
   * Refactored `DataSet.save()`, more stable and more flexsible in the future;
   * Rewrite a part of basic mathematical functions;
@@ -209,27 +237,7 @@ Even if it uses Python original data structures, DaPy still has efficiency compa
 
   - First public beta version of DaPy!  
 
-
-
-
-## Contributors
-
-- ###### Directors:
-
-  Xuansheng WU (@JacksonWoo: wuxsmail@163.com )
-
-- ###### Maintainors  
-
-  1. Xuansheng WU
-
-- ###### Developers
-
-  1. Xuansheng WU
-  2. Feichi YANG  (@Nick Yang: yangfeichi@163.com)  
-
-
-
-## License
+### License
 
 Copyright (C) 2018 - 2019 Xuansheng Wu
 <br>

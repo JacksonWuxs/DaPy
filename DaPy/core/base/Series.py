@@ -50,6 +50,10 @@ class Series(object):
     def index_(self, value):
         self._index = self._check_index(value)
 
+    @property
+    def shape(self):
+        return (len(self._data), 1)
+
     def __repr__(self):
         return self._data.__repr__()
 
@@ -322,10 +326,10 @@ class Series(object):
     def select(self):
         pass
 
-    def to_list(self):
+    def tolist(self):
         return self._data
 
-    def to_array(self):
+    def toarray(self):
         try:
             from numpy import array
         except ImportError:

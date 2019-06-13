@@ -1,7 +1,17 @@
 from setuptools import setup, find_packages
 from DaPy import __version__, _unittests
+from DaPy.core.base.constant import PYTHON2
+
 pkg = find_packages()
 _unittests()
+
+requirements = [
+        'xlrd >= 1.1.0',     # Used in DaPy.base.io.parse_excel()
+        'xlwt >= 1.3.0',     # Used in DaPy.base.DataSet.DataSet.save()
+    ]
+
+if PYTHON2:
+    requirements.append('repoze.lru')
 
 setup(
     name='DaPy',
@@ -27,11 +37,6 @@ setup(
     package_dir={'DaPy.datasets': 'DaPy/datasets'},
     package_data={'DaPy.datasets': ['adult/*.*', 'example/*.*', 'iris/*.*', 'wine/*.*']},
     zip_safe=True,
-    install_requires=[
-        'requests',          # Used in DaPy.base.DataSet.DataSet.read()
-        'bs4',               # Used in DaPy.base.io.parse_html()
-        'xlrd >= 1.1.0',     # Used in DaPy.base.io.parse_excel()
-        'xlwt >= 1.3.0',     # Used in DaPy.base.DataSet.DataSet.save()
-    ]
+    install_requires=requirements
 
 )

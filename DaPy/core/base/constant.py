@@ -13,7 +13,7 @@ nan = float('nan')
 inf = float('inf')
 STR_TYPE = [str, bytes]
 MATH_TYPE = [int, float, complex]
-VALUE_TYPE = [bool, type(None)] 
+VALUE_TYPE = [bool, type(None), datetime] 
 SEQ_TYPE = [list, tuple, deque, array, set, frozenset, bytearray]
 
 try:
@@ -34,7 +34,9 @@ if version_info.major == 2:
     VALUE_TYPE.extend([unicode, long])
     MATH_TYPE.append(long)
     STR_TYPE.append(unicode)
-   
+    PYTHON3, PYTHON2 = False, True
+else:
+   PYTHON2, PYTHON3 = False, True
 
 try:
     import cPickle as pickle
@@ -45,3 +47,4 @@ VALUE_TYPE = tuple(VALUE_TYPE + STR_TYPE + MATH_TYPE)
 STR_TYPE = tuple(STR_TYPE)
 MATH_TYPE = tuple(MATH_TYPE)
 SEQ_TYPE = tuple(SEQ_TYPE)
+

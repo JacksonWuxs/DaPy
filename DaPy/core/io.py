@@ -141,8 +141,8 @@ def write_txt(f, data, newline, delimiter, encode, decode):
     if hasattr(data, 'columns'):
         writeline(f, data.columns)
 
-    if isinstance(data, SeriesSet):
-        for line in zip(*list(data.values())):
+    if isinstance(data, (Frame, SeriesSet)):
+        for line in data.iter_row():
             writeline(f, line)
 
     elif hasattr(data, 'items'):
@@ -180,7 +180,7 @@ def write_xls(worksheet, data, decode, encode):
     else:
         start = 0
 
-    if True:
+    try:
         if isinstance(data, (Frame, Matrix, SeriesSet)):
             for i, row in enumerate(data, start):
                 writeline(worksheet, i, row)
@@ -209,8 +209,8 @@ def write_xls(worksheet, data, decode, encode):
         else:
             raise ValueError('DaPy can save a sequence object, dict-like object ' +\
                              'and sheet-like object only.')
-##    except ValueError:
-##        warn('.xls format only allows 65536 lines per sheet.')
+    except ValueError:
+        warn('.xls format only allows 65536 lines per sheet.')
 
 def write_html(f, data, encode, decode):
     def writeline(f, record):

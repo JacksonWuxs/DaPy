@@ -2,7 +2,7 @@ from array import array
 from .core import Matrix, SeriesSet, Series
 from .core import nan, inf
 from .core import range, filter, zip, range
-from .core import is_math, is_seq, is_iter
+from .core import is_math, is_seq, is_iter, is_value
 from .core.base import STR_TYPE
 from collections import namedtuple, deque, Iterable, deque
 from itertools import repeat
@@ -205,22 +205,25 @@ def _sum(data, axis=None):
                 [0.2, 1.5]])
     2.9
     >>> dp.sum([[0, 1],
-                [0, 5]], axis=1) # sum of each record
+                [0, 5]], axis=0) # sum of each record
     [1, 5]
     >>> dp.sum([[0, 1],
-                [0, 5]], axis=0) # sum of each variable
+                [0, 5]], axis=1) # sum of each variable
     [0, 6]
     '''
     if hasattr(data, 'sum'):
         return data.sum(axis)
+    
+    if is_seq(data) is False:
+        data = tuple(data)
         
     if axis is None:
-        if all(map(is_math, data)):
-            return sum(data)
-        return reduce(sum, data)
-    
+        if any(map(is_value, data)) is False:
+            return _sum(map(_sum, data))
+        return sum(data)
+        
     if axis == 1:
-        return map(sum, data)
+        return Matrix(map(sum, data)).T
 
     if axis == 0:
         return _sum([line for line in zip(*data)], axis=1)
@@ -270,7 +273,7 @@ def mean(data, axis=None):
     '''
     if axis is None:
         if hasattr(data, 'shape'):
-            return float(_sum(data, axis)) / _sum(data.shape)
+            return float(_sum(data, None)) / _sum(data.shape)
         if is_seq(data) or isinstance(data, Series):
             if is_seq(data[0]):
                 return float(_sum(data, axis)) / (len(data[0]) + len(data))

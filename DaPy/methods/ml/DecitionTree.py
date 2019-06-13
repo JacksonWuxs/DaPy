@@ -5,6 +5,7 @@ from copy import copy, deepcopy
 from pprint import pformat
 
 class DecisionTree(object):
+    '''Implement of decision tree with C4.5 algorithm'''
     def __init__(self, max_depth=None):
         self._feature_name = []
         self._class_name = []
@@ -49,7 +50,7 @@ class DecisionTree(object):
     def _get_best_feature(self, X, Y, tol_gain_ratio=0.0001):
         size = float(X.shape[0])
         base_entropy = self._cal_shannon(Y)
-        best_gain_ratio, best_feature = tol_gain_ratio, -1
+        best_gain_ratio, best_feature = tol_gain_ratio, None
         
         for feature in X.columns:
             if feature == '__target__':
@@ -61,6 +62,7 @@ class DecisionTree(object):
                 subset_shannon = self._cal_shannon(subset_feature['__target__'])
                 current_entropy -= prob * subset_shannon
                 current_iv -= prob * log(prob, 2)
+                
             gain_ratio = (base_entropy - current_entropy) / abs(current_iv)
             if gain_ratio > best_gain_ratio:
                 best_gain_ratio, best_feature = gain_ratio, feature
@@ -70,13 +72,15 @@ class DecisionTree(object):
     def _create_tree(self, X, Y, feature_name):
         if len(set(Y)) == 1:
             return Y[0]
+
+        most_common_Y = Counter(Y).most_common()[0][0]
         
         if X.shape[1] == 1 and X.columns[0] == '__target__':
-            return Counter(Y).most_common()[0][0]
+            return most_common_Y
         
         best_feature, best_info_gain = self._get_best_feature(X, Y)
-        if isinstance(best_feature, int):
-            return Counter(Y).most_common()[0][0]
+        if best_feature is None:
+            return most_common_Y
 
         feature_name.remove(best_feature)
         self._shannon.setdefault(best_feature,
@@ -84,7 +88,7 @@ class DecisionTree(object):
         subColumn = X.columns
         subColumn.remove(best_feature)
         subX = X[subColumn]
-        subtree = {}
+        subtree = {'???': most_common_Y}
         feature_column = X[best_feature]
 
         for value in set(feature_column):
@@ -111,12 +115,13 @@ class DecisionTree(object):
             feature = list(node.keys())[0]
             compare_value = row[self._feature_name.index(feature)]
             for value, subnode in node[feature].items():
+                node = subnode
                 if compare_value == value:
-                    if isinstance(subnode, dict) is False:
-                        return subnode
-                    node = subnode
+                    if isinstance(node, dict) is False or node == '???':
+                        return node
+                    break
         else:
-            raise ValueError('cannot get the result')
+            return subnode['???']
 
     def predict(self, X):
         assert X.shape[1] == self.n_features
@@ -147,11 +152,11 @@ class DecisionTree(object):
                 plotRelation(father, nodeNum, relation)
                 subTree = tree[firstStr]
                 fatherNode = nodeNum
-                for key,value in subTree.items():
+                for key, value in subTree.items():
                     nodeNum += 1
                     if isinstance(value, dict):
                         plotTree(value, fatherNode, key)
-                    else:
+                    elif key != '???':
                         plotNode(value, nodeNum)
                         plotRelation(fatherNode, nodeNum, key)
         
@@ -196,6 +201,7 @@ if __name__ == '__main__':
     graph.write_pdf(r'C:\Users\JacksonWoo\Desktop\boston.pdf')
     print(mytree)
     print(mytree.predict(X))
+    print(mytree.predict(SeriesSet([['red', 'red', 'clear', 'None', 'None', 'soft sticky']])))
 
 
 
