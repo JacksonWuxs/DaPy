@@ -25,7 +25,7 @@ pip install DaPy
 ```
 Some of functions in DaPy depend on requirements.
 
-- **xlrd **: loading data from .xls file【Necessary】
+- **xlrd**: loading data from .xls file【Necessary】
 - **xlwt**: export data to a .xls file【Necessary】
 - **repoze.lru**: speed up loading data from .csv file【Necessary】
 - **savReaderWrite**: loading data from .sav file【Option】
@@ -47,7 +47,8 @@ Here are just a few of things that DaPy is easy to use:
 
 DaPy has comparable efficiency to some exists libraries. Following dialog shows a testing result running on Python3. We used pandas.load_csv with python engine and the data has 432 thousands rows and 7 columns.
 
-![](https://github.com/JacksonWuxs/DaPy/blob/master/doc/material/result.png)
+![](https://github.com/JacksonWuxs/DaPy/blob/master/doc/material/Result.png)
+
 
 ### Example Useages
 
@@ -83,8 +84,8 @@ DaPy has comparable efficiency to some exists libraries. Following dialog shows 
 - Saving Result
   - Save the model: ```m.save(addr)```
   - Save the final dataset: ```sheet.save(addr)```
-
-
+  
+  
 ### TODO  
 
 :heavy_check_mark: = Done      :running: = In Development       ​ :calendar:  = Put On the Agenda       :thinking: = Not Sure
