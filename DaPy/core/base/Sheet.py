@@ -194,6 +194,15 @@ class BaseSheet(object):
                 if isinstance(t2, int):
                     raise SyntaxError('do you mean sheet["%s"] ' % self.columns[t2]+
                                       'or sheet[%s]' % t2)
+
+        def quickly_append_col(obj, arg, seq, miss):
+            obj._data[arg] = seq
+            obj._columns.append(arg)
+            obj._missing.append(seq)
+            obj._dim = dims(min(self.shape.Ln, len(seq)), 
+                            obj._dim.Col + 1)
+            return obj
+
         args = []
         for arg in interval:
             if isinstance(arg, slice):
@@ -237,7 +246,7 @@ class BaseSheet(object):
                 seq = [sequence[i] for i in int_args]
                 if miss != 0:
                     miss = sum(map(self._isnan, seq))
-                obj._quickly_append_col(key, seq, miss)
+                obj = quickly_append_col(obj, key, seq, miss)
 
             slc_args = [arg for arg in interval if isinstance(arg, slice)]
             for arg in slc_args:
@@ -895,14 +904,6 @@ class SeriesSet(BaseSheet):
             cond = self._trans_where(cond, axis=1)
         self._data[col] = [new if cond(value) else value\
                            for value in self._data[col]]
-        
-    def _quickly_append_col(self, arg, seq, miss):
-        self._data[arg] = seq
-        self._columns.append(arg)
-        self._missing.append(seq)
-        self._dim = dims(min(self.shape.Ln, len(seq)), 
-                        self._dim.Col + 1)
-        return self
 
     def append_row(self, item):
         '''append a series data as a row into the tail of the sheet

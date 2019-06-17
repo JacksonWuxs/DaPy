@@ -105,7 +105,7 @@ class DecisionTree(object):
         X.append_col(Y, '__target__')
 
         self._feature_name = copy(feature_name)
-        self._class_name = ['Class=%s' % value for value in Y]
+        self._class_name = set(['Class=%s' % value for value in Y])
         self._root = self._create_tree(X, Y, feature_name)
         return self
 
@@ -115,13 +115,13 @@ class DecisionTree(object):
             feature = list(node.keys())[0]
             compare_value = row[self._feature_name.index(feature)]
             for value, subnode in node[feature].items():
-                node = subnode
                 if compare_value == value:
-                    if isinstance(node, dict) is False or node == '???':
-                        return node
+                    if isinstance(subnode, dict) is False:
+                        return subnode
+                    node = subnode
                     break
-        else:
-            return subnode['???']
+            else:
+                return node[feature]['???']
 
     def predict(self, X):
         assert X.shape[1] == self.n_features

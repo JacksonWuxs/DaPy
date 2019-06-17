@@ -1,119 +1,206 @@
-<img src="https://github.com/JacksonWuxs/DaPy/blob/master/doc/material/DaPy.png"/>
+<img src="https://github.com/JacksonWuxs/DaPy/blob/master/doc/material/DaPy.png">
+<i>本开源项目流利地实现你在数据挖掘中的想法</i>
 
-DaPy - 享受数据挖掘之旅
-====
+# DaPy - 享受你的数据挖掘之旅
 
+![](https://img.shields.io/badge/Version-1.10.1-green.svg)  ![](https://img.shields.io/badge/Python2-pass-green.svg)![](https://img.shields.io/badge/Python3-pass-green.svg)![](https://img.shields.io/badge/Download-PyPi-green.svg)  ![](https://img.shields.io/badge/License-GNU-blue.svg)
 
-![](https://img.shields.io/badge/Version-1.5.3-green.svg)   ![](https://img.shields.io/badge/Download-PyPi-green.svg)   ![](https://img.shields.io/badge/License-GNU-blue.svg)  
+[英文版](https://github.com/JacksonWuxs/DaPy/blob/master/README.md)
 
-作为一个基于Python原生数据结构搭建的数据分析库，**DaPy**致力于节约数据科学家的时间并提高他们的研究效率，同时它也在尽其所能为他们提供更舒适和流畅的操作体验。
+### 简介
 
-[安装](#安装) | [特性](#特性) | [快速开始](https://github.com/JacksonWuxs/DaPy/blob/master/doc/Quick%20Start/Chinese.md) | [远期规划](#远期规划) | [更新日志](#更新日志) | [用户手册](https://github.com/JacksonWuxs/DaPy/blob/master/doc/Guide%20Book/Chinese/README.md) | [版权归属](#版权归属) | [English](https://github.com/JacksonWuxs/DaPy/blob/master/README.md)
+DaPy是一个在设计时就非常关注易用性的数据分析库。通过为您提供设计合理的**数据结构**和丰富的**机器学习模型**，它能帮您快速地实现数据分析思路。简单来说，本项目能帮你完成数据挖掘任务中的每一步，如导入导出数据、预处理数据、特征工程、模型训练和模型评估等。
 
-## 安装
-最新版本1.5.3已上传至PyPi。
+### 示例
+
+本示例简单展示了DaPy的功能。我们的任务是为鸢尾花分类任务训练一个分类器。更详细的信息可以参阅[这里](https://github.com/JacksonWuxs/DaPy/blob/master/doc/Quick%20Start/English.md)。
+
+![](https://github.com/JacksonWuxs/DaPy/blob/master/doc/Quick%20Start/quick_start.gif)
+
+### 安装
+
+最新版的DaPy-1.10.1已经上传到了PyPi
 ```
 pip install DaPy
 ```
+DaPy中的部分功能依赖于下述这些第三方库：
 
-用下面的代码将DaPy更新至1.5.3版本。
-```
-pip install -U DaPy
-```
+- **xlrd**: loading data from .xls file【必要】
+- **xlwt**: export data to a .xls file【必要】
+- **repoze.lru**: speed up loading data from .csv file【必要】
+- **savReaderWrite**: loading data from .sav file【可选】
+- **bs4.BeautifulSoup**: auto downloading data from a website【可选】
+- **numpy**: dramatically increase the efficiency of ML models【推荐】 
 
-## 特性
-**便捷**和**高效**是DaPy的基石。
-从一开始，我们就让DaPy使用尽可能多的Python原生数据结构，且试图让
-它支持更多的Python语法习惯，因此你可以快速地适应DaPy。此外，我们
+### 特性
 
-极力简化调用DaPy的API接口，以便让你流畅地实现你的想法。
+我们希望DaPy是一个对用户友好的框架，为此, 我们极力优化DaPy的API接口设计，以便让你更快地适应和灵活地使用它。下面是DaPy较为友好的功能:  
 
-* 以下是DaPy做得不错的一些事情：
-    - [使用`DataSet`结构高效管理各种数据](https://github.com/JacksonWuxs/DaPy/blob/master/doc/Guide%20Book/English/Features.md#visually-manage-diverse-data)
-    - [快速完成数据的"增删改查"操作](https://github.com/JacksonWuxs/DaPy/blob/master/doc/Guide%20Book/English/Features.md#easily-insert-and-delete-a-large-number-of-data)
-    - 轻松访问数据集的一部分，不仅可以通过索引或变量名称，还可以通过特定条件访问。
-    - 支持从CSV，Excel，SQLite3，SPSS或者html文件存取数据的强大I/O工具。
-    - 支持多变量及多条件的排序。
-    - 使用内置分析模型快速验证您的想法（例如“方差分析”，“多层感知机”，“线性回归”）。
-    - 多种方法可帮助您轻松感知数据集。
+- 多种在CMD中呈现数据的方式
 
-即使它使用Python原生数据结构，
-DaPy的效率仍然与C写的一些库相当。
-我们在Intel i7-8550U平台上的
-2.7.15-64Bit版本的Python原生IDLE中进行了测试。[数据集](http://www.kitgram.cn/Library/DaPy$Test_data/read_csv.csv)
-有超过200万条记录，文件大小约119 MB。
+- 符合Python语法习惯的二维数据表结构
+- 与SQL语法相似的函数封装方法
+- 支持多种文件格式的I/O工具 (支持格式：.html, .xls, .db, .csv, .sav)
+- 内建基本机器学习模型(决策树、多层感知机、线性回归等)
 
-如果您想跟进最新进展，可以访问[这里](https://www.teambition.com/project/5b1b7bd40b6c410019df8c41/tasks/scrum/5b1b7bd51e4661001838eb10)。
-<table style='text-align:center'>
-<thead>
-    <th>测试项目</th>
-    <th>DaPy(V1.5.3)</th>
-    <th>Pandas(V0.23.4)</th>
-    <th>Numpy(V1.15.1)</th>
-</thead>
-<tbody>
-<tr>
-	<td>加载数据</td>
-	<td>12.85s (3.2x)</td>
-	<td> 4.02s (1.0x)</td>
-  	<td>22.63s (5.6x)</td>
-</tr>
-<tr>
-	<td>遍历数据</td>
-	<td>0.09s (1.9x)</td>
-	<td>1.15s (14.4x)</td>
-	<td>0.08s (1.0x)</td>
-</tr>
-<tr>
-	<td>排序数据</td>
-	<td>0.97s (1.7x)</td>
-	<td>0.25s (1.0x)</td>
-	<td>3.03s (9.2x)</td>
-</tr>
-<tr>
-	<td>存储数据</td>
-	<td>7.20s (3.5x)</td>
-	<td>7.60s (3.7x)</td>
-	<td>2.05s (1.0x)</td>
-</tr>
-<tr>
-	<td>总耗时</td>
-	<td>21.11s (1.6x)</td>
-	<td>13.02s (1.0x)</td>
-	<td>27.79s (2.1x)</td>
-</tr>
-</tbody>
-</table>  
+另外, 为了让DaPy能应付真实世界中的任务, 我们还时刻关注DaPy的*性能表现*。虽然DaPy目前是由纯Python语言实现的，但它与现有的数据处理框架在性能上也具有可比性。下图展示了使用具有432万条记录及7个变量的数据集的性能测试结果。
+
+![](https://github.com/JacksonWuxs/DaPy/blob/master/doc/material/Result.jpg)
+
+### 用法说明
+
+- 加载源数据
+  - 从本地csv, sav, sqlite3 或 xls文件中加载数据: ```sheet = DaPy.read(file_addr)```
+  - 显示数据的前后5条记录: ```sheet.show(lines=5)```
+- 预处理数据
+  - 删除重复记录: ```sheet.drop_duplicates(col, keep='first')```
+  - 合并另一张表中新的字段: ```sheet.merge(sheet2, keep_same=False)```
+  - 用线性插值法填充缺失值或者直接去除: ```sheet.fillna(method='linear')``` , ```sheet.dropna(axis=0)```
+  - 移除一些无用变量（如. 客户*ID*）: ```sheet.drop('ID', axis=1)```
+  - 基于某一列数据进行排序: ```sheet = sheet.sort('Age', 'DESC')```
+- 数据探索
+  - 汇总每一个变量的统计指标（均值、方差等）: ```sheet.info```
+  - 统计某分类变量的取值分布情况: ```sheet.count_values('gender')```
+  - 探索分类变量不同取值之间的差异: ```sheet.groupby('city')```
+  - 计算连续变量间的相关性: ```sheet.corr(['age', 'income'])```
+- 特征工程
+  - 使用日期变量构造一些分类变量（季节、周末等）: ```sheet.label_date('birth')```
+  - 为分类变量引入虚拟变量: ```sheet.get_dummies(['city', 'education'])```
+  - 归一化一些连续变量: ```sheet.normalized(col='age')```
+  - 对数归一化一些连续变量: ```sheet.normalized('log', col='salary')```
+  - 使用符合您业务需求的函数构造新变量: ```sheet.apply(func=tax_rate, col=['salary', 'income'])```
+  - 使用差分让时间序列平稳: ```DaPy.diff(sheet.income)```
+  - 构造交叉项: ```sheet.get_cross_terms(col=['income', 'age', 'gender', 'education'])```
+- 模型训练
+  - 选择并初始化一个模型: ```m = MLP()```, ```m = LinearRegression()```, ```m = DecisionTree()``` or  ```m = DiscriminantAnalysis()``` 
+  - 训练模型参数: ```m.fit(X_train, Y_train)```
+- 模型评估
+  - 使用参数检验对模型进行评估（仅限线性回归和判别分析）: ```m.report.show()```
+  - 通过可视化评估模型: ```m.plot_error()``` or ```DecisionTree.export_graphviz()```
+  - 使用测试集评估模型: ```DaPy.methods.Performance(m, X_test, Y_test, mode)```.
+- 保存结果
+  - 保存模型: ```m.save(addr)```
+  - 保存数据: ```sheet.save(addr)```
 
 
+### TODO  
 
+:heavy_check_mark: = 已完成      :running: = 正在开发       ​ :calendar:  = 规划中       :thinking: = 未排期
 
-## 远期规划  
-* 描述性统计
-* 推断性统计
-   * T-test
-   * 轮廓分析
-* 特征工程
-  - PCA (主成分分析)
-  - LDA (Linear Discriminant Analysis)
-  - MIC (Maximal information coefficient)
+* 数据结构
+
+  * DataSet (3-D data structure) :heavy_check_mark:
+  * Frame (2-D general data structure)​ :heavy_check_mark:
+  * SeriesSet (2-D general data structure) :heavy_check_mark:
+  * Matrix (2-D mathematical data structure) :heavy_check_mark:
+  * Row (1-D general data structure) :heavy_check_mark:
+  * Series (1-D general data structure) :heavy_check_mark:
+  * TimeSeries (1-D time sequence data structure)​ :running:
+
+* 统计
+
+  * 基本统计功能 (mean, std, skewness, kurtosis, frequency, fuantils)​ :heavy_check_mark:
+  * 相关性分析 (spearman & pearson) :heavy_check_mark:
+
+  * 方差分析 :heavy_check_mark:
+  * 均值比较 (simple T-test, independent T-test) :thinking:
+
+* 操作
+
+  * 易用的API设计 (create, Retrieve, Update, Delete)  :heavy_check_mark:
+  * 灵活的I/O工具 (supporting multiple source data for input and output) :heavy_check_mark:
+  * 虚拟变量 :heavy_check_mark:
+  * 差分序列模型:heavy_check_mark:
+  * 数据标准化 (log, normal, standard, box-cox):heavy_check_mark:
+  * 数据去重 :heavy_check_mark:
+  * 聚合函数 :heavy_check_mark:
+
 * 模型
-   - 朴素贝叶斯
-   - 支持向量机
-   - K-Means
 
-## 更新日志
+  - 判别分析 :heavy_check_mark:
+  - 线性回归  :heavy_check_mark:
+  - 多层感知机 :heavy_check_mark:
+  - 决策树 :heavy_check_mark:
+  - K-Means :running:
+  - PCA (Principal Component Analysis) :running:
+  - ARIMA (Autoregressive Integrated Moving Average) :calendar:
+  - SVM ( Support Vector Machine) :thinking:
+  - Bayes Classifier :thinking:
+
+* 其他
+
+  * 手册 :running:
+  * 示例 :running:
+  * 单元测试 :running:
+
+### 项目成员
+
+- ###### 负责人:
+
+  Xuansheng WU (@JacksonWoo: wuxsmail@163.com )
+
+- ###### 开发者：
+
+  1. Xuansheng WU
+  2. Feichi YANG  (@Nick Yang: yangfeichi@163.com)  
+
+### 版本日志
+
+* V1.10.1 (2019-06-13)
+  * 添加 ```SeriesSet.update()```, 更新某些数据中的一些记录信息;
+  * 添加 ```BaseSheet.tolist()``` and ```BaseSheet.toarray()```, 将表转换为list嵌套list的结构或者numpy结构;
+  * 添加 ```BaseSheet.query()```, 通过一个Python句法书写的字符串筛选符合条件的记录;
+  * 添加 ```SeriesSet.dropna()```, 提出包含缺失值的记录或变量;
+  * 添加 ```SeriesSet.fillna()```, 为缺失值填补固定值或者线性插值法填补;
+  * 添加 ```SeriesSet.label_date()```, 为时间变量构造新的解释变量;
+  * 添加 ```DaPy.Row```, 原始数据表一条记录的视图;
+  * 添加 ```DaPy.methods.DecitionTree```, C4.5决策树分类器算法的实现;
+  * 添加 ```DaPy.methods.SignTest```, 符号检验;
+  * 重构 ```DaPy.core.base```;
+  * 优化 ```BaseSheet.groupby()```, 以前性能的18倍;
+  * 优化 ```BaseSheet.select()```, 以前性能的14倍;
+  * 优化 ```BaseSheet.sort()```, 以前性能的2倍;
+  * 优化 ```dp.save()```, 保存.csv的性能是以前1.6倍;
+  * 优化 ```dp.read()```, 加载数据的性能是以前1.1倍;
+* V1.9.2 (2019-04-23)
+  * 添加 `BaseSheet.groupby()`, 基于特定列为记录进行分类分析;
+  * 添加 `DataSet.apply()`, 对数据集映射一个函数;
+  * 添加 `DataSet.drop_duplicates()`, 自动去除数据集中的重复值;
+  * 添加 `DaPy.Series`, 用于保存序列数据的新数据结构;
+  * 添加 `DaPy.methods.Performance()`, 自动评价一个机器学习模型的性能;
+  * 添加 `DaPy.methods.Kappa()`, 计算给定混淆矩阵的Kappa系数;
+  * 添加 `DaPy.methods.ConfuMat()`, 基于给定真实值和预测值生成混淆矩阵;
+  * 更新 `BaseSheet.select()`, 支持新的字段 limit 和 columns;
+* V1.7.2 Beta (2019-01-01)
+  * 添加 `get_dummies()` , 引入虚拟变量方式处理名义变量;
+  * 添加 `DaPy.show_time`, DaPy开始具备日志功能;
+  * 添加 `boxcox()` , Box-Cox转换;
+  * 添加 `diff()`, 对时间序列进行差分;
+  * 添加 `DaPy.methods.LDA`, 判别分析模型（支持线性判别法和Fisher判别法）;
+  * 添加 `row_stack()`, 纵向合并多个数据表;
+  * 添加 `Row`，新数据结构更好地以*视图*方式访问一行数据;
+  * 添加 `LinearRegression.report`,  访问该模型训练集上的参数检验统计报告;
+  * 更新 `read()`, 支持自动从网页中爬取数据;
+  * 更新 `SeriesSet.merge()`, 更多可用的参数;
+  * 重命名 `DataSet.pop_miss_value()`  为 `DataSet.dropna()`;
+  * 重构 `methods`, more stable and more scalable in the future;
+  * 重构 `methods.LinearRegression`, it can prepare a statistic report for you after training;
+  * 重构 `BaseSheet.select()`, 5 times faster and more pythonic API design;
+  * 重构 `BaseSheet.replace()`, 20 times faster and more pythonic API design;
+  * 开始支持Python 3！
+  * 修复了一些小Bug;
 * V1.5.1 (2018-11-17)
-  * 添加 外部数据文件读写能力：html，Pickle;
-  * 添加 DaPy.delete() 和 DaPy.column_stack()函数用于删除和横向合并非DaPy对象;
-  * 添加 DaPy.P() 和 DaPy.C()函数用于计算排列数和组合数；
+  * 添加 `select()`, 快速基于某些条件筛选数据;
+  * 添加 `delete()`, 按照某个坐标轴删除一个非DaPy数据结构的数据;
+  * 添加 `column_stack()`, 横向合并多个数据表;
+  * 添加 DaPy.P() 和 DaPy.C()函数，用于计算排列数和组合数；
   * 添加 语法特性，使得用户可以通过data.title来访问表结构中的列;
   * 重构 DaPy.BaseSheet类，精简代码体积并提高了拓展性;
   * 重构 DaPy.DataSet.save()函数，提高了代码稳定性及拓展能力；
   * 重写 部分基本数学函数的算法；
   * 修复 一些细小的bug;
 * V1.3.3 (2018-06-20)
-  - 添加 外部数据文件读取能力拓展: Excel, SPSS, SQLite3, CSV;
+  - 添加 外部数据文件读取能力: Excel, SPSS, SQLite3, CSV;
   - 重构 DaPy架构, 提高了远期拓展能力;
   - 重构 DaPy.DataSet类, 一个DataSet实例可以批量管理多个数据表;
   - 重构 DaPy.Frame类, 删除了格式验证, 适配更多类型的数据集;
@@ -132,24 +219,24 @@ DaPy的效率仍然与C写的一些库相当。
   - 添加 `多层感知机`至DaPy.machine_learn;
   - 添加 一些标准数据集.
 * V1.3.1 (2018-03-19)
-  - 修复 在加载数据及中的bug;
+  - 修复 在加载数据时的bug;
   - 添加 支持保存数据集的功能.
 * V1.2.5 (2018-03-15)
   - DaPy的第一个版本！
 
-## 版权归属
-Copyright (C) 2018 Xuansheng Wu
-<br>
+### 开源协议
+
+Copyright (C) 2018 - 2019 Xuansheng Wu
+
 This program is free software: you can redistribute it and/or modify
 it under the terms of the GNU General Public License as published by
 the Free Software Foundation, either version 3 of the License, or
-(at your option) any later version.</br>
-<br>
+(at your option) any later version.
+
 This program is distributed in the hope that it will be useful,
 but WITHOUT ANY WARRANTY; without even the implied warranty of
 MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-GNU General Public License for more details.</br>
-<br>
+GNU General Public License for more details.
+
 You should have received a copy of the GNU General Public License
-along with this program.  If not, see https:\\www.gnu.org\licenses.# datapy
-A light Python library for data processing and analysing.</br>
+along with this program.  If not, see https:\\www.gnu.org\licenses.

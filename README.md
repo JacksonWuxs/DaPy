@@ -9,11 +9,11 @@
 
 ### Overview
 
-DaPy is a data analysis library designed with ease of use in mind, which lets you quickly implement your thoughts by providing well-designed **data structures** and abundant  **professional ML models**. In short, this project can help you complete data mining tasks step by step, such as loading data, preprocessing data, feature engineering, developing models, model evaluation and result export. 
+DaPy is a data analysis library designed with ease of use in mind, which lets you smoothly implement your thoughts by providing well-designed **data structures** and abundant  **professional ML models**. In short, this project can help you complete data mining tasks in each step, such as loading data, preprocessing data, feature engineering, developing models, model evaluation and result export.
 
 ### Example
 
-This example simply shows you what DaPy can do for you. Our goal in this example is to train a classifier to predict the class that a new record belongs to. Detail information can be read from [here](https://github.com/JacksonWuxs/DaPy/blob/master/doc/Quick%20Start/English.md).
+This example simply shows you what DaPy can do for you. Our goal in this example is to train a classifier for Iris classification task. Detail information can be read from [here](https://github.com/JacksonWuxs/DaPy/blob/master/doc/Quick%20Start/English.md).
 
 ![](https://github.com/JacksonWuxs/DaPy/blob/master/doc/Quick%20Start/quick_start.gif)
 
@@ -25,29 +25,27 @@ pip install DaPy
 ```
 Some of functions in DaPy depend on requirements.
 
-- **xlrd **: loading data from .xls file【Necessary】
+- **xlrd**: loading data from .xls file【Necessary】
 - **xlwt**: export data to a .xls file【Necessary】
 - **repoze.lru**: speed up loading data from .csv file【Necessary】
-- **savReaderWrite**: loading data from .sav file【Option】
-- **bs4.BeautifulSoup**: auto downloading data from a website【Option】
+- **savReaderWrite**: loading data from .sav file【Optional】
+- **bs4.BeautifulSoup**: auto downloading data from a website【Optional】
 - **numpy**: dramatically increase the efficiency of ML models【Recommand】 
 
 ### Features
 
-We hope DaPy is an user-friendly tool. Therefore, *easy-to-use* is the cornerstone of DaPy. Also, we hope it can be used in some real-world tasks, thereby we are keeping an eye on its *efficiency*. 
+We hope DaPy is an user-friendly tool. Therefore, we pay attention to the design of API in DaPy in order to let you quickly adept it and use it flexibly. Here are just a few of things that make DaPy simple:  
 
-Here are just a few of things that DaPy is easy to use:  
+- Variety of ways to visualize data in CMD
 
-- Variety of ways to visualize data
-
-- Easy imagine data structure (just like operating a 2D table)
+- 2D data sheet structures following Python syntax habbits
 - SQL-like APIs to process data
 - Flexible IO tools for loading and saving data (e.g. Website, Excel, Sqlite3, SPSS, Text)
 - Built-in basic models (e.g. Decision Tree, Multilayer Perceptron, Linear Regression, ...)
 
-DaPy has comparable efficiency to some exists libraries. Following dialog shows a testing result running on Python3. We used pandas.load_csv with python engine and the data has 432 thousands rows and 7 columns.
+Also, we hope it can be used in some real-world tasks, thereby we are keeping an eye on its *efficiency*. Although DaPy is implemented by pure Python, it has comparable efficiency to some exists libraries. Following dialog shows a testing result and the data had 432 thousands rows and 7 columns.
 
-![](https://github.com/JacksonWuxs/DaPy/blob/master/doc/material/result.png)
+![](https://github.com/JacksonWuxs/DaPy/blob/master/doc/material/Result.jpg)
 
 ### Example Useages
 
