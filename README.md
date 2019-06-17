@@ -47,6 +47,7 @@ Also, we hope it can be used in some real-world tasks, thereby we are keeping an
 
 ![](https://github.com/JacksonWuxs/DaPy/blob/master/doc/material/Result.jpg)
 
+
 ### Example Useages
 
 - Loading Source Data
@@ -81,8 +82,8 @@ Also, we hope it can be used in some real-world tasks, thereby we are keeping an
 - Saving Result
   - Save the model: ```m.save(addr)```
   - Save the final dataset: ```sheet.save(addr)```
-
-
+  
+  
 ### TODO  
 
 :heavy_check_mark: = Done      :running: = In Development       ​ :calendar:  = Put On the Agenda       :thinking: = Not Sure
@@ -232,23 +233,23 @@ Also, we hope it can be used in some real-world tasks, thereby we are keeping an
   - Added the function which supports to save data as a csv file;
   - Fixed some bugs in the loading data function;
 * V1.2.5 (2018-03-15)
-
   - First public beta version of DaPy!  
 
 ### License
 
 Copyright (C) 2018 - 2019 Xuansheng Wu
-<br>
+
 This program is free software: you can redistribute it and/or modify
 it under the terms of the GNU General Public License as published by
 the Free Software Foundation, either version 3 of the License, or
-(at your option) any later version.</br>
-<br>
+(at your option) any later version.
+
 This program is distributed in the hope that it will be useful,
 but WITHOUT ANY WARRANTY; without even the implied warranty of
 MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-GNU General Public License for more details.</br>
-<br>
+GNU General Public License for more details.
+
 You should have received a copy of the GNU General Public License
 along with this program.  If not, see https:\\www.gnu.org\licenses.# datapy
-A light Python library for data processing and analysing.</br>
+A light Python library for data processing and analysing.
+
