@@ -4,6 +4,7 @@ from .core import nan, inf
 from .core import range, filter, zip, range
 from .core import is_math, is_seq, is_iter, is_value
 from .core.base import STR_TYPE
+from .core.base.IndexArray import SortedIndex
 from collections import namedtuple, deque, Iterable, deque
 from itertools import repeat
 from warnings import warn
@@ -237,6 +238,15 @@ def _max(data, axis=None):
     if axis == 1:
         return map(max, data)
 
+def median(data):
+    '''median value of sequence data'''
+    sub_lenth = len(data) // 2 + 1
+    sort_data = sorted(data)
+    med = sort_data[sub_lenth]
+    if len(data) % 2 == 0:
+        return (med + sort_data[sub_lenth + 1]) / 2.0
+    return med
+
 def mean(data, axis=None):
     '''average of sequence elements.
 
@@ -291,10 +301,8 @@ def mean(data, axis=None):
         return result[0][0]
     return result
 
-def std(data, axis=None):
-    Ex = mean(data)
-    Ex2 = sum((i ** 2 for i in data)) / len(data)
-    return (Ex2 - Ex**2) ** 0.5
+def std(series):
+    return Series(series).std()
 
 def cov(x, y=None, **kwrds):
     '''
@@ -339,6 +347,28 @@ def cov(x, y=None, **kwrds):
 def corr(x, y, method='pearson'):
     '''calculate the correlation between X and Y
 
+    Users can calculate the correlation between two sequence of numerical
+    data with three possible methods, which are Pearson Correlation
+    (K. Pearson, 1990), Spearmsn Correlation (Kendall M, 1990) and
+    Kendall Correlation (Kendall M, 1990). According to some researches,
+    Pearson is the best method when data is fully distributed with Gauss
+    Distribution. When significant nonlinear impacts or movement bias
+    appear in the data, Spearman and Kendall correlations are better.
+
+    Formulas
+    --------
+            cov(x,y)
+    r = -----------------, Pearson Correlation
+         std(x) * std(y)
+
+              6 * sum(di^2)
+    r = 1 - ----------------, Spearman Correlation
+               n(n^2 - 1)
+
+          Nc - Nd
+    r = --------------, Kendall Correlation
+         n(n - 1) / 2
+
     Parameters
     ----------
     x, y : array-like
@@ -346,47 +376,119 @@ def corr(x, y, method='pearson'):
 
     method : str (default="pearson")
         the method used to calculate correlation.
-        ("pearson" and "spearman" are supported).
+        ("pearson", "spearman" and 'kendall' are supported).
+
+    Returns
+    -------
+    value of correlation
+
+    Examples
+    --------
+    >>> from DaPy import corr
+    >>> x = []
+    >>> y = []
+
+    TODO
+    ----
+    1. Gini Correlation, GC
+    2. Order Statistics Correlation Coeeficient, OSCC
+
+    References
+    ----------
+    1. Fisher R A. Statistical Methods, Experimental Design, and Scientific
+    Inference [M]. New York: Oxford University-Press, 1990.
+    2. Kendall M, Gibbons J D. Rank Correlation Methods[M]. 5th. New Yrok:
+    Oxford University Press, 1990.
+    3. Weichao X. A Review on Correlation Coefficients. Journal of Guandong
+    University of Technology. Vol.29 No.3. 2012.
+    4. Chen W & Tingjin C. Non-parametetric Statistics (Second Edition).
+    Publication of Tsinghua University. 2009.
+    5. He X & Liu W. Applied Regression Analysis. China People's University
+    Publication House. 2015.
+
+    See Also
+    --------
+    >>> help(DaPy.matlib._corr_kendall)
+    >>> help(DaPy.matlib._corr_spearman)
+    >>> help(DaPy.matlib._corr_pearson)
     '''
     assert isinstance(method, STR_TYPE), 'method should be a str or unicode'
-    assert method in ('pearson', 'spearman'), 'method should be "pearson" or "spearman"'
-    if method.lower() == 'pearson':
+    assert method in ('pearson', 'spearman', 'kendall'), 'method should be "pearson" or "spearman"'
+    if method == 'pearson':
         return _corr_pearson(x, y)
 
-    if method.lower() == 'spearman':
-        return _corr_spearman(x, y)  
+    if method == 'spearman':
+        return _corr_spearman(x, y)
+
+    if method == 'kendall':
+        return _corr_kendall(x, y)
+
+def _corr_kendall(x, y):
+    '''calculate the kendall rank correlation between X and Y
+
+    In this function, we use the following formula to calculate the kendall
+    correlation between two series. In order to speed up the operation of
+    counting Nc and Nd parameters in the formula, binary select algorithm
+    is applied here. Finally, the worst time complexity of this algorithm
+    is O(4NlnN).
+
+    Formula
+    -------
+              Nc - Nd
+    tau = ---------------
+           n(n - 1) / 2
+
+    Reference
+    ---------
+    Chen W & Tingjin C. Non-parametetric Statistics (Second Edition).
+    Publication of Tsinghua University. 2009.
+    '''
+    data = SeriesSet({'x': x, 'y': y}) # initialize the data
+    ranks = data.get_ranks(['x', 'y']).sort('x_rank', 'y_rank') # O(3NlogN)
+    sorted_y_rank_index = SortedIndex(ranks.y_rank) # O(NlogN)
+    cache = {} # used to remember selected values
+
+    Nc, Nd, n = 0, 0, data.shape.Ln
+    for i, value in enumerate(ranks.y_rank): # O(N)
+        upper, lower = cache.get(value, (None, None))
+        if not upper:
+            # find the data which are greater or lease than the current: O(logN)
+            upper = sorted_y_rank_index.upper(value, include_equal=False)
+            lower = sorted_y_rank_index.lower(value, include_equal=False)
+            cache[value] = [upper, lower]
+
+        # count numbers of values which are greater than the current: O(1)
+        Nc += sum(1 for ind_ in upper if ind_ > i)
+        Nd += sum(1 for ind_ in lower if ind_ > i)
+    r = 2.0 * (Nc - Nd) / (n ** 2 - n)
+    stat = tau * sqrt(9.0 * (n ** 2 - 1.0) / (4 * n + 20))
+    if abs(stat) < 1.65:
+        return 0
+    return tau
 
 def _corr_spearman(x, y):
     '''calculate the spearman rank correlation between X and Y
 
     Formula
     -------
-                   6
-    Rs = 1 - -------------SIGMA(di^2)
+               6*SUM(di^2)
+    r = 1 - ----------------
                n(n^2 - 1)
 
     Reference
     ---------
     He X & Liu W. Applied Regression Analysis. China People's University
     Publication House. 2015.
-    '''
-    def rank(X):
-        lst, last_value, last_rank = [1], X[0], 1.0
-        for rank, value in enumerate(X[1:], 2):
-            if value == last_value:
-                lst.append(float(last_rank))
-                continue
-            lst.append(float(rank))
-            last_value, last_rank = value, rank
-        return lst
-        
-    data = SeriesSet({'X': x, 'Y': y})
-    n = data.shape.Ln
-    data = data.sort(('X', 'DESC'))
-    data.append_col(rank(data.X), 'xRank')
-    data = data.sort(('Y', 'DESC'))
-    data.append_col(rank(data.Y), 'yRank')
-    return _corr_pearson(data.xRank, data.yRank)
+    ''' 
+    data = SeriesSet({'x': x, 'y': y})
+    ranks = data.get_ranks(['x', 'y'])
+    diff_sqrt = (ranks.x_rank - ranks.y_rank) ** 2
+    n = ranks.shape.Ln
+    r = 1 - (6.0 * diff_sqrt.sum()) / (n ** 3 - n)
+    stat = r * sqrt((n - 2) / (1 - r))
+    if abs(stat) < 1.65:
+        return 0
+    return r
 
 def _corr_pearson(x, y):
     '''calculate the pearson correlation between X and Y
@@ -412,16 +514,10 @@ def frequency(data, cut=0.5):
             Group2 += 1
     return statistic(Group1/size, Group2/size, Group3/size)
 
-def quantiles(data, shapes=[0.05,0.1,0.25,0.5,0.75,0.9,0.95]):
+def quantiles(data, points=[0.05,0.1,0.25,0.5,0.75,0.9,0.95]):
     data = sorted(data)
-    groups = list()
-    lenth = len(data) + 1
-    for point in shapes:
-        try:
-            groups.append(data[int(lenth*point)])
-        except:
-            pass
-    return groups
+    lenth = len(data)
+    return [data[int(lenth * data)] for point in points]
 
 def distribution(data, breaks=10, x_label=False):
     assert isinstance(breaks, int)
@@ -497,14 +593,27 @@ def describe(data):
         data = array('f', x)
     except:
         data = array('f', filter(lambda x: is_math(x) and x != nan, data))
+        
     size = float(len(data))
     if size == 0:
         return statistic(*[None] * 9)
 
-    Ex = sum(data) / size
-    Ex2 = sum((i ** 2 for i in data)) / size
-    Ex3 = sum((i ** 3 for i in data)) / size
-    Ex4 = sum((i ** 4 for i in data)) / size
+    min_, max_ = min(data), max(data)
+    if is_math(min_) and is_math(max_):
+        rang = max_ - min_
+    else:
+        rang = '-'
+
+    Ex, Ex2, Ex3, Ex4 = 0, 0, 0, 0
+    for i in data:
+        Ex += i; i *= i
+        Ex2 += i; i *= i
+        Ex3 += i; i *= i
+        Ex4 += i
+    Ex /= size
+    Ex2 /= size
+    Ex3 /= size
+    Ex4 /= size
 
     std = (Ex2 - Ex**2) ** 0.5
     std_n = size / (size - 1.0) * std
@@ -513,12 +622,6 @@ def describe(data):
     else:
         S = (Ex3 - 3 * Ex * std ** 2 - Ex ** 3) / std ** 1.5
         K = Ex4 / std ** 4 - 3
-    min_, max_ = min(data), max(data)
-
-    if is_math(min_) and is_math(max_):
-        rang = max_ - min_
-    else:
-        rang = None
     
     if Ex == 0:
         return statistic(Ex, std, std_n, None, rang, min_, max_, S, K)

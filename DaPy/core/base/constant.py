@@ -48,3 +48,8 @@ STR_TYPE = tuple(STR_TYPE)
 MATH_TYPE = tuple(MATH_TYPE)
 SEQ_TYPE = tuple(SEQ_TYPE)
 
+SHEET_DIM = namedtuple('sheet', ['Ln', 'Col'])
+
+DUPLICATE_KEEP = {'first': slice(1, None),
+                  'last': slice(0, -1),
+                  False: slice(None, None)}

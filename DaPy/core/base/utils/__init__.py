@@ -18,10 +18,8 @@ if PYTHON3 is True:
 else:
     from string import atof as str2float, atoi as str2int
     from repoze.lru import lru_cache
-    
-@lru_cache(maxsize=None)
-def str2float(value):
-    return float(value)
+
+str2float = float
 
 @lru_cache(maxsize=None)
 def str2int(value):
@@ -35,9 +33,7 @@ def str2bool(value):
 def str2date(value):
     return _str2date(value)
 
-@lru_cache(maxsize=None)
-def str2percent(value):
-    return _str2percent(value)
+str2percent = _str2percent
 
 @lru_cache(maxsize=None)
 def isnan(value):
@@ -130,7 +126,7 @@ def argsort(seq, key=None, reverse=False):
     '''
     if hasattr(seq, '__getitem__'):
         return sorted(xrange(len(seq)), key=seq.__getitem__, reverse=reverse)
-    return [value[0] for value in sorted(enumerate(seq), key=itemgetter(1), reverse=reverse)]
+    return list(map(itemgetter(0), sorted(enumerate(seq), key=itemgetter(1), reverse=reverse)))
 
 def hash_sort(records, *orders):
     assert all(map(lambda x: isinstance(x[0], int), orders)), 'keyword should be int'
@@ -178,3 +174,6 @@ def auto_plus_one(exists, item, start=1):
     while '%s_%d' % (item, start) in exists:
         start += 1
     return '%s_%d' % (item, start)
+
+def count_nan(nan_func, series):
+    return [nan_func(v) for v in series].count(True)

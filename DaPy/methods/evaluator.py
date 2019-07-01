@@ -54,6 +54,7 @@ def Performance(predictor, data, target, mode='reg'):
     
     elif mode == 'reg':
         predict = Series(predictor.predict(data).tolist())
+        print predict
         mean_abs_err = Score.MAE(target, predict)
         mean_sqrt_err = Score.MSE(target, predict)
         R2 = Score.R2_score(target, predict)

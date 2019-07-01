@@ -1,11 +1,48 @@
-from collections import Iterable, OrderedDict
+from collections import Iterable, OrderedDict, Sequence
 from copy import copy
 from .constant import STR_TYPE, VALUE_TYPE, MATH_TYPE, SEQ_TYPE
 from .utils import range, xrange, map, zip, filter, is_iter
 
 __all__ = ['Row']
 
-class Row(object):
+class Row(Sequence):
+    '''This class is a view of a row of source sheet
+
+    This class can help you quickly get the each row of the source sheet,
+    and it will return the current data of that row. Operations to this object
+    will be mapped to the source sheet. Also, any difference in the source sheet
+    can be shown from here.
+
+    Parameters
+    ----------
+    sheet : Reference of the source sheet
+
+    line : the row number of this view
+
+    Examples
+    --------
+    >>> from DaPy import SeriesSet
+    >>> sheet = SeriesSet([[0, 0, 0, 0], [1, 1, 1, 1]], ['A', 'B', 'C', 'D'])
+    >>> row0 = sheet[0] # class Row
+    >>> row0
+    [0, 0, 0, 0]
+    >>>
+    >>> sheet['A'][0] += 1
+    >>> row0
+    [1, 0, 0, 0]
+    >>>
+    >>> sheet.shape
+    sheet(Ln=2, Col=4)
+    >>> row0.append(1)
+    >>> row0
+    [1, 0, 0, 0, 1]
+    >>> print sheet.show()
+     A | B | C | D | C_4 
+    ---+---+---+---+------
+     1 | 0 | 0 | 0 |  1   
+     1 | 1 | 1 | 1 | None 
+    '''
+    
     def __init__(self, sheet, line):
         self._sheet = sheet
         self._line = line
@@ -111,7 +148,7 @@ class Row(object):
             raise ValueError('unknow statement row[%s] = %s' % (index, value))
 
     def _get_new_column(self, value):
-        col = [self._sheet.miss_symbol] * self._sheet.shape.Ln
+        col = [self._sheet.nan] * self._sheet.shape.Ln
         col[self._line] = value
         return col
     

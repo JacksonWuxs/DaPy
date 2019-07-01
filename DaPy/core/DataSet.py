@@ -1525,11 +1525,11 @@ class DataSet(object):
 
             dtype_dic = {'COL': SeriesSet, 'SERIESSET': SeriesSet, 
                          'MATRIX': Matrix, 'MAT': Matrix, 'FRAME': Frame}
-            data = dtype_dic.get(dtype.upper(), SeriesSet)(nan=nan)
+            data = dtype_dic.get(dtype.upper(), SeriesSet)
             kwrd['nan'] = miss_symbol
-            data.from_file(addr, **kwrd)
-            self._data.append(data)
-            self._types.append(type(data))
+            
+            self._data.append(SeriesSet.from_file(addr, **kwrd))
+            self._types.append(SeriesSet)
             self._sheets.append(self._check_sheet_new_name(sheet_name))
 
         elif ftype == 'pkl':

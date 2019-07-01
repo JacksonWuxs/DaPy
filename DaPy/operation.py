@@ -1,4 +1,8 @@
-﻿from copy import copy
+﻿from bisect import bisect_right, bisect_left
+from copy import copy
+from collections import Counter
+from operator import itemgetter
+
 from .core import DataSet, Frame, SeriesSet, Matrix as mat, Series
 from .core import is_seq, is_math, is_value, range, filter, zip, xrange
 
@@ -50,7 +54,7 @@ def merge(*datas, **kwrds):
     for key, data in zip(keys[1:], datas[1:]):
         first_data.merge(data, last_key, key, keep_key, keep_same)
         last_key = key
-    return first_data    
+    return first_data
 
 def delete(data, index, axis=0):
     if isinstance(index, int):
@@ -181,6 +185,50 @@ def row_stack(tup):
             new.append(data)
     return mat(new)
 
+def get_ranks(series, duplicate='mean'):
+    '''return the rank of each value in the series
+
+    In this function you can choose how to rank the data
+    which has multiple same value. The cumsumption of
+    time is O(N*logN + 3N).
+
+    Parameters
+    ----------
+    series : array-like
+        the data you expect to sort
+    
+    duplicate : str (default='mean')
+        how to calculate the rank for same data
+        `mean` -> use average rank when appear same values
+        `first` -> use the first rank of same values
+        `last` -> use the last rank of same values
+
+    Return
+    ------
+    series : the ranks of each values in the series
+
+    Examples
+    --------
+    >>> from DaPy import get_rank
+    >>> get_rank([3, 3, 2, 5, 7, 1, 4], duplicate='mean')
+    [3.5, 3.5, 2, 6, 7, 1, 5]
+    '''
+    assert duplicate in ('mean', 'first', 'last')
+    sort_series = sorted(series) # O(N*logN)
+    ranks = Counter(sort_series) # O(N)
+    rank = 1
+    
+    while rank <= len(sort_series): # O(N)
+        value = sort_series[rank - 1]
+        num = ranks[value]
+        if num == 1 or duplicate == 'first':
+            ranks[value] = rank
+        elif duplicate == 'mean':
+            ranks[value] = (2 * rank + (num - 1)) / 2.0
+        elif duplicate == 'last':
+            ranks[value] = rank + num - 1
+        rank += num
+    return [ranks.__getitem__(v) for v in series] # O(N)
 
 def get_dummies(data, value=1, dtype='mat'):
     '''Convert categorical variable into dummy variables
@@ -248,26 +296,53 @@ def get_dummies(data, value=1, dtype='mat'):
     if dtype.lower() in ('mat', 'matrix'):
         return mat(dummies)
 
+def get_categories(array, cut_points, group_name, boundary=(False, True)):
+    '''values in `array` are divided into groups according to `cut_points`
+
+    This function uses bisect library to impletment a lookup operation.
+    The comsumption of time is O(N*logK), where K is the number of cut points.
+
+    Parameters
+    ----------
+    array : array-like
+        the data you expect to be grouped
+
+    cut_points : values in list
+        the boundaries of each subgroup
+
+    group_names : str in list
+        the name of each group
+
+    boundary : bools in tuple (default=(False, True))
+        how to divide the values which exactely match the boundary
+
+    Return
+    ------
+    group_list : group_names in the list
+
+    Example
+    -------
+    >>> from DaPy import get_group
+    >>> scores = [57, 89, 90, 100]
+    >>> cuts = [60, 70, 80, 90]
+    >>> grades = ['F', 'D', 'C', 'B', 'A']
+    >>> get_group(scores, cuts, grades, boundary=(False, True))
+    ['F', 'B', 'B', 'A']
+    >>> get_group(scores, cuts, grades, boundary=(True, False))
+    ['F', 'B', 'A', 'A']
+    '''
+    assert is_seq(array), '`array` must be a sequence'
+    assert is_seq(cut_points), '`cut points` must be held with a sequence'
+    assert is_seq(group_name), '`group name` must be held with a sequence'
+    assert isinstance(boundary, tuple) and len(boundary) == 2, '`boundary` must be a 2 dimention tuple'
+    assert boundary.count(True) == 1, '`boundary` must have only single True'
+    assert sorted(cut_points) == cut_points, '`cut_points` must be arranged by asceding'
+    assert len(cut_points) == len(group_name) - 1
     
-        
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+    if boundary[0] is True:
+        return [group_name[bisect_right(cut_points, x)] for x in array]
+    return [group_name[bisect_left(cut_points, x)] for x in array]
+    
 
 
 

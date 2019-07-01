@@ -232,7 +232,7 @@ class MLP(object):
 
     def _check_funcs(self, funcs, lenth_layer):
         if funcs is None:
-            return ['tanh'] * (lenth_layer - 1) + ['sigm']
+            return ['tanh'] * (lenth_layer - 1) + ['softmax']
         return check_activations(funcs)
     
     def train(self, X, Y, train_time=500, verbose=True, mini_error=0.05):
@@ -364,7 +364,7 @@ class MLP(object):
         Series : the labels of each record
         '''
         result_proba = self.predict_proba(data)
-        return Series(result_proba.argmax(axis=0))
+        return Series(result_proba.argmax(axis=1).T[0])
 
     def save(self, addr):
         '''Save your model to a .pkl file

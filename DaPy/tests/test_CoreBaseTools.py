@@ -5,6 +5,10 @@ from DaPy.core.base.utils import (
     auto_str2value, argsort, hash_sort, auto_plus_one,
     is_value, is_math, is_iter, is_seq
 )
+from DaPy.operation import (
+    merge, delete, concatenate, column_stack, row_stack,
+    get_ranks, get_dummies, get_categories
+)
 
 TABLE_DATA = [[1, 2, 3, 4], [3, 4, None, 6], [6, 7, 8, 9], [3, 1, 2, 7]]
 
@@ -47,3 +51,13 @@ class Test_Tools(TestCase):
     def test_ismath(self):
         self.assertEqual(is_math(3.5), True)
         self.assertEqual(is_math(datetime(2018, 1, 1)), False)
+
+    def test_group(self):
+        scores = [57, 89, 90, 100]
+        cuts = [60, 70, 80, 90]
+        grades = ['F', 'D', 'C', 'B', 'A']
+        self.assertEqual(get_categories(scores, cuts, grades, boundary=(False, True)),
+                         ['F', 'B', 'B', 'A'])
+        self.assertEqual(get_categories(scores, cuts, grades, boundary=(True, False)),
+                         ['F', 'B', 'A', 'A'])
+        

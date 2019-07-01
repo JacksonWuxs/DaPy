@@ -78,8 +78,9 @@ class activators(object):
     def softmax(self, x, diff=False):
         if diff:
             return x - x * x
-        new_x = self.engine.exp(x)
-        sum_x = self.engine.sum(new_x, axis=1)
+        exp_x = self.engine.exp(x)
+        sum_x = self.engine.sum(exp_x, axis=1)
+        return exp_x / sum_x.reshape((len(sum_x), 1))
         output = [1] * len(new_x)
         for i, record in enumerate(new_x):
             div = sum_x[i]

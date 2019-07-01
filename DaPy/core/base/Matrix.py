@@ -1,12 +1,14 @@
-from collections import namedtuple, deque
-from copy import copy, deepcopy
 from array import array
-from operator import itemgetter
-from .utils import is_seq, is_math, is_iter
-from .utils import range, filter, map, zip, str2float, xrange
-from .constant import SEQ_TYPE
-from random import random
+from collections import deque, namedtuple
+from copy import copy, deepcopy
 from csv import reader
+from itertools import chain
+from operator import itemgetter
+from random import random
+
+from .constant import SEQ_TYPE
+from .utils import is_iter, is_math, is_seq
+from .utils import filter, map, range, str2float, xrange, zip
 
 __all__ = ['Matrix']
 
@@ -673,11 +675,10 @@ class Matrix(object):
         x, y = new_shape
         size = self.shape.Ln * self.shape.Col
         assert x * y == size, "can't reshape matrix of size %d into shape %s" % (size, new_shape)
-        iter_each_values = (value for row in self._matrix for value in row)
         new = Matrix()
         new._dim = Matrix.dims(new_shape[0], new_shape[1])
         row = []
-        for i, value in enumerate(iter_each_values, 1):
+        for i, value in enumerate(chain(*self._matrix), 1):
             row.append(value)
             if i % y == 0:
                 new._matrix.append(row)

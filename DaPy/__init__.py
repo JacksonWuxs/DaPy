@@ -37,7 +37,8 @@ from .matlib import exp, dot, multiply, zeros, ones, C, P, add, diag, log, boxco
 from .matlib import cov, corr, frequency, quantiles, _sum as sum, diff, cumsum
 from .matlib import distribution, describe, mean, _abs as abs, _max as max
 from .io import read, encode, save
-from .operation import delete, column_stack, row_stack, merge, get_dummies, concatenate
+from .operation import delete, column_stack, row_stack, merge, concatenate
+from .operation import get_dummies, get_ranks
 from warnings import warn      
 from datetime import datetime
 

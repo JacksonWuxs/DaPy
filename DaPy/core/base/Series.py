@@ -1,324 +1,262 @@
 from copy import copy
+from itertools import repeat
 from datetime import datetime, timedelta
+from operator import add, sub, mul, mod, pow
+from operator import eq, gt, ge, lt, le
+from math import sqrt
 
 try:
     from numpy import darray
 except ImportError:
     darray = list
 
-from .constant import STR_TYPE, VALUE_TYPE, SEQ_TYPE
+from .constant import STR_TYPE, VALUE_TYPE, SEQ_TYPE, DUPLICATE_KEEP, PYTHON3
 from .utils import filter, map, range, xrange, zip
-from .utils import is_iter, is_math, is_seq, is_value, auto_plus_one
+from .utils import is_iter, is_math, is_seq, is_value, isnan, auto_plus_one
+from .utils.utils_isfunc import SET_SEQ_TYPE
 
+if PYTHON3:
+    from operator import truediv as div
+else:
+    from operator import div
+    
+SHAPE_UNEQUAL_WARNING = "can't broadcast together with lenth %d and %d"
 
-class Series(object):
-    def __init__(self, data=None, index=None, **kwrds):
-        self._column = kwrds.get('column', 'Series')
-        self._miss_symbol = kwrds.get('nan', None)
-        assert isinstance(self._column, STR_TYPE), "name should be a str"
-        assert is_value(self._miss_symbol), "missing value should be a value"
-        assert is_iter(index) or index is None, "index object is not iterable"
-        assert is_iter(data) or data is None, 'data object is not iterable'
+def quickly_apply(operation, left, right):
+    assert callable(operation) is True
+    return Series(map(operation, left, right))
 
-        self._index = []
-        self._data = self._check_data(data)
-        if index is None and hasattr(data, '_index'):
-            index = data._index
-        self._index = self._check_index(index)
-        self._miss_value = self.data.count(self._miss_symbol)
-        if len(self._index) != len(self._data):
-            raise ValueError("Length of series uneuqals to index")
-
-    @property
-    def column(self):
-        return self._column
-
-    @column.setter
-    def column(self, value):
-        assert isinstance(value, STR_TYPE)
-        self._column = value
+class Series(list):
+    def __init__(self, array=[]):
+        assert is_iter(array), 'array object is not iterable'
+        list.__init__(self, array)
 
     @property
     def data(self):
-        return self._data
-            
-    @property
-    def index_(self):
-        return copy(self._index)
-
-    @index_.setter
-    def index_(self, value):
-        self._index = self._check_index(value)
+        return self
 
     @property
     def shape(self):
         return (len(self._data), 1)
 
     def __repr__(self):
-        return self._data.__repr__()
-
-    def _check_data(self, value):
-        if value is None:
-            return list()
-        if isinstance(value, list) is False:
-            return list(value)
-        return value
-
-    def _check_index(self, value):
-        if value is None:
-            value= range(len(self._data))
-        return [self._autoindex(value) for value in value]
-
-    def _autoindex(self, index):
-        if index is None:
-            return self._autoindex(len(self))
-        
-        if hasattr(self, 'index') and index not in self.index_:
-            return index
-
-        if isinstance(index, int):
-            return self._autoindex(index + 1)
-
-        if isinstance(index, datetime):
-            return self._autoindex(index + timedelta(days=1))
-        return auto_plus_one(self._index, index)
-        
-
-    def __contains__(self, value):
-        return value in self._data
-
-    def __delitem__(self, index):
-        self._data.__delitem__(self._index.index(index))
-        self._index.__delitem__(self._index.index(index))
+        if len(self) > 10:
+            head = ','.join(map(str, self[:5]))
+            tail = ','.join(map(str, self[-5:]))
+            return 'Sereis([%s, ..., %s])' % (head, tail)
+        return 'Series(%s)' % list.__repr__(self)
 
     def __eq__(self, other):
-        return Series(map(lambda x: x == other, self), self._index)
+        other = self._check_operate_value(other)
+        return quickly_apply(eq, self, other)
 
-    def __getitem__(self, index):
-        if isinstance(index, Series) and len(index) == len(self):
-            indexs = [i for i, value in zip(index._index, index) if value is True]
-            return Series(self.__getitem__(indexs), indexs)
+    def __gt__(self, other):
+        other = self._check_operate_value(other)
+        return quickly_apply(gt, self, other)
+
+    def __ge__(self, other):
+        other = self._check_operate_value(other)
+        return quickly_apply(ge, self, other)
+
+    def __le__(self, other):
+        other = self._check_operate_value(other)
+        return quickly_apply(le, self, other)
+
+    def __le__(self, other):
+        other = self._check_operate_value(other)
+        return quickly_apply(le, self, other)
+    
+    def __getitem__(self, key):
+        '''get data from current series
+
+        Parameters
+        ----------
+        key : slice, int, same-size series and tuple
+
+        Return
+        ------
+        number or numbers in Series
+
+        Example
+        -------
+        >>> ser = Series(range(2, 10))
+        >>> ser[2:5] # get elements by slice
+        [4, 5, 6]
+        >>> ser[-1] # get element by index
+        9
+        >>> ser[ser > 4] # get elements by sequence of bool
+        [5, 6, 7, 8, 9]
+        >>> ser[2, 4, 2, 3] # get elements by multiple index
+        [4, 6, 4, 5]
+        '''
+        if isinstance(key, int):
+            return list.__getitem__(self, key)
         
-        if isinstance(index, (list, tuple)):
-            index = list(map(self.index_.index, index))
-            sequence = map(self._data.__getitem__, index)
-            return Series(sequence, index)
-        if index in set(self.index_):
-            return self._data.__getitem__(self.index_.index(index))
-        if isinstance(index, int):
-            return self._data.__getitem__(index)
-        raise ValueError('"%s" is not a index in the series' % index)
+        if isinstance(key, Series):
+            assert len(key) == len(self)
+            return Series(val for key_, val in zip(key, self) if key_)
 
-    def __getslice__(self, start, stop, step=None):
-        assert isinstance(step, int) or step is None, 'step should be an int or None'
-        if isinstance(start, STR_TYPE):
-            start = self._index.index(start)
-        if isinstance(start, STR_TYPE):
-            stop = self._index.index(stop)
-        return Series(self._data[start:stop:step])
+        func = list.__getitem__
+        if isinstance(key, (tuple, list)):
+            return Series(map(func, repeat(self, len(self)), key))
 
-    def __iter__(self):
-        for value in self._data:
-            yield value
+        if isinstance(key, slice):
+            return Series(func(self, key))
+        
+    def __getslice__(self, start, stop):
+        return Series(list.__getslice__(self, start, stop))
 
-    def __len__(self):
-        return self._data.__len__()
-
-    def __setitem__(self, index, value):
-        self._data[self._index.index(index)] = value
-        self._miss_value = self._data.count(self._miss_symbol)
-
-    def __setslice__(self, start, stop, value):
-        i = self._index.index(start)
-        j = self._index.index(stop)
-        self._data.__setslice__(i, j, value)
-        self._miss_value = self._data.count(self._miss_symbol)
+    def _check_operate_value(self, value):
+        lself = len(self)
+        if is_value(value):
+            return repeat(value, lself)
+        
+        if hasattr(value, 'len') is False:
+            value = list(value)
+            
+        rl = len(value)
+        assert lself == rl, SHAPE_UNEQUAL_WARNING % (lself, rl)
+        return value
 
     def __add__(self, right):
         '''[1, 2, 3] + 3 -> [4, 5, 6]
+        [1, 2, 3] + [4, 5, 6] -> [5, 7, 9]
         '''
-        if is_iter(right) is True:
-            return Series([x + v for x, v in zip(self, right)], self._index)
-        return Series(map(lambda x: x + right, self), self._index)
+        right = self._check_operate_value(right)
+        return quickly_apply(add, self, right)
 
     def __radd__(self, left):
         '''3 + [1, 2, 3] -> [4, 5, 6]
         '''
-        if is_iter(left) is True:
-            return Series([v + x for x, v in zip(self, left)], self._index)
-        return Series(map(lambda x: left + x, self), self._index)
+        left = self._check_operate_value(left)
+        return quickly_apply(add, left, self)
 
     def __sub__(self, right):
         '''[1, 2, 3] - 3 -> [-2, -1 ,0]
         '''
-        if is_iter(right) is True:
-            return Series([x - v for x, v in zip(self, right)], self._index)
-        return Series(map(lambda x: x - right, self), self._index)
-        
-    def __isub__(self, left):
+        value = self._check_operate_value(right)
+        return quickly_apply(sub, self, value)
+    
+    def __rsub__(self, left):
         '''3 - [1, 2, 3] -> [2, 1, 0]
         '''
-        if is_iter(left) is True:
-            return Series([v - x for x, v in zip(self, left)], self._index)
-        return Series(map(lambda x: left - x, self), self._index)
+        value = self._check_operate_value(left)
+        return quickly_apply(sub, value, self)
 
     def __mul__(self, right):
         '''[1, 2, 3] * 3 -> [3, 6, 9]
         '''
-        if is_iter(right) is True:
-            return Series([x * v for x, v in zip(self, right)], self._index)
-        return Series(map(lambda x: x * right, self), self._index)
+        value = self._check_operate_value(right)
+        return quickly_apply(mul, self, value)
 
-    def __imul__(self, left):
+    def __rmul__(self, left):
         '''3 * [1, 2, 3] -> [3, 6, 9]
         '''
-        if is_iter(left) is True:
-            return Series([v * x for x, v in zip(self, left)], self._index)
-        return Series(map(lambda x: left * x, self), self._index)
+        value = self._check_operate_value(left)
+        return quickly_apply(mul, value, self)
 
     def __div__(self, right):
         '''[1, 2, 3] / 2 -> [0.5, 1, 1.5]
         '''
-        if is_iter(right) is True:
-            return Series([x / v for x, v in zip(self, right)], self._index)
-        return Series(map(lambda x: x / right, self), self._index)
+        value = self._check_operate_value(right)
+        return quickly_apply(div, self, value)
 
-    def __idiv__(self, left):
+    def __truediv__(self, right):
+        return self.__div__(right)
+
+    def __rdiv__(self, left):
         '''3 / [1, 2, 3] -> [3, 1.5, 1]
         '''
-        if is_iter(left) is True:
-            return Series([v / x for x, v in zip(self, left)], self._index)
-        return Series(map(lambda x: left / x, self), self._index)
+        value = self._check_operate_value(left)
+        return quickly_apply(div, value, self)
 
     def __mod__(self, right):
         '''[1, 2, 3] % 3 -> [0, 0, 1]
         '''
-        if is_iter(right) is True:
-            return Series([x % v for x, v in zip(self, right)], self._index)
-        return Series(map(lambda x: x % right, self), self._index)
+        value = self._check_operate_value(right)
+        return quickly_apply(mod, self, value)
 
-    def __imod__(self, left):
+    def __rmod__(self, left):
         '''3 % [1, 2, 3] -> [3, 1, 1]
         '''
-        if is_iter(left) is True:
-            return Series([v % x for x, v in zip(self, left)], self._index)
-        return Series(map(lambda x: left % x, self), self._index)
+        value = self._check_operate_value(left)
+        return quickly_apply(mod, value, self)
 
     def __pow__(self, right):
         '''[1, 2, 3] ** 2 -> [1, 4, 9]
         '''
-        if is_iter(right) is True:
-            return Series([x ** v for x, v in zip(self, right)], self._index)
-        return Series(map(lambda x: x ** right, self), self._index)
+        value = self._check_operate_value(right)
+        return quickly_apply(pow, self, value)
 
     def __float__(self):
         '''float([1, 2, 3]) -> [1.0, 2.0, 3.0]
         '''
-        return Series(map(float, self), self._index)
+        return Series(map(float, self))
 
     def __abs__(self):
         '''abs([-1, 2, -3]) -> [1, 2, 3]
         '''
-        return Series(map(abs, self), self._index)
-
-    def append(self, value, index=None):
-        self.index_.append(self._autoindex(index))
-        self._data.append(value)
+        return Series(map(abs, self))
 
     def abs(self):
         return self.__abs__()
 
-    def insert(self, position, value, index=None):
-        if index is None and all(map(lambda x: isinstance(x, int), self.index_)):
-            self.index_.insert(position, position)
-        else:
-            self.index_.insert(position, self._autoindex(index))
-        self._data.insert(position, value)
-
-    def index(self, value):
-        return self._data.index(value)
-
-    def extend(self, other):
-        assert hasattr(other, '__iter__')
-        other = Series(other)
-        self._index.extend(other.index_)
-        self._data.extend(other)
-
-    def pop(self, index):
-        index = self.index_.index(index)
-        self.index_.pop(index)
-        return self._data.pop(index)
-
-    def remove(self, value):
-        index = self._data.index(value)
-        del self.index_[index], self._data[index]
-
-    def count(self, value):
-        if isinstance(value, VALUE_TYPE):
-            try:
-                return self._data.count(value)
-            except ValueError:
-                return 0
-        return [self.count(value) for value in value]
-
-    def apply(self, func, inplace=False):
-        assert inplace in (True, False)
+    def apply(self, func):
         assert callable(func), 'func expects callable object'
+        return Series(map(func, self))
 
-        if inplace is False:
-            return Series(map(func, self._data), self._index)
-        self.data = map(func, self._data)
-
-    def idxmax(self):
-        pass
-
-    def idxmin(self, skipna=False):
-        pass
-
-    def sort(self, key=None, reverse=False):
-        pass
-
-    def between(self, left, right):
-        pass
-
-    def count(self, value, range='all'):
-        pass
-
-    def count_element(self):
-        pass
+    def between(self, left, right, boundary='both'):
+        assert boundary in ('both', False, 'left', 'right')
+        bound_left, bound_right = ge, ge
+        if boundary in (False, 'right'):
+            bound_left = gt
+        if boundary in (False, 'left'):
+            bound_right = gt
+        def func(x):
+            bound_left(left, x) and bound_rgiht(right, x)
+        return Series(map(func, self))
 
     def drop(self, label):
-        pass
+        label = repeat(label, len(self))
+        return Series((val for key_, val in zip(label, self) if val != key_))
 
-    def drop_duplicates(self, keep=['first', 'last', 'False'], inplace=False):
-        pass
+    def drop_duplicates(self, keep=['first', 'last', False]):
+        assert keep in ('first', 'last', False)
+        
+        # find the all ununiqual values: O(n)
+        val_ind = {}
+        for i, value in enumerate(self):
+            val_ind.setdefault(value, []).append(i)
 
-    def dropna(self, inplace=False):
-        pass
+        # get index from the quickly preview table: O(k)
+        to_drop_index, keep_arg = set(), DUPLICATE_KEEP[keep]
+        for value, index in val_ind.items():
+            if len(index) != 1:
+                to_drop_index.update(index[keep_arg])
+
+        # drop out these index: O(n)
+        return Series((val for i, val in enumerate(self) if i not in to_drop_index))
+
+    def dropna(self):
+        return Series((val for val in self if not isnan(val)))
 
     def normalize(self):
         pass
 
-    def isna(self):
-        pass
-
-    def keys(self):
-        pass
-
-    def map(self, func):
-        pass
+    def isnan(self):
+        return Series(map(isnan, self))
 
     def max(self):
-        pass
+        return max(self)
 
     def min(self):
-        pass
+        return min(self)
 
-    def mean(self):
-        pass
+    def mean(self, *arg, **kwargs):
+        return sum(self) / float(len(self))
 
-    def quantile(self, q):
-        pass
+    def percenttile(self, q):
+        return sorted(self)[int(q * len(self))]
     
     def replace(self):
         pass
@@ -326,15 +264,50 @@ class Series(object):
     def select(self):
         pass
 
+    def sum(self, *arg, **kwargs):
+        return sum(self)
+
+    def std(self):
+        Ex, Ex2, length = 0, 0, float(len(self))
+        for i in series:
+            Ex += i
+            Ex2 += pow(i, 2)
+        Ex /= length
+        Ex2 /= length
+        return sqrt(Ex2 - pow(Ex2, 2))
+
     def tolist(self):
-        return self._data
+        return list(self)
 
     def toarray(self):
         try:
             from numpy import array
+            return array(self)
         except ImportError:
             raise ImportError("can't find numpy")
-        else:
-            return array(self._data)
 
-SEQ_TYPE += (Series,)
+
+SET_SEQ_TYPE.add(Series)
+
+if __name__ == '__main__':
+    init = Series(xrange(2, 8))
+    assert all(init == [2, 3, 4, 5, 6, 7])
+    assert len(init) == 6
+    assert str(init) == 'Series([2, 3, 4, 5, 6, 7])'
+    assert all(init[2:5] == [4, 5, 6])
+    assert init[-1] == 7
+    assert all(init[init >= 4] == [4, 5, 6, 7])
+    
+    assert all(init + 1 == [3, 4, 5, 6, 7, 8])
+    assert all(init + init == [4, 6, 8, 10, 12, 14])
+    assert all(init - 1 == [1, 2, 3, 4, 5, 6])
+    assert all(init - init == [0, 0, 0, 0, 0, 0])
+    assert all(init * 1 == [2, 3, 4, 5, 6, 7])
+    assert all(init * init == [4, 9, 16, 25, 36, 49])
+    assert all(init / 2.0 == [1, 1.5, 2, 2.5, 3, 3.5])
+    assert all(init / init == [1, 1, 1, 1, 1, 1])
+
+    assert all(1.0 + init == [3, 4, 5, 6, 7, 8])
+    assert all(1 - init == [-1, -2, -3, -4, -5, -6])
+    assert all(1 * init == [2, 3, 4, 5, 6, 7])
+    assert all(10.0 / init == [5.0, 3.3333333333333335, 2.5, 2.0, 1.6666666666666667, 1.4285714285714286])
