@@ -17,20 +17,9 @@ This example simply shows you what DaPy can do for you. Our goal in this example
 
 ![](https://github.com/JacksonWuxs/DaPy/blob/master/doc/Quick%20Start/quick_start.gif)
 
-### Install
+### Comparison
 
-The latest version 1.10.1 had been updated to PyPi.
-```
-pip install DaPy
-```
-Some of functions in DaPy depend on requirements.
 
-- **xlrd**: loading data from .xls file【Necessary】
-- **xlwt**: export data to a .xls file【Necessary】
-- **repoze.lru**: speed up loading data from .csv file【Necessary】
-- **savReaderWrite**: loading data from .sav file【Optional】
-- **bs4.BeautifulSoup**: auto downloading data from a website【Optional】
-- **numpy**: dramatically increase the efficiency of ML models【Recommand】 
 
 ### Features
 
@@ -46,6 +35,23 @@ We hope DaPy is an user-friendly tool. Therefore, we pay attention to the design
 Also, we hope it can be used in some real-world tasks, thereby we are keeping an eye on its *efficiency*. Although DaPy is implemented by pure Python, it has comparable efficiency to some exists libraries. Following dialog shows a testing result and the data had 432 thousands rows and 7 columns.
 
 ![](https://github.com/JacksonWuxs/DaPy/blob/master/doc/material/Result.jpg)
+
+### Install
+
+The latest version 1.10.1 had been updated to PyPi.
+
+```
+pip install DaPy
+```
+
+Some of functions in DaPy depend on requirements.
+
+- **xlrd**: loading data from .xls file【Necessary】
+- **xlwt**: export data to a .xls file【Necessary】
+- **repoze.lru**: speed up loading data from .csv file【Necessary】
+- **savReaderWrite**: loading data from .sav file【Optional】
+- **bs4.BeautifulSoup**: auto downloading data from a website【Optional】
+- **numpy**: dramatically increase the efficiency of ML models【Recommand】 
 
 
 ### Example Useages
