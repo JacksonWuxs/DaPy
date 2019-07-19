@@ -16,7 +16,7 @@ if PYTHON2:
 setup(
     name='DaPy',
     version=__version__,
-    description='Enjoy your Tour in Data Mining',
+    description='Enjoy Your Tour in Data Mining',
     classifiers=[
         'Development Status :: 4 - Beta',
         'Intended Audience :: Developers',

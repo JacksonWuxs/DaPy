@@ -29,8 +29,9 @@ class SortedIndex(Sequence):
 
     def __repr__(self):
         if len(self) > 10:
-            values = '[%s, ..., %s]' % (', '.join(map(str, chain(self._val[:5]))),
-                                    ', '.join(map(str, chain(self._val[-5:]))))                                     
+            front = ', '.join(map(str, chain(self._val[:5])))
+            tail = ', '.join(map(str, chain(self._val[-5:])))
+            values = '[%s, ..., %s]' % (front, tail)                                     
         else:
             values = str(self._val)
         return 'SortedIndex(%s)' % values
@@ -207,8 +208,7 @@ class SortedIndex(Sequence):
         SortedIndex([2, 3, 5])
         >>> index.equal(5)
         2
-        
-'''
+        '''
         remove_index = self._get_item_index(value)
         value_index = sorted(self._ind[remove_index])
         del self._ind[remove_index], self._val[remove_index]
@@ -243,12 +243,6 @@ class SortedIndex(Sequence):
         return list(set(self._ind) - equal_index)
 
 if __name__ == '__main__':
-##    from time import clock
-####    from cProfile import run
-####    run("SortedIndex(xrange(4300000))")
-##    t0 = clock()
-##    index = SortedIndex(xrange(4300000))
-##    print clock() - t0
     original = [4, 23, 31, 33, 34, 34, 21, 23, 33]
     index = SortedIndex(original)
     assert index.between(23, 33, (True, True), True) == [23, 23, 31, 33, 33]

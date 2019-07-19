@@ -1,11 +1,12 @@
-from re import compile, search
-from DaPy.core.base.constant import PYTHON2, PYTHON3
-from DaPy.core.base.constant import STR_TYPE
-from .utils_str_transfer import _str2date, _str2bool, _str2percent
-from .utils_isfunc import is_value, is_math, _isnan, is_str
-from .utils_isfunc import is_iter, is_seq, is_empty
-from .utils_2to3 import split, strip, pickle
-from .utils_2to3 import range, xrange, map, zip, filter, zip_longest
+from math import isnan as _isnan
+from re import compile as _compile
+
+from DaPy.core.base.constant import PYTHON2, PYTHON3, STR_TYPE
+
+from .utils_2to3 import (filter, map, pickle, range, split,
+                         strip, xrange, zip, zip_longest)
+from .utils_isfunc import is_empty, is_iter, is_math, is_seq, is_str, is_value
+from .utils_str_transfer import _str2bool, _str2date, _str2percent
 
 __all__ = ['str2value', 'argsort', 'hash_sort',
            'is_value', 'is_math', 'is_iter', 'is_seq', 
@@ -35,16 +36,18 @@ def str2date(value):
 
 str2percent = _str2percent
 
-@lru_cache(maxsize=None)
 def isnan(value):
-    return _isnan(value)
+    try:
+        return _isnan(value)
+    except TypeError:
+        return False
 
 # following masks are used to recognize string patterns
-FLOAT_MASK = compile(r'^[-+]?[0-9]\d*\.\d*$|[-+]?\.?[0-9]\d*$')
-PERCENT_MASK = compile(r'^[-+]?[0-9]\d*\.\d*%$|[-+]?\.?[0-9]\d*%$')
-INT_MASK = compile(r'^[-+]?[-0-9]\d*$')
-DATE_MASK = compile('^(?:(?!0000)[0-9]{4}([-/.]?)(?:(?:0?[1-9]|1[0-2])([-/.]?)(?:0?[1-9]|1[0-9]|2[0-8])|(?:0?[13-9]|1[0-2])([-/.]?)(?:29|30)|(?:0?[13578]|1[02])([-/.]?)31)|(?:[0-9]{2}(?:0[48]|[2468][048]|[13579][26])|(?:0[48]|[2468][048]|[13579][26])00)([-/.]?)0?2([-/.]?)29)$')
-BOOL_MASK = compile('^(true)|(false)|(yes)|(no)|(\u662f)|(\u5426)|(on)|(off)$')
+FLOAT_MASK = _compile(r'^[-+]?[0-9]\d*\.\d*$|[-+]?\.?[0-9]\d*$')
+PERCENT_MASK = _compile(r'^[-+]?[0-9]\d*\.\d*%$|[-+]?\.?[0-9]\d*%$')
+INT_MASK = _compile(r'^[-+]?[-0-9]\d*$')
+DATE_MASK = _compile('^(?:(?!0000)[0-9]{4}([-/.]?)(?:(?:0?[1-9]|1[0-2])([-/.]?)(?:0?[1-9]|1[0-9]|2[0-8])|(?:0?[13-9]|1[0-2])([-/.]?)(?:29|30)|(?:0?[13578]|1[02])([-/.]?)31)|(?:[0-9]{2}(?:0[48]|[2468][048]|[13579][26])|(?:0[48]|[2468][048]|[13579][26])00)([-/.]?)0?2([-/.]?)29)$')
+BOOL_MASK = _compile('^(true)|(false)|(yes)|(no)|(\u662f)|(\u5426)|(on)|(off)$')
 
 def auto_str2value(value, dtype=None):
     '''using preview masks to auto transfer a string to matchest date type

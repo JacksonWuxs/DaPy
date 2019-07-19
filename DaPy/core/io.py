@@ -142,7 +142,7 @@ def write_txt(f, data, newline, delimiter, encode, decode):
         writeline(f, data.columns)
 
     if isinstance(data, (Frame, SeriesSet)):
-        for line in data.iter_row():
+        for line in data.iter_rows():
             writeline(f, line)
 
     elif hasattr(data, 'items'):

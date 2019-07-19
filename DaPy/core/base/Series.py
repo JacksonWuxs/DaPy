@@ -89,20 +89,61 @@ class Series(list):
         >>> ser[2, 4, 2, 3] # get elements by multiple index
         [4, 6, 4, 5]
         '''
+        func = list.__getitem__
         if isinstance(key, int):
-            return list.__getitem__(self, key)
+            return func(self, key)
         
         if isinstance(key, Series):
             assert len(key) == len(self)
             return Series(val for key_, val in zip(key, self) if key_)
 
-        func = list.__getitem__
         if isinstance(key, (tuple, list)):
-            return Series(map(func, repeat(self, len(self)), key))
+            return Series(map(func, repeat(self, len(key)), key))
 
         if isinstance(key, slice):
             return Series(func(self, key))
+
+    def __delitem__(self, key):
+        '''delete data from current series
+
+        Parameters
+        ----------
+        key : slice, int, same-size series and tuple
+
+        Return
+        ------
+        number or numbers in Series
+
+        Example
+        -------
+        >>> ser = Series(range(2, 10))
+        >>> ser[2:5] # get elements by slice
+        [4, 5, 6]
+        >>> ser[-1] # get element by index
+        9
+        >>> ser[ser > 4] # get elements by sequence of bool
+        [5, 6, 7, 8, 9]
+        >>> ser[2, 4, 2, 3] # get elements by multiple index
+        [4, 6, 4, 5]
+        '''
+        func = list.__delitem__
+        if isinstance(key, int):
+            return func(self, key)
         
+        if isinstance(key, Series):
+            assert len(key) == len(self)
+            for ind, val in enumerate(key):
+                if val:
+                    func(self, ind)
+
+        if isinstance(key, (tuple, list)):
+            key = sorted(set(key), reverse=True)
+            for ind in key:
+                func(self, ind)
+
+        if isinstance(key, slice):
+            func(self, key)
+
     def __getslice__(self, start, stop):
         return Series(list.__getslice__(self, start, stop))
 
@@ -257,6 +298,20 @@ class Series(list):
 
     def percenttile(self, q):
         return sorted(self)[int(q * len(self))]
+    
+    def pop(self, ind):
+        if isinstance(ind, int):
+            return list.pop(self, ind)
+        
+        if isinstance(ind, slice):
+            start, stop = ind.start, ind.stop
+            return Series(list.pop(self, i) for i in xrange(start, stop))
+        
+        if is_seq(ind):
+            ind = sorted(set(ind), reverse=True)
+            to_ret = Series(list.pop(self, i) for i in ind)
+            to_ret.reverse()
+            return to_ret
     
     def replace(self):
         pass

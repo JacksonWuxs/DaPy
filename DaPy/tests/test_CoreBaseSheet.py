@@ -29,34 +29,34 @@ class Test0_InitData(TestCase):
         
     def test_init_table(self):
         # self.isinit_sheet_success(Frame(TABLE_DATA, TABLE_COL), TABLE_DATA, (3, 4), TABLE_COL, None, [0, 0, 1, 0])
-        self.isinit_sheet_success(SeriesSet(TABLE_DATA, TABLE_COL), DICT_DATA, (3, 4), TABLE_COL, None, [0, 0, 1, 0])
+        self.isinit_sheet_success(SeriesSet(TABLE_DATA, TABLE_COL, None), DICT_DATA, (3, 4), TABLE_COL, None, [0, 0, 1, 0])
 
     def test_init_dict(self):
         # self.isinit_sheet_success(Frame(DICT_DATA), TABLE_DATA, (3, 4), TABLE_COL, None, [0, 0, 1, 0])
-        self.isinit_sheet_success(SeriesSet(DICT_DATA), DICT_DATA, (3, 4), TABLE_COL, None, [0, 0, 1, 0])
+        self.isinit_sheet_success(SeriesSet(DICT_DATA, nan=None), DICT_DATA, (3, 4), TABLE_COL, None, [0, 0, 1, 0])
 
     def test_init_seq(self):
-        dcol = SeriesSet(SEQ_DATA, 'T1')
+        dcol = SeriesSet(SEQ_DATA, 'T1', None)
         #self.isinit_sheet_success(dframe, [[1], [3], [None], [2], [4]], (5, 1), ['T1'], None, [1])
         self.isinit_sheet_success(dcol, OrderedDict(T1=SEQ_DATA), (5, 1), ['T1'], None, [1])
 
     def test_init_frame(self):
-        original = Frame(TABLE_DATA, TABLE_COL)
+        original = Frame(TABLE_DATA, TABLE_COL, None)
         # self.isinit_sheet_success(Frame(original), TABLE_DATA, (3, 4), TABLE_COL, None, [0, 0, 1, 0])
-        self.isinit_sheet_success(SeriesSet(original), DICT_DATA, (3, 4), TABLE_COL, None, [0, 0, 1, 0])
+        self.isinit_sheet_success(SeriesSet(original, nan=None), DICT_DATA, (3, 4), TABLE_COL, None, [0, 0, 1, 0])
 
     def test_init_col(self):
-        original = SeriesSet(TABLE_DATA, TABLE_COL)
+        original = SeriesSet(TABLE_DATA, TABLE_COL, None)
         # self.isinit_sheet_success(Frame(original), TABLE_DATA, (3, 4), TABLE_COL, None, [0, 0, 1, 0])
-        self.isinit_sheet_success(SeriesSet(original), DICT_DATA, (3, 4), TABLE_COL, None, [0, 0, 1, 0])
+        self.isinit_sheet_success(SeriesSet(original, nan=None), DICT_DATA, (3, 4), TABLE_COL, None, [0, 0, 1, 0])
         # self.isinit_sheet_success(Frame(original, 'NAN'), TABLE_DATA, (3, 4), ['NAN_0', 'NAN_1', 'NAN_2', 'NAN_3'], None, [0, 0, 1, 0])
-        self.isinit_sheet_success(SeriesSet(original, 'NAN'), DICT_DATA, (3, 4), ['NAN_0', 'NAN_1', 'NAN_2', 'NAN_3'], None, [0, 0, 1, 0])
+        self.isinit_sheet_success(SeriesSet(original, 'NAN', nan=None), DICT_DATA, (3, 4), ['NAN_0', 'NAN_1', 'NAN_2', 'NAN_3'], None, [0, 0, 1, 0])
 
     def test_init_empty(self):
         # self.isinit_sheet_success(Frame(), [], (0, 0), [], None, [])
-        self.isinit_sheet_success(SeriesSet(), OrderedDict(), (0, 0), [], None, [])
+        self.isinit_sheet_success(SeriesSet(nan=None), OrderedDict(), (0, 0), [], None, [])
         # self.isinit_sheet_success(Frame(columns=['A', 'B']), [], (0, 2), ['A', 'B'], None, [0, 0])
-        self.isinit_sheet_success(SeriesSet(columns=['A', 'B']),
+        self.isinit_sheet_success(SeriesSet(columns=['A', 'B'], nan=None),
                                   OrderedDict(A=Series([]), B=Series([])),
                                   (0, 2),
                                   ['A', 'B'], None, [0, 0])
@@ -66,15 +66,71 @@ class Test1_CoreOperations(TestCase):
     def setUp(self):
         pass
 
+    def test_getitem(self):
+        def _test_getitem_by_int(sheet):
+            row = sheet[0]
+            from DaPy.core.base.Row import Row
+            self.assertEqual(type(row), Row)
+            self.assertEqual(row, [1, 2, 3, 4])
+
+        def _test_getitem_by_str(sheet):
+            ser = sheet['A']
+            self.assertEqual(type(ser), Series)
+            self.assertEqual(ser, [1, 3, 6])
+
+        def _test_getitem_by_int_slice(sheet):
+            subset = sheet[:2]
+            self.assertEqual(tuple(subset.shape), (2, 4))
+            self.assertEqual(subset.missing, [0, 0, 1, 0])
+            self.assertEqual(subset[0], [1, 2, 3, 4])
+            self.assertEqual(subset[1], [3, 4, None, 6])
+            self.assertEqual(subset.columns, TABLE_COL)
+
+        def _test_getitem_by_str_slice(sheet):
+            subset = sheet['A': 'C']
+            self.assertEqual(tuple(subset.shape), (3, 3))
+            self.assertEqual(subset.missing, [0, 0, 1])
+            self.assertEqual(subset[0], [1, 2, 3])
+            self.assertEqual(subset[1], [3, 4, None])
+            self.assertEqual(subset.columns, ['A', 'B', 'C'])
+
+        def _test_getitem_by_int_tuple(sheet):
+            subset = sheet[0, 0, 1, 1]
+            self.assertEqual(tuple(subset.shape), (4, 4))
+            self.assertEqual(subset.missing, [0, 0, 2, 0])
+            self.assertEqual(subset[0], [1, 2, 3, 4])
+            self.assertEqual(subset[1], [1, 2, 3, 4])
+            self.assertEqual(subset[2], [3, 4, None, 6])
+            self.assertEqual(subset[3], [3, 4, None, 6])
+            self.assertEqual(subset.columns, ['A', 'B', 'C', 'D'])
+
+        def _test_getitem_by_str_tuple(sheet):
+            subset = sheet['A', 'A', 'C', 'C']
+            self.assertEqual(tuple(subset.shape), (3, 4))
+            self.assertEqual(subset.missing, [0, 0, 1, 1])
+            self.assertEqual(subset[0], [1, 1, 3, 3])
+            self.assertEqual(subset[1], [3, 3, None, None])
+            self.assertEqual(subset[2], [6, 6, 8, 8])
+            self.assertEqual(subset.columns, ['A', 'A_1', 'C', 'C_1'])
+        sheet = SeriesSet(TABLE_DATA, TABLE_COL, nan=None)
+        _test_getitem_by_int(sheet)
+        _test_getitem_by_str(sheet)
+        _test_getitem_by_int_slice(sheet)
+        _test_getitem_by_str_slice(sheet)
+        _test_getitem_by_int_tuple(sheet)
+        _test_getitem_by_str_tuple(sheet)
+
     def test_append(self):
         def _test_append_row(sheet):
             sheet.append_row(ROW_1)
             sheet.append_row(ROW_2)
-            self.assertEqual(tuple(sheet.shape), (5, 5))
-            self.assertEqual(sheet.missing, [0, 0, 2, 0, 4])
-            self.assertEqual(sheet[0], [1, 2, 3, 4, None])
-            self.assertEqual(sheet[-2], ['ROW1', 'ROW1', None, 'ROW1', None])
-
+            sheet.append_row(dict(A=9, B=9, C=9, D=9, E=9))
+            self.assertEqual(tuple(sheet.shape), (6, 6))
+            self.assertEqual(sheet.missing, [0, 0, 2, 0, 5, 5])
+            self.assertEqual(sheet[0], [1, 2, 3, 4, None, None])
+            self.assertEqual(sheet[-3], ['ROW1', 'ROW1', None, 'ROW1', None, None])
+            self.assertEqual(sheet[-1], [9, 9, 9, 9, None, 9])
+            
         def _test_append_col(sheet):
             sheet.append_col(ROW_1)
             sheet.append_col(ROW_2)
@@ -82,8 +138,8 @@ class Test1_CoreOperations(TestCase):
             self.assertEqual(sheet.missing, [2, 2, 3, 2, 2, 0])
             self.assertEqual(sheet[0], [1, 2, 3, 4, 'ROW1', 'ROW2'])
             self.assertEqual(sheet[-1], [None, None, None, None, None, 'ROW5'])
-        _test_append_row(SeriesSet(TABLE_DATA, TABLE_COL))
-        _test_append_col(SeriesSet(TABLE_DATA, TABLE_COL))
+        _test_append_row(SeriesSet(TABLE_DATA, TABLE_COL, nan=None))
+        _test_append_col(SeriesSet(TABLE_DATA, TABLE_COL, nan=None))
 
     def test_insert(self):
         def _test_insert_row(sheet):
@@ -104,13 +160,13 @@ class Test1_CoreOperations(TestCase):
             self.assertEqual(sheet[0], ['ROW1', 'ROW2', 1, 2, 3, 4])
             self.assertEqual(sheet[2], [None, 'ROW3', 6, 7, 8, 9])
             self.assertEqual(sheet[-1], [None, 'ROW5', None, None, None, None])
-        _test_insert_row(SeriesSet(TABLE_DATA, TABLE_COL))
-        _test_insert_col(SeriesSet(TABLE_DATA, TABLE_COL))
+        _test_insert_row(SeriesSet(TABLE_DATA, TABLE_COL, nan=None))
+        _test_insert_col(SeriesSet(TABLE_DATA, TABLE_COL, nan=None))
 
 
     def test_extend(self):
-        sheet1 = SeriesSet(TABLE_DATA, TABLE_COL)
-        sheet2 = SeriesSet(TABLE_DATA, TABLE_COL)
+        sheet1 = SeriesSet(TABLE_DATA, TABLE_COL, nan=None)
+        sheet2 = SeriesSet(TABLE_DATA, TABLE_COL, nan=None)
         sheet = sheet1.extend(sheet2)
         self.assertEqual(tuple(sheet.shape), (6, 4))
         self.assertEqual(sheet.missing, [0, 0, 2, 0])
@@ -119,8 +175,8 @@ class Test1_CoreOperations(TestCase):
         self.assertEqual(sheet[3], [1, 2, 3, 4])
 
     def test_join(self):
-        sheet1 = SeriesSet(TABLE_DATA, TABLE_COL)
-        sheet2 = SeriesSet(TABLE_DATA, TABLE_COL)
+        sheet1 = SeriesSet(TABLE_DATA, TABLE_COL, nan=None)
+        sheet2 = SeriesSet(TABLE_DATA, TABLE_COL, nan=None)
         sheet2.append_col(['K', 'K'], 'K_col')
         sheet = sheet1.join(sheet2)
         self.assertEqual(tuple(sheet.shape), (3, 9))
@@ -171,9 +227,9 @@ class Test1_CoreOperations(TestCase):
         self.assertEqual(new[-1], ['Janny', 'F', 26, '', ''])
 
     def test_drop(self):
-        data = SeriesSet(TABLE_DATA, TABLE_COL)
-        data.drop(0)
-        data.drop(2, axis=1)
+        data = SeriesSet(TABLE_DATA, TABLE_COL, None)
+        data.drop(0, inplace=True)
+        data.drop(2, axis=1, inplace=True)
         self.assertEqual(tuple(data.shape), (2, 3))
         self.assertEqual(data.missing, [0, 0, 0])
         self.assertEqual(data.columns, ['A', 'B', 'D'])
@@ -181,24 +237,24 @@ class Test1_CoreOperations(TestCase):
 
 
     def test_reshape(self):
-        data = SeriesSet(TABLE_DATA, TABLE_COL)
+        data = SeriesSet(TABLE_DATA, TABLE_COL, None)
         new = data.reshape((6, 2))
         self.assertEqual(tuple(new.shape), (6, 2))
-        self.assertEqual(new.missing, [0, 1])
-        self.assertEqual(new.columns, ['Col_1', 'Col_2', 'Col_3'])
+        self.assertEqual(new.missing, [1, 0])
+        self.assertEqual(new.columns, ['C_0', 'C_1'])
         self.assertEqual(new[0], [1, 2])
         self.assertEqual(new[-1], [8, 9])
 
     def test_get(self):
-        data = SeriesSet(TABLE_DATA, TABLE_COL)
+        data = SeriesSet(TABLE_DATA, TABLE_COL, None)
         self.assertEqual(data.get('TEST'), None)
     
     def test_count(self):
-        data = SeriesSet(TABLE_DATA, TABLE_COL)
+        data = SeriesSet(TABLE_DATA, TABLE_COL, None)
         self.assertEqual(data.count(2), 1)
-        self.assertEqual(list(data.count([2, 3]).values()), [1, 1])
+        self.assertEqual(list(data.count([2, 3]).values()), [1, 2])
         self.assertEqual(list(data.count([2, 3]).keys()), [2, 3])
-        self.assertEqual(data.count(None, (0, 1), (1, 2)), 1)
+        self.assertEqual(data.count(None, (1, 2), (0, 1)), 1)
 
     def test_count_values(self):
         test = SeriesSet([
@@ -209,7 +265,8 @@ class Test1_CoreOperations(TestCase):
                         ['Daniel', 29]],
                         ['Name', 'Age'],
                          '')
-        self.assertEqual(dict(test.count_values('Name')), {'Alan': 1, 'Bob': 1, 'Charlie': 1, 'Daniel': 2})
+        self.assertEqual(dict(test.count_values('Name')),
+                         {'Alan': 1, 'Bob': 1, 'Charlie': 1, 'Daniel': 2})
 
     def test_pop(self):
         def pop_row(sheet):
@@ -217,12 +274,8 @@ class Test1_CoreOperations(TestCase):
             self.assertEqual(tuple(rows.shape), (2, 2))
             self.assertEqual(rows.missing, [1, 0])
             self.assertEqual(rows.columns, ['Name', 'Age'])
-            print rows.show()
             self.assertEqual(rows[0], ['Alan', 35])
             self.assertEqual(rows[1], ['', 3])
-            self.assertEqual(tuple(sheet.shape), (4, 2))
-            self.assertEqual(sheet.missing, [0, 0])
-            self.assertEqual(sheet.columns, ['Name', 'Age'])
 
         def pop_col(sheet):
             rows = sheet.pop_col([0])
@@ -230,8 +283,8 @@ class Test1_CoreOperations(TestCase):
             self.assertEqual(rows.missing, [1])
             self.assertEqual(rows.columns, ['Name'])
             self.assertEqual(rows[0], ['Alan'])
-            sheet.assertEqual(tuple(sheet.shape), (6, 1))
-            sheet.assertEqual(sheet.columns, ['Age'])
+            self.assertEqual(tuple(sheet.shape), (6, 1))
+            self.assertEqual(sheet.columns, ['Age'])
 
         pop_row(SeriesSet([
                         ['Alan', 35],

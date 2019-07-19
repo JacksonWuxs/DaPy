@@ -1,48 +1,70 @@
-from collections import Counter, namedtuple
+from collections import Counter, namedtuple, Iterator
 from copy import copy
+from functools import wraps
 from os.path import isfile
 from time import clock
-from warnings import warn
+from pprint import pprint
 
-from .base import (Frame, Matrix, SeriesSet, Series, auto_plus_one, is_iter,
-                   is_seq, is_value, map, pickle, range, zip, filter,
-                   LogInfo, LogWarn, LogErr)
+from .base import (Frame, LogErr, LogInfo, LogWarn, Matrix, Series, SeriesSet,
+                   auto_plus_one, filter, is_iter, is_seq, is_str, is_value,
+                   map, pickle, range, zip)
 from .io import (parse_addr, parse_excel, parse_html, parse_sav, parse_sql,
                  write_db, write_html, write_txt, write_xls)
 
-__all__ = ['DataSet', 'show_time']
+__all__ = ['DataSet']
 
 
-def _timer(func):
+def timer(func):
+    @wraps(func)
     def timer_func(self, *args, **kwrds):
         start = clock()
-        returned = func(self, *args, **kwrds)
+        ret = func(self, *args, **kwrds)
         if self.log is True:
             name, spent = func.__name__, clock() - start
             LogInfo('%s() in %.3fs.' % (name, spent))
-        return returned
-    timer_func.__doc__ = func.__doc__
-    timer_func.__name__ = func.__name__
+        return ret
     return timer_func
 
+def operater(callfunc):
+    callfunc = getattr(SeriesSet, callfunc.__name__)
+
+    @wraps(callfunc)
+    def operate_func(self, *args, **kwrds):
+        ret_set = DataSet()
+        for name, sheet in zip(self._sheets, self._data):
+            ret = callfunc(sheet, *args, **kwrds)
+            if isinstance(ret, (SeriesSet, Series)):
+                ret_set._add(ret, name)
+
+            elif isinstance(ret, dict):
+                for name_, ret_ in ret.items():
+                    ret_set._add(ret_, name_)
+            
+            # try:
+            #     ret = callfunc(sheet, *args, **kwrds)
+            #     ret_set._add(ret, name)
+            # except Exception as e:
+            #     LogErr('sheet:%s.apply() failed, because %s' % (name, e))
+        return ret_set
+    return operate_func
 
 class DataSet(object):
-    '''A general two-dimentional data structure supports users easily
-    to opearte the other basic DaPy 2D data structures. It supports
-    users to process any inherence data structure in a same way and use
-    the Pythonic Syntax. DataSet is one of the fundamantal data structure in
-    DaPy.
+    '''A easy-to-use functional data structure similar to MySQL
+    
+    DataSet is one of the fundamantal data structure in DaPy. 
+    It supports users easily to opearte any data structure in 
+    a same way with Pythonic Syntax. Additionally, it has 
+    logging function.
 
     Attrbutes
     ---------
-    _data : list
-        the list stored all the sheets inside.
+    data : list
+        a list stored all the sheets inside.
 
-    _sheets : list
-    
-        the list stored all the names of each sheet.
+    sheets : list
+        a list stored all the names of each sheet.
 
-    _types : list
+    types : list
         the list stored all the type of each sheet.
 
     Examples
@@ -213,61 +235,58 @@ class DataSet(object):
 
         temp = DataSet()
         for sheet, data in zip(self._sheets, self._data):
-            if hasattr(data, name) or (hasattr(data, 'columns') and name in data.columns):
+            if hasattr(data, name) or\
+                 (hasattr(data, 'columns') and name in data.columns):
                 temp.add(data.__getattr__(name), sheet)
 
-        if temp.level == 0:
-            raise AttributeError("DataSet has no sheet `%s`'" % name)
+        assert temp.level != 0, "DataSet has no sheet `%s`'" % name
         return temp
     
-    def __trans_str(self, sheet):
-        if sheet not in self._sheets:
-            raise IndexError("'%s' is not a sheet name"%sheet)
-        return self._sheets.index(sheet)
+    def _check_col_ind_str(self, ind):
+        assert ind in self._sheets, "'%s' is not a sheet name" % ind
+        return self._sheets.index(ind)
 
-    def __trans_int(self, sheet):
-        if abs(sheet) < len(self._sheets):
-            raise IndexError("index '%s' does not exist."%sheet)
+    def _check_col_ind_int(self, ind):
+        if ind < 0:
+            sheet += self.level - 1
+        assert 0 <= ind < self.level, "'%s' is not exist." % ind
+        return ind
 
-        if sheet < 0:
-            return len(self._sheets) + sheet - 1
-        return sheet
+    def _check_sheet_new_name(self, new_name):
+        new_name = str(new_name)
+        if not new_name:
+            return self._check_sheet_new_name('sheet_%d' % len(self._sheets))
 
-    def __trans_slice(self, i, j, step):
-        if isinstance(i, str) or isinstance(j, str):
+        if new_name not in self._sheets:
+            return new_name
+        return auto_plus_one(self._sheets, new_name)
+
+    def _check_sheet_index_slice(self, i, j):
+        if is_str(i) or is_str(j):
             if i is not None:
-                i = self.__trans_str(i)
+                i = self._check_col_ind_str(i)
             if j is not None:
-                j = self.__trans_str(j)
-        else:
-            if i is not None:
-                i = self.__trans_int(i)
-            if j is not None:
-                j = self.__trans_int(j)
-                
-        if not isinstance(step, int) and step is None:
-            raise TypeError('step shoud be a integer or None.')
-        return range(len(self._sheets))[i:j:step]
+                j = self._check_col_ind_int(j)
+        i = self._check_col_ind_int(i) + 1
+        j = self._check_col_ind_int(j) + 1
+        return range(len(self._sheets))[slice(i, j)]
 
-    def __transform_sheet(self, sheets):
-        '''return a list of sheet indexes
-        '''
-        if isinstance(sheets, slice):
-            return self.__trans_slice(sheets.__getattribute__('start'),
-                                      sheets.__getattribute__('stop'),
-                                      sheets.__getattribute__('step'))
-        
-        if sheets is all:
+    def _check_sheet_index(self, sheet):
+        '''return a list of sheet indexes'''
+        if sheet is None:
             return range(len(self._data))
-        
-        if not is_seq(sheets):
-            sheets = [sheets, ]
 
-        index_sheet = list()
-        for sheet in sheets:
-            if isinstance(sheet, str):
-                index_sheet.append(self._sheets.index(sheet))
-        return index_sheet
+        if is_str(sheet):
+            return [self._check_col_ind_str(sheet)]
+            
+        if isinstance(sheet, slice):
+            return self._check_sheet_index_slice(sheet.start, sheet.stop)
+        
+        if isinstance(sheet, int):
+            return [self._check_col_ind_int(sheet)]
+
+        if isinstance(sheet, (list, tuple)):
+            return [self._check_sheet_index(_) for _ in sheet]
 
     def __getstate__(self):
         unpack_obj = dict()
@@ -316,81 +335,55 @@ class DataSet(object):
             return len(self._data[0])
         return len(self._data)
         
-    def __getitem__(self, pos):
-        if len(self._data) == 1 and (pos not in self._sheets):
-            return self._data[0][pos]
+    def __getitem__(self, key):
+        if len(self._data) == 1 and (key not in self._sheets):
+            return self._data[0][key]
         
-        if isinstance(pos, slice):
-            return self.__getslice__(pos.__getattribute__('start'),
-                            pos.__getattribute__('stop'))
+        if isinstance(key, slice):
+            return self.__getslice__(key.start, key.stop)
 
-        if self.__contains__(pos):
-            return DataSet(self._data[self._sheets.index(pos)],
-                           self._sheets[self._sheets.index(pos)])
-
-        if isinstance(pos, int):
-            return self._data[pos]
-
-        raise ValueError('unrecognized symbol as %s, use string '%pos +\
-                         'represented titles or integer which is less than the ' +\
-                         'DataSet size.')
-
-    def _slice2int(self, i, j):
-        if i in self._sheets:
-            i = self._sheets.index(i)
-        elif i is None:
-            i = 0
-        elif isinstance(i, int) and i < 0:
-            i = 0
-        else:
-            raise ValueError('cannot get the object of %s'%i)
-
-        if j in self._sheets:
-            j = self._sheets.index(j)
-            
-        elif j is None:
-            j = len(self._sheets) - 1
-            
-        elif isinstance(j, int):
-            if j < 0:
-                j = len(self._sheets) + j
-
-            if j > len(self._sheets):
-                j = len(self._sheets)
-        else:
-            raise ValueError('cannot get the object of %s'%i)
-        return i, j
+        key = self._check_sheet_index(key)
+        title = [self._sheets[_] for _ in key]
+        src = [self._data[_] for _ in key]
+        return DataSet(title, src)
 
     def __getslice__(self, i, j):
         if len(self._data) == 1:
             return DataSet(self._data[0][i:j], self._sheets[0])
         
-        i, j = self._slice2int(i, j)
-        return DataSet(self._data[i: j + 1], self._sheets[i: j + 1])
+        start, stop = self._check_sheet_index_slice(pos)
+        return DataSet(self._data[start: stop], self._sheets[start: stop])
 
-    def __setitem__(self, key, value):
+    def __setitem__(self, key, val):
         if len(self._data) == 1 and key not in self._sheets:
-            self._data[0].__setitem__(key, value)
+            self._data[0].__setitem__(key, val)
             return
         
-        if isinstance(key, str):
-            if isinstance(value, DataSet):
-                raise TypeError('can not set a DataSet object as a sheet.')
+        if is_str(key):
+            if isinstance(val, DataSet):
+                for src, title in zip(val._data, val._sheets):
+                    self._data.append(src)
+                    self._types.append(type(src))
+                    new_key = '%s_%s' % (key, title)
+                    self._sheets.append(self._check_sheet_new_name(new_key))
+                return 
+
             if key not in self._sheets:
-                self._data.append(value)
-                self._types.append(type(value))
+                self._data.append(val)
+                self._types.append(type(val))
                 self._sheets.append(self._check_sheet_new_name(key))
                 return
-            key = self._sheets.index(key)
-        
-        if abs(key) > len(self._data):
-            raise IndexError('DataSet assignment index out of range')
+            
+            if key in self._sheets:
+                key = self._sheets.index(key)
+                self._data[key] = val
+                self._types[key] = val
+                return
 
-        if not is_iter(value):
-            raise TypeError('value should be a iterable.')
-
-        self._data[key] = value
-        self._types[key] = type(value)
+        if isinstance(key, int):
+            assert abs(key) <= len(self._data), 'set index out of range'
+            self._data[key] = val
+            self._types[key] = type(val)
 
     def __delslice__(self, start, stop):
         if start not in self._sheets and stop not in self._sheets:
@@ -403,14 +396,16 @@ class DataSet(object):
 
     def __delitem__(self, key):
         if isinstance(key, slice):
-            self.__delslice__(key.__getattribute__('start'),
-                              key.__getattribute__('stop'))
+            self.__delslice__(key.start, key.stop)
+
         elif key in self._sheets:
             index = self._sheets.index(key)
             del self._sheets[index], self._data[index], self._types[index]
+
         elif isinstance(key, tuple):
             for obj in key:
                 self.__delitem__(obj)
+
         else:
             for data in self._data:
                 data.__delitem__(key)
@@ -428,14 +423,25 @@ class DataSet(object):
             self._data[0].reverse()
         else:
             self._data.reverse()
+    
+    def _add(self, item, sheet):
+        if isinstance(item, DataSet):
+            if sheet and 1 == len(item._sheets):
+                new_sheets = [self._check_sheet_new_name(sheet)
+                              for sheet_name in item.sheets]
+            else:
+                new_sheets = [self._check_sheet_new_name(sheet_name) \
+                          for sheet_name in item._sheets]
+            self._data.extend(item._data)
+            self._sheets.extend(new_sheets)
+            self._types.extend(item._types)
+            
+        else:
+            self._data.append(item)
+            self._types.append(type(item))
+            self._sheets.append(self._check_sheet_new_name(sheet))
 
-    def _check_sheet_new_name(self, new_name):
-        if not new_name:
-            return self._check_sheet_new_name('sheet_%d'%len(self._sheets))
-        if new_name not in self._sheets:
-            return new_name
-        return auto_plus_one(self._sheets, new_name)
-
+    @timer
     def add(self, item, sheet=None):
         ''' add a new sheet to the current dataset
 
@@ -474,277 +480,54 @@ class DataSet(object):
            1   |   1   |   1   
            1   |   1   |   1 
         ''' 
-        if isinstance(item, DataSet):
-            if sheet and 1 == len(item._sheets):
-                new_sheets = [self._check_sheet_new_name(sheet)
-                              for sheet_name in item.sheets]
-            else:
-                new_sheets = [self._check_sheet_new_name(sheet_name) \
-                          for sheet_name in item._sheets]
-            self._data.extend(item._data)
-            self._sheets.extend(new_sheets)
-            self._types.extend(item._types)
-            
-        else:
-            self._data.append(item)
-            self._types.append(type(item))
-            self._sheets.append(self._check_sheet_new_name(sheet))
-            
-    @_timer
-    def apply(self, func, col='all', inplace=False):
-        '''map a process to such a column.
+        self._add(item, sheet)
 
-        Parameters
-        ----------
-        func : callable
-            the function that you need to process the data
-
-        col : str, str in list (default='all')
-            the columns that you expect to process
-
-        Example
-        -------
-        >>> data = example()
-        >>> data['A_col']
-        [3, 4, 1, 3, 4, 2, 6, 4, 1, 3, 2, 3]
-        >>> data.apply(lambda x: x ** 2, 'A_col')
-        >>> data['A_col']
-        [9, 16, 1, 9, 16, 4, 36, 16, 1, 9, 4, 9]
-        '''
-        response = DataSet()
-        for sheet, data in zip(self._sheets, self._data):
-            if hasattr(data, 'apply'):
-                try:
-                    sub_response = data.apply(func, col, inplace)
-                    if inplace is False:
-                        response.add(sub_response, sheet)
-                except Exception as e:
-                    LogErr('sheet:%s.apply() failed, because %s'%(sheet, e))
-        if inplace is False:
-            return response
+    @timer
+    @operater
+    def apply(self, func, col=None, inplace=False, axis=0):
+        pass
         
-    @_timer
+    @timer
+    @operater
     def append_row(self, item):
-        '''Append a new record ``item`` at the tail of each sheet.
+        pass
 
-        Parameter
-        ---------
-        item : iterable or value
-            append this item as a new record into the original dataset,
-            if item is an iterable object, we will direct append. Otherwise,
-            we will build a iterable which contains this value inside for you.
-
-        sheet : int or str (defualt=0)
-            the name or index represented the sheet
-            which you would like to opearte.
-
-        miss_symbol : value (defualt=None)
-            the symbol of missing value in this record. It will be
-            transformed to the inside miss value.
-        '''
-        if isinstance(item, DataSet):
-            map(self.append_row, item._data)
-            return
-
-        for sheet, data in zip(self._sheets, self._data):
-            if hasattr(data, 'append'):
-                try:
-                    data.append(item)
-                except Exception as e:
-                    LogErr('%s.append() failed because %s.'%(sheet, e))
-            elif hasattr(data, 'append_row'):
-                try:
-                    data.append_row(item)
-                except Exception as e:
-                    LogErr('%s.append_row() failed because %s.'%(sheet, e))
-            else:
-                LogErr('%s has no attribute append_row(), ignored.' % sheet)
-
-    @_timer
+    @timer
+    @operater
     def append_col(self, series, variable_name=None):
-        '''Append a new variable named ``variable_name`` with a list of data
-        ``series`` at the tail of data set.
+        pass
 
-        Parameter
-        ---------
-        variable_name : str
-            the new variable name for this new column.
+    @timer   
+    @operater
+    def corr(self, method='pearson', col=None):
+        pass
 
-        series : value or sequence-like
-            the iterable object containing values of this new variable or
-            a value you expect to append. If
-            the number of value is less than the size of dataset, it will be
-            added miss value to expand.
-        '''
-        if isinstance(series, DataSet):
-            map(self.append_col, series._data, [variable_name] * series.level)
-            return
+    @timer
+    @operater
+    def count(self, value, col=None, row=None):
+        pass
 
-        for sheet, data in zip(self._sheets, self._data):
-            if hasattr(data, 'append_col') is False:
-                LogErr('%s has no attribute append_col(), ignored.' % sheet)
-                continue
-            try:
-                data.append_col(series, variable_name)
-            except Exception as e:
-                LogErr('%s.appendcol() failed because %s.'%(sheet, e))
-
-    @_timer   
-    def corr(self, method='pearson'):
-        '''Calculate the correlation matrix of your data set.
-        SeriesSet structure support this operation only.
-
-        Return
-        ------
-        DataSet : the correlation matrix in this datasets.
-
-        Example
-        -------
-        >>> import DaPy as dp
-        >>> data = dp.DataSet({
-            'A_col': [1, 3, 4, 5, 6, 4, 5, 6, 8],
-            'B_col': [2, 4, 6, 8, 12, 13, 15, 16],
-            'C_col': [-2, -3, -4, -5, -4, -7, -8, -10, -11]})
-        >>> data.tocol()
-        >>> data.corr()
-        sheet:sheet0
-        ============
-         _Subjects_ |      B_col      |      C_col      |      A_col     
-        ------------+-----------------+-----------------+-----------------
-           B_col    |        1        |  0.119814309454 | -0.351822820287 
-           C_col    |  0.119814309454 |        1        | -0.790569415042 
-           A_col    | -0.351822820287 | -0.790569415042 |        1          
-        '''
-        corr_ds = DataSet()
-        for sheet, data in zip(self._sheets, self._data):
-            try:
-                corr_ds.add(data.corr(method), sheet)
-            except Exception as e:
-                LogErr('%s.corr() failed because %s' % (sheet, e))                    
-        return corr_ds
-
-    @_timer
-    def count(self, x, point1=None, point2=None):
-        '''Find one or more set of identification data in the specified area.
-
-        Parameter
-        ---------
-        x : value or iterable object
-            the value that you expect to statistic.
-
-        point1 : tuple (default=None)
-            the area you expect to statistic. The first tuple in the main tuple
-            represents the coordinates of the point in the upper left corner of
-            the area. The second tuple represents the coordinates of the point
-            in the lower right corner of the area.
-
-        point2 : tuple (default=None)
-            the area you expect to statistic. The second tuple represents the
-            coordinates of the point in the lower right corner of the area.
-
-        Return
-        ------
-        Counter : the number of each object in your setting area.
-
-        Examples
-        --------
-        >>> import DaPy as dp
-        >>> data = dp.DataSet([[1, 2,    3,    4],
-                               [2, None, 3,    4],
-                               [3, 3,    None, 5],
-                               [7, 8,    9,    10]])
-        >>> data.toframe()
-        >>> data.count(3)
-        sheet:sheet0
-        ============
-        4  # There are 4 of element 3 in the entire data set.
-        >>> data.count([3, None], point1=(0, 1), point2=(2, 2))
-        sheet:sheet0
-        ============
-        {3: 3, None: 2}
-        '''
-        count_ds = DataSet()
-        for sheet, data in zip(self._sheets, self._data):
-            if hasattr(data, 'count'):
-                try:
-                    try:
-                        count_ds.add(data.count(x, point1, point2), sheet)
-                    except TypeError:
-                        count_ds.add(data.count(x), sheet)
-                except Exception as e:
-                    LogErr('%s.count() faild because %s' % (sheet, e))
-        return count_ds
-
-    @_timer
+    @timer
+    @operater
     def copy(self):
-        '''return a copy of this dataset'''
-        copy_ds = DataSet()
-        for name, sheet in zip(self._data, self._sheets):
-            try:
-                if hasattr(sheet, 'copy'):
-                    copy_ds.add(sheet, name)
-                else:
-                    copy_ds.add(copy(sheet), name)
-            except Exception as e:
-                LogErr('%s.copy() faild, %s' % (name, e))
-        return copy_ds
+        pass
 
-    @_timer
+    @timer
+    @operater
     def count_values(self, col=None):
-        '''Count the frequency of values for each variable.
-        You could count only a part of your data set with setting key-word(col)
-        as a iterble inluding the number of column or variable names.
+        pass
+    
+    @timer
+    @operater
+    def create_index(self, column):
+        pass
+    
+    @timer
+    @operater
+    def get(self, key, default):
+        pass
 
-        Parameter
-        ---------
-        col : int, str, iter (default=all)
-            an iterable object containing the columns' names or
-             the number of column. ``all`` represents all columns.
-
-        Return
-        ------
-        dict : the elements' frequency in each column.
-
-        Examples
-        --------
-        >>> import DaPy as dp
-        >>> data = dp.DataSet([[1, 2, 3, 4],
-                               [2, None, 3, 4],
-                               [3, 3, None, 5],
-                               [7, 8, 9, 10]])
-        >>> data.tocol()
-        >>> data.count_element(col='all').show()
-        sheet:sheet0
-        ============
-         Variable | Value | Frequency
-        ----------+-------+-----------
-           C_0    |   1   |     1     
-           C_0    |   2   |     1     
-           C_0    |   3   |     1     
-           C_0    |   7   |     1     
-           C_1    |   8   |     1     
-           C_1    |   2   |     1     
-           C_1    |   3   |     1     
-           C_1    |  None |     1     
-           C_2    |   9   |     1     
-           C_2    |   3   |     2     
-           C_2    |  None |     1     
-           C_3    |   10  |     1     
-           C_3    |   4   |     2     
-           C_3    |   5   |     1     
-        '''
-        count_ds = DataSet()
-        for name, sheet in zip(self._data, self._sheets):
-            try:
-                if hasattr(sheet, 'count_values'):
-                    count_ds.add(sheet.count_values(col), sheet)
-                else:
-                    LogErr('%s has no attribute count_values, ignored' % name)
-            except Exception as e:
-                LogErr('%s.copy() faild, %s' % (name, e))
-        return count_ds
-
-    @_timer
+    @timer
     def get_dummies(self, col=None, value=1):
         '''Convert categorical variable into dummy variables
 
@@ -789,8 +572,13 @@ class DataSet(object):
                     LogErr('%s has no attribute get_dummies, ignored' % name)
             except Exception as e:
                 LogErr('%s.get_dummies() faild, %s' % (name, e))
+    
+    @timer
+    @operater
+    def groupby(self, keys, func=None, apply_col=None, unapply_col=None):
+        pass
                                  
-    @_timer
+    @timer
     def insert_row(self, index, item):
         '''Insert a new record ``item`` in position ``index``.
 
@@ -824,7 +612,7 @@ class DataSet(object):
             else:
                 LogErr('%s has no attribute insert_row(), ignored.' % sheet)
 
-    @_timer
+    @timer
     def insert_col(self, index, series, variable_name=None):
         '''Insert a new variable named ``variable_name`` with a sequence of data
         ``series`` in position ``index``.
@@ -865,7 +653,7 @@ class DataSet(object):
             except Exception as e:
                 LogErr('%s.insert_col() failed because %s.'%(sheet, e))          
 
-    @_timer
+    @timer
     def dropna(self, axis=0):
         '''Drop out all the records, which contain miss value, if ``order`` is
         ``LINE``. Drop out all the variables, which contain miss value,
@@ -905,150 +693,32 @@ class DataSet(object):
                 except Exception as e:
                     LogErr('sheet:%s.dropna() failed because %s' % (sheet, e))
 
-    @_timer
-    def select(self, where):
-        '''select the records which obey your conditions.
+    @timer
+    @operater
+    def select(self, where, col=None, limit=1000):
+        pass
 
-        In this function, we support you to select some specific records
-        which follow your conditions. In our solution, the condition should be
-        a python syntax in a str object. Simply, it just like the condition
-        behind the "if" syntax.
+    @timer
+    @operater
+    def pop(self, index=-1, aixs=0):
+        pass
 
-        Parameter
-        ---------
-        conditions : str
-            the condition should be write down in a str object.
-
-        Return
-        ------
-        DataSet : a copy of records which obeies your conditions.
-
-        Examples
-        --------
-        >>> from DaPy import datasets
-        >>> data = datasets.example()
-        >>> data
-        sheet:sample
-        ============
-        A_col: <3, 4, 1, 3, 4, ... ,4, 1, 3, 2, 3>
-        B_col: <2, 3, 3, 3, 5, ... ,7, 9, 2, 9, 4>
-        C_col: <1, 2, 4, 1, 4, ... ,8, 8, 6, 1, 1>
-        D_col: <4, 2, 2, 2, 3, ... ,3, 3, 5, 5, 6>
-        >>> data.select('A_col == 1').show()
-        sheet:sample
-        ============
-         A_col | B_col | C_col | D_col
-        -------+-------+-------+-------
-           1   |   3   |   4   |   2   
-           1   |   9   |   8   |   3   
-        >>> data.select('A_col > 2 and B_col > 3').show()
-        sheet:sample
-        ============
-         A_col | B_col | C_col | D_col
-        -------+-------+-------+-------
-           4   |   5   |   4   |   3   
-           6   |   4   |   3   |   2   
-           4   |   7   |   8   |   3   
-           3   |   4   |   1   |   6
-        '''
-        new_data = list()
-        new_sheets = list()
-        for sheet, data in zip(self._sheets, self._data):
-            if hasattr(data, 'select'):
-                try:
-                    new_data.append(data.select(where))
-                    new_sheets.append(sheet)
-                except Exception as e:
-                    LogErr('sheet:%s.select() failed, because %s'%(sheet, e))
-        return DataSet(new_data, new_sheets)
-
-    @_timer
+    @timer
+    @operater
     def pop_row(self, index=-1):
-        '''Delete and return the record in position ``index``.
+        pass
 
-        Parameter
-        ---------
-        index : int
-            the position of record you would like to drop out.
-
-        Return
-        ------
-        record : tuple or list
-
-        Examples
-        --------
-        >>> data = dp.DataSet(dp.SeriesSet([1,2,3,4,5,6], 'A'))
-        >>> data.pop(-2) # remove and return the second last record
-        sheet:sheet0
-        ============
-        [5]
-        >>> 
-        '''
-        new_data = list()
-        new_sheets = list()
-        for i, (sheet, data) in enumerate(zip(self._sheets, self._data)):
-            if hasattr(data, 'pop_row'):
-                try:
-                    new_data.append(data.pop_row(index))
-                    new_sheets.append(sheet)
-                except Exception as e:
-                    LogErr('sheet:%s.pop() current record failed, '%self._sheets[i] +\
-                         'because %s'%e)
-            elif hasattr(data, 'pop'):
-                try:
-                    new_data.append(data.pop(index))
-                    new_sheets.append(sheet)
-                except Exception as e:
-                    LogErr('sheet:%s.pop() current record failed, '%self._sheets[i] +\
-                         'because %s'%e)
-        return DataSet(new_data, new_sheets)
-
-    @_timer
+    @timer
+    @operater
     def pop_col(self, col='all'):
-        '''Delete and return all the value of each columns in ``variables``.
-        Key-word(item) could assignment as a number or the variable name.
+        pass
 
-        Parameter
-        ---------
-        variables : int or str
-            the title name or index of the columns you expect to pop.
+    @timer
+    @operater
+    def query(self, expression, col=None, limit=1000):
+        pass
 
-        Return
-        ------
-        pop_columns : DataSet
-            the DataSet consists of drop out columns.
-
-        Examples
-        --------
-        >>> import DaPy as dp
-        >>> data = dp.DataSet([[1,2,3,4],
-                               [2,3,4,5],
-                               [3,4,5,6],
-                               [4,5,6,7],
-                               [5,6,7,8]])
-        >>> data.tocol()
-        >>> data.pop_col('Col_2', 1)
-        sheet:sheet0
-        ============
-        Col_1: <2, 3, 4, 5, 6>
-        Col_2: <3, 4, 5, 6, 7>
-        >>> data
-        Col_0: <1, 2, 3, 4, 5>
-        Col_3: <4, 5, 6, 7, 8>
-        '''
-        new_data = list()
-        new_sheets = list()
-        for i, (sheet, data) in enumerate(zip(self._sheets, self._data)):
-            if hasattr(data, 'pop_col'):
-                try:
-                    new_data.append(data.pop_col(col))
-                    new_sheets.append(sheet)
-                except Exception as e:
-                    LogErr('sheet:%s.pop_col() current variable failed, '%self._sheets[i] +\
-                         'because %s'%e)
-        return DataSet(new_data, new_sheets)
-
-    @_timer
+    @timer
     def extend(self, other):
         '''extend your data by another object, new data as new records.
 
@@ -1105,7 +775,7 @@ class DataSet(object):
             except Exception as e:
                 LogErr('sheet: %s.extend() failed because %s.'%(sheet, e))
 
-    @_timer         
+    @timer         
     def join(self, other):
         '''extend your dataset by another object, new data seems as new variables.
 
@@ -1164,7 +834,7 @@ class DataSet(object):
             except Exception as e:
                 LogErr('sheet: %s.join() failed because %s.'%(sheet, e))
 
-    @_timer     
+    @timer     
     def normalized(self, process='NORMAL', col=None, **kwrds):
         '''Apply a data operation to your data
 
@@ -1244,7 +914,7 @@ class DataSet(object):
             if hasattr(data, 'normalized'):
                 data.normalized(process, col, **kwrds)
 
-    @_timer
+    @timer
     def merge(self, other, self_key=0, other_key=0, keep_key=True, keep_same=True):
         '''laterally merge another data to exist sheet. 
 
@@ -1400,33 +1070,22 @@ class DataSet(object):
             except Exception as e:
                 LogErr('%s.merge() failed because %s.'%(sheet, e))
 
-    @_timer
-    def drop(self, index=-1, axis=0):
-        '''remove a column or a row in the dataset
+    @timer
+    @operater
+    def drop(self, index=-1, axis=0, inplace=False):
+        pass
 
-        Parameters
-        ----------
-        index : int or str (default=-1)
-            the row row index or column index to remove
+    @timer
+    @operater
+    def drop_row(self, index=-1, axis=0, inplace=False):
+        pass
 
-        axis : 0, 1 (default=0)
-            the remove the index along witch axis
-            0 means row, 1 means column
-
-        Return
-        ------
-        None
-        '''
-        for sheet, data in zip(self._sheets, self._data):
-            if hasattr(data, 'drop') is True:
-                try:
-                    data.drop(index, axis)
-                except Exception as e:
-                    LogErr('%s.drop() failed because %s'%(sheet, e))
-            else:
-                LogErr('%s has no attribute drop(), ignored.' % sheet)
+    @timer
+    @operater
+    def drop_col(self, index=-1, axis=0, inplace=False):
+        pass
         
-    @_timer
+    @timer
     def read(self, addr, dtype='col', **kwrd):
         '''This function could be used with loading data from a file and
         transform it into one of DaPy data structure.
@@ -1505,17 +1164,17 @@ class DataSet(object):
             sheet_name = fbase
         if ftype == 'db':
             for sheet, name in parse_sql(addr, dtype, nan):
-                self.add(sheet, name)
+                self._add(sheet, name)
 
         elif ftype == 'sav':
-            self.add(parse_sav(addr, dtype, nan), sheet_name)
+            self._add(parse_sav(addr, dtype, nan), sheet_name)
                 
         elif ftype == 'xls' or ftype == 'xlsx':
             first_line = kwrd.get('first_line', 1)
             title_line = kwrd.get('title_line', 0)
             for sheet, name in parse_excel(dtype, addr, first_line, title_line,
                                            nan):
-                self.add(sheet, name)
+                self._add(sheet, name)
 
         elif ftype in ('txt', 'csv'):
             sep = kwrd.get('sep')
@@ -1525,15 +1184,14 @@ class DataSet(object):
 
             dtype_dic = {'COL': SeriesSet, 'SERIESSET': SeriesSet, 
                          'MATRIX': Matrix, 'MAT': Matrix, 'FRAME': Frame}
-            data = dtype_dic.get(dtype.upper(), SeriesSet)
+            dtype = dtype_dic.get(dtype.upper(), SeriesSet)
             kwrd['nan'] = miss_symbol
-            
-            self._data.append(SeriesSet.from_file(addr, **kwrd))
-            self._types.append(SeriesSet)
+            self._data.append(dtype.from_file(addr, **kwrd))
+            self._types.append(dtype)
             self._sheets.append(self._check_sheet_new_name(sheet_name))
 
         elif ftype == 'pkl':
-            self.add(pickle.load(open(addr, 'rb')), sheet_name)
+            self._add(pickle.load(open(addr, 'rb')), sheet_name)
 
         elif ftype in ('html', 'htm', 'web'):
             if ftype == 'web':
@@ -1552,12 +1210,17 @@ class DataSet(object):
             
             for sheet, name in parse_html(\
                         text, dtype, miss_symbol, nan, sheet_name):
-                return self.add(sheet, name)
+                return self._add(sheet, name)
         else:
             raise ValueError('DaPy singly supports file types as'+\
                              '(xls, xlsx, csv, txt, pkl, db, sav, html, htm).')
 
-    @_timer
+    @timer
+    @operater
+    def reshape(self, nshape):
+        pass
+
+    @timer
     def reverse(self, axis='sheet'):
         '''Reverse your data set or records.
 
@@ -1591,68 +1254,12 @@ class DataSet(object):
 
         raise AttributeError('axis should be "sheet" or "record"')
 
-    @_timer
-    def replace(self, *arg):
-        '''d.replace(col, condition, target)
-           d.replace([c0, co1, ..., c(n)], condition, target)
-           d.replace((col(s), condition0, target),
-               (col(s), condition1, target),
-               (col(s), condition(n), target))
+    @timer
+    @operater
+    def replace(self, old, new, col=None, regex=False, sheet=None):
+        pass
 
-        Examples
-        --------
-        >>> import DaPy as dp
-        >>> data = dp.DataSet([['Andy', 'Mary', 'Peter'],
-                               ['Henry', 'Char', 'Iris'],
-                               ['Peter', 'Mary', 'Andy'],
-                               ['Peter', 'Cindy', 'Julia']])
-        >>> data.toframe()
-        >>> data.replace(0, "== 'Peter' or == 'Andy'", 'Mary')
-        >>> data
-        sheet:sheet0
-        ============
-           C0  |   C1  |   C2 
-        -------+-------+-------
-          Mary |  Mary | Peter 
-         Henry |  Char |  Iris 
-          Mary |  Mary |  Andy 
-          Mary | Cindy | Julia 
-        >>> data.replace(['C0', 2], "== 'Mary'", 'Peter')
-        >>> data
-        sheet:sheet0
-        ============
-           C0  |   C1  |   C2 
-        -------+-------+-------
-         Peter |  Mary | Peter 
-         Henry |  Char |  Iris 
-         Peter |  Mary |  Andy 
-         Peter | Cindy | Julia 
-        >>> data.replace(all, '== "Peter"', 'Mary')
-        >>> data
-        sheet:sheet0
-        ============
-           C0  |   C1  |   C2 
-        -------+-------+-------
-          Mary |  Mary |  Mary 
-         Henry |  Char |  Iris 
-          Mary |  Mary |  Andy 
-          Mary | Cindy | Julia
-        >>> data.replace(('C0', "== 'Mary'", 'Henry'),
-		 (['C1', 'C2'], "!= 'Mary'", 'Mary'))
-        sheet:sheet0
-        ============
-           C0  |  C1  |  C2 
-        -------+------+------
-         Henry | Mary | Mary 
-         Henry | Mary | Mary 
-         Henry | Mary | Mary 
-         Henry | Mary | Mary 
-        '''
-        for data in self._data:
-            if hasattr(data, 'replace'):
-                data.replace(*arg)
-
-    @_timer
+    @timer
     def shuffle(self):
         ''' Mess up your data
         '''
@@ -1662,41 +1269,12 @@ class DataSet(object):
             elif hasattr(data, 'shuffle'):
                 data.shuffle()
 
-    @_timer
+    @timer
+    @operater
     def sort(self, *orders):
-        '''Easily sort records with this function.
+        pass
 
-        You will be asked to offer at least one ordering conditions.
-        The parameter should be like a tuple or a list with two elements,
-        on behalf of the key value and arrangement condition (key, arrangement).
-        e.g. ('D_col', 'ASC') means that ascending ordered the data set
-        with A_col.
-
-        Examples
-        --------
-        >>> from DaPy import datasets
-        >>> data = datasets.example()
-        >>> data
-        sheet:sample
-        ============
-        A_col: <3, 4, 1, 3, 4, ... ,4, 1, 3, 2, 3>
-        B_col: <2, 3, 3, 3, 5, ... ,7, 9, 2, 9, 4>
-        C_col: <1, 2, 4, 1, 4, ... ,8, 8, 6, 1, 1>
-        D_col: <4, 2, 2, 2, 3, ... ,3, 3, 5, 5, 6>
-        >>> data.sort(('B_col', 'DESC'), ('A_col', 'ASC'))
-        >>> data
-        sheet:sample
-        ============
-        A_col: <1, 2, 4, 4, 3, ... ,3, 4, 3, 3, 2>
-        B_col: <9, 9, 7, 5, 4, ... ,3, 3, 2, 2, 1>
-        C_col: <8, 1, 8, 4, 1, ... ,1, 2, 1, 6, 1>
-        D_col: <3, 5, 3, 3, 6, ... ,2, 2, 4, 5, 5>
-        '''
-        for data in self._data:
-            if hasattr(data, 'sort'):
-                data.sort(*orders)
-
-    @_timer
+    @timer
     def save(self, addr, **kwrds):
         '''Save the DataSet to a file.
 
@@ -1786,7 +1364,7 @@ class DataSet(object):
         else:
             raise ValueError('unrecognized file type')
 
-    @_timer
+    @timer
     def toframe(self):
         '''Transform all of the stored data structure to DaPy.Frame
         '''
@@ -1806,7 +1384,7 @@ class DataSet(object):
                 LogErr('sheet:%s can not transform to Frame.'%self._sheets[i])
             self._types[i] = Frame
 
-    @_timer
+    @timer
     def tocol(self):
         '''Transform all of the stored data structure to DaPy.SeriesSet
         '''
@@ -1827,7 +1405,7 @@ class DataSet(object):
                     'because: %s' % e)
             self._types[i] = SeriesSet
 
-    @_timer
+    @timer
     def tomat(self):
         '''Transform all of the stored data structure to DaPy.Matrix
         '''
@@ -1840,15 +1418,31 @@ class DataSet(object):
             except:
                 LogErr('sheet:%s can not transform to Matrix.'%self._sheets[i])
             self._types[i] = Matrix
+    
+    @timer
+    @operater
+    def tolist(self):
+        pass
 
-    def show(self, lines='all'):
+    @timer
+    @operater
+    def toarray(self):
+        pass
+
+    def show(self, lines=None):
+        '''show(lines=None) -> None
+
+        See Also
+        --------
+        DaPy.SeriesSet.show
+        '''
         for i, data in enumerate(self._data):
             print('sheet:' + self._sheets[i])
             print('=' * (len(self._sheets[i]) + 6))
             if hasattr(data, 'show'):
-                print(data.show(lines))
+                data.show(lines)
             else:
-                print(data.__repr__())
+                pprint(data.__repr__())
 
 if __name__ == '__main__':
     from doctest import testmod
