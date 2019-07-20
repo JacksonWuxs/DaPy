@@ -304,8 +304,7 @@ class BaseSheet(object):
             elif isinstance(arg, slice):
                 start, stop = self._check_slice_col(arg.start, arg.stop)
                 for col in self._columns[start:stop + 1]:
-                    index = self._columns.index(col)
-                    miss = self._missing[index]
+                    miss = self._missing[self._columns.index(col)]
                     seq = self.data[col]
                     subset_quickly_append_col(subset, col, seq, miss)
             else:
@@ -1604,7 +1603,6 @@ class SeriesSet(BaseSheet):
         1. This function has been added into unit test.
         2. Function won't be locked when sheet.locked is False
         '''
-        variable_name = self._check_col_new_name(variable_name)
         miss, series = self._check_sequence(series, self._dim.Ln)
         size = len(series)
         if size > self._dim.Ln:
@@ -1612,11 +1610,7 @@ class SeriesSet(BaseSheet):
             for i, title in enumerate(self._columns):
                 self._missing[i] += bias
                 self._data[title].extend([self._nan] * bias)
-
-        self._columns.append(variable_name)
-        self._missing.append(miss)
-        self._dim = SHEET_DIM(size, self._dim.Col + 1)
-        self._data[variable_name] = series
+        subset_quickly_append_col(self, variable_name, series, miss)
 
     def append_row(self, row):
         '''append_row(row=[1, 2, 3]) -> None
@@ -1720,8 +1714,7 @@ class SeriesSet(BaseSheet):
 
         if inplace is False:
             if axis == 0:
-                mapper = map(func, self[cols])
-                return SeriesSet(mapper, cols, self.nan)
+                return SeriesSet(map(func, self[cols]), cols, self.nan)
 
             ret = SeriesSet(columns=self.columns, nan=self.nan)
             row = [func(self[_]) if _ in cols else self.nan for _ in self.columns]
@@ -1733,11 +1726,14 @@ class SeriesSet(BaseSheet):
             err += 'Please delete that column at first!'
             assert all(lambda x: x not in self._sorted_index, cols), err
             for name in cols:
-                self.data[name] = Series(map(func, self.data[name]))
+                seq = Series(map(func, self.data[name]))
+                ind = self.columns.index(seq)
+                self._missing[ind] = count_nan(self._isnan, seq)
+                self.data[name] = seq
 
         if axis == 0:
             new_col = self._check_col_new_name(None)
-            new_val = [func(row) for row in self[cols]]
+            new_seq = (func(row) for row in self[cols])
             self.append_col(new_val, new_col)
         return self
 

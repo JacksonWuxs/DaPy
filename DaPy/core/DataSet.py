@@ -2,6 +2,7 @@ from collections import Counter, namedtuple, Iterator
 from copy import copy
 from functools import wraps
 from os.path import isfile
+from operator import methodcaller
 from time import clock
 from pprint import pprint
 
@@ -237,7 +238,11 @@ class DataSet(object):
         for sheet, data in zip(self._sheets, self._data):
             if hasattr(data, name) or\
                  (hasattr(data, 'columns') and name in data.columns):
-                temp.add(data.__getattr__(name), sheet)
+                attr = methodcaller(name)
+                try:
+                    temp._add(attr(data), sheet)
+                except TypeError:
+                    temp._add(getattr(data, name), sheet)
 
         assert temp.level != 0, "DataSet has no sheet `%s`'" % name
         return temp
