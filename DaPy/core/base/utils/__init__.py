@@ -1,5 +1,6 @@
 from math import isnan as _isnan
 from re import compile as _compile
+from operator import itemgetter
 
 from DaPy.core.base.constant import PYTHON2, PYTHON3, STR_TYPE
 
@@ -127,12 +128,12 @@ def argsort(seq, key=None, reverse=False):
     >>> argsort([5, 2, 1, 10])
     [2, 1, 0, 3]
     '''
-    if hasattr(seq, '__getitem__'):
-        return sorted(xrange(len(seq)), key=seq.__getitem__, reverse=reverse)
-    return list(map(itemgetter(0), sorted(enumerate(seq), key=itemgetter(1), reverse=reverse)))
+    # if hasattr(seq, '__getitem__'):
+    #     return tuple(sorted(xrange(len(seq)), key=seq.__getitem__, reverse=reverse))
+    return tuple(map(itemgetter(0), sorted(enumerate(seq), key=itemgetter(1), reverse=reverse)))
 
 def hash_sort(records, *orders):
-    assert all(map(lambda x: isinstance(x[0], int), orders)), 'keyword should be int'
+    assert all(map(lambda x: isinstance(x[0], int), orders)), 'keyword must be int'
     assert all(map(lambda x: x[1] in ('ASC', 'DESC'), orders)), 'orders symbol should be "ASC" or "DESC"'
 
     compare_pos = [x[0] for x in orders]

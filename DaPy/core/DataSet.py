@@ -33,10 +33,10 @@ def operater(callfunc):
         ret_set = DataSet()
         for name, sheet in zip(self._sheets, self._data):
             ret = callfunc(sheet, *args, **kwrds)
-            if isinstance(ret, (SeriesSet, Series)):
+            if isinstance(ret, (SeriesSet, Series, list, tuple)):
                 ret_set._add(ret, name)
 
-            elif isinstance(ret, dict):
+            elif isinstance(ret, (dict, Counter)):
                 for name_, ret_ in ret.items():
                     ret_set._add(ret_, name_)
             
@@ -528,50 +528,9 @@ class DataSet(object):
         pass
 
     @timer
+    @operater
     def get_dummies(self, col=None, value=1):
-        '''Convert categorical variable into dummy variables
-
-        Parameters
-        ----------
-        data : array-like
-            the data you expect to convert, it should be a 1D sequence data
-
-        value : value-type (default=1)
-            the value which will be used as a mark in the return object
-
-        dtype : str, data structure (default='mat')
-            the type of return object
-
-        Examples
-        --------
-        >>> import DaPy as dp
-        >>> data = dp.SeriesSet([
-                    ['A', 2],
-                    ['B', 3],
-                    ['A', 3],
-                    ['C', 1],
-                    ['D', 4],
-                    ['C', 1]],
-		    ['alpha', 'num'])
-        >>> data.get_dummies(col='alpha')
-        >>> print data.show()
-         alpha | num | alpha_A | alpha_C | alpha_B | alpha_D
-        -------+-----+---------+---------+---------+---------
-           A   |  2  |    1    |    0    |    0    |    0    
-           B   |  3  |    0    |    0    |    1    |    0    
-           A   |  3  |    1    |    0    |    0    |    0    
-           C   |  1  |    0    |    1    |    0    |    0    
-           D   |  4  |    0    |    0    |    0    |    1    
-           C   |  1  |    0    |    1    |    0    |    0    
-         '''
-        for name, sheet in zip(self._sheets, self._data):
-            try:
-                if hasattr(sheet, 'get_dummies'):
-                    sheet.get_dummies(col, value)
-                else:
-                    LogErr('%s has no attribute get_dummies, ignored' % name)
-            except Exception as e:
-                LogErr('%s.get_dummies() faild, %s' % (name, e))
+        pass
     
     @timer
     @operater
@@ -654,44 +613,9 @@ class DataSet(object):
                 LogErr('%s.insert_col() failed because %s.'%(sheet, e))          
 
     @timer
-    def dropna(self, axis=0):
-        '''Drop out all the records, which contain miss value, if ``order`` is
-        ``LINE``. Drop out all the variables, which contain miss value,
-        if ``order`` is ``COL``.
-
-        Examples
-        --------
-        >>> import DaPy as dp
-        >>> data = dp.DataSet([[1, 2, 3, 4],
-                               [2, None, 3, 4],
-                               [3, 3, None, 5],
-                               [7, 8, 9, 10]])
-        >>> data.tocol()
-        >>> # There are two different keywords to use.
-        >>> # Using keyword as ``LINE``:
-        >>> data.dropna('line')
-        sheet:sheet0
-        ============
-         Col_0 | Col_1
-        -------+-------
-           3   |   2   
-           3   |  None 
-          None |   3   
-           5   |   4 
-
-        >>> # Using keyword as 'COL':
-        >>> data.pop_miss_value('col')
-        sheet:sheet0
-        ============
-        Col_1: <2, None, 3, 8>
-        Col_2: <3, 3, None, 9>
-        '''
-        for sheet, data in zip(self._sheets, self._data):
-            if hasattr(data, 'dropna'):
-                try:
-                    data.dropna(axis)
-                except Exception as e:
-                    LogErr('sheet:%s.dropna() failed because %s' % (sheet, e))
+    @operater
+    def dropna(self, axis=0, how='any', inplace=False):
+        pass
 
     @timer
     @operater

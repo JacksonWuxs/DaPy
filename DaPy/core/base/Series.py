@@ -4,6 +4,7 @@ from datetime import datetime, timedelta
 from operator import add, sub, mul, mod, pow
 from operator import eq, gt, ge, lt, le
 from math import sqrt
+from time import clock
 
 try:
     from numpy import darray
@@ -11,14 +12,14 @@ except ImportError:
     darray = list
 
 from .constant import STR_TYPE, VALUE_TYPE, SEQ_TYPE, DUPLICATE_KEEP, PYTHON3
-from .utils import filter, map, range, xrange, zip
+from .utils import filter, map, range, xrange, zip, zip_longest
 from .utils import is_iter, is_math, is_seq, is_value, isnan, auto_plus_one
 from .utils.utils_isfunc import SET_SEQ_TYPE
 
 if PYTHON3:
-    from operator import truediv as div
+    from operator import truediv as div, itemgetter
 else:
-    from operator import div
+    from operator import div, itemgetter
     
 SHAPE_UNEQUAL_WARNING = "can't broadcast together with lenth %d and %d"
 
@@ -89,19 +90,24 @@ class Series(list):
         >>> ser[2, 4, 2, 3] # get elements by multiple index
         [4, 6, 4, 5]
         '''
-        func = list.__getitem__
         if isinstance(key, int):
-            return func(self, key)
+            return list.__getitem__(self, key)
         
         if isinstance(key, Series):
             assert len(key) == len(self)
             return Series(val for key_, val in zip(key, self) if key_)
 
         if isinstance(key, (tuple, list)):
-            return Series(map(func, repeat(self, len(key)), key))
-
+            if len(key) < len(self) * 0.1:
+                return Series(map(list.__getitem__, repeat(self, len(key)), key))
+            key = itemgetter(*key)
+            
+        if isinstance(key, itemgetter):
+            list_self = list(self) 
+            return Series(key(list_self)) 
+        
         if isinstance(key, slice):
-            return Series(func(self, key))
+            return Series(list.__getitem__(self, key))
 
     def __delitem__(self, key):
         '''delete data from current series
