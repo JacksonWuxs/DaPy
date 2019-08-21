@@ -29,7 +29,7 @@ from .Series import Series
 from .utils import (
     argsort, auto_plus_one, auto_str2value, count_nan, fast_str2value,
     is_empty, is_iter, is_math, is_seq, is_str, is_value, isnan, split,
-    xrange, zip_longest, hash_sort, str2date, strip)
+    xrange, zip_longest, hash_sort, str2date, strip, range)
 from .utils.utils_join_table import inner_join, left_join, outer_join
 from .utils.utils_regression import simple_linear_reg
 
@@ -195,7 +195,33 @@ class BaseSheet(object):
         if self._sorted_index:
             return False
         return True
-        
+
+    def __repr__(self):
+        if self._dim.Ln > 10:
+            def write_line(title, blank):
+                item = self._data[title]
+                msg = ' ' * blank + title + ': <'
+                msg += ', '.join([str(value) for value in item[:5]])
+                msg += ', ... ,'
+                msg += ', '.join([str(value) for value in item[-5:]])
+                msg += '>\n'
+                return msg
+            
+        elif self._dim.Ln != 0:
+            def write_line(title, blank):
+                item = self._data[title]
+                msg = ' ' * blank + title + ': <'
+                msg += ', '.join([str(value) for value in item])
+                msg += '>\n'
+                return msg
+        else:
+            return 'empty SeriesSet instant'
+
+        msg = ''
+        size = len(max(self._columns, key=len))
+        for title in self._columns:
+            msg += write_line(title, size - len(title))
+        return msg[:-1]
 
     def __getattr__(self, name):
         '''self.A -> return column A'''
@@ -384,8 +410,7 @@ class BaseSheet(object):
     def __getstate__(self):
         instance = self.__dict__.copy()
         instance['_dim'] = tuple(self._dim)
-        instance['_data'] = self._data
-        instance['_sorted_index'] = self._sorted_index
+        del instance['_isnan']
         return instance
 
     def __setstate__(self, read_dict):
@@ -394,8 +419,9 @@ class BaseSheet(object):
         self._columns = read_dict['_columns']
         self._missing = read_dict['_missing']
         self._nan = read_dict['_nan']
-        self._data = read_dict['_data']
         self._sorted_index = read_dict['_sorted_index']
+        self._init_nan_func()
+        self._data = dict((key, Series(val)) for key, val in read_dict['_data'].items())
 
     def _init_col_name(self, columns):
         if is_str(columns) and self._dim.Col == 1:
@@ -442,7 +468,11 @@ class BaseSheet(object):
 
     def _add_row(self, row):
         if is_value(row):
-            row = [row] * self._dim.Col
+            if self._isnan(row) is True:
+                self._missing = [_ + 1 for _ in self._missing]
+            self._dim = SHEET_DIM(self._dim.Ln + 1, self._dim.Col)
+            return [row] * self._dim.Col
+            
 
         if hasattr(row, '_asdict'):
             row = row._asdict()
@@ -462,8 +492,9 @@ class BaseSheet(object):
             for i in xrange(lenth_bias):
                 self.append_col(Series())
         elif lenth_bias > 0:
-            self.join([[self.nan] * lenth_bias for i in xrange(self.shape.Ln)],
-                      inplace=True)
+            for _ in xrange(lenth_bias):
+                series = Series(repeat(self._nan, lenth_bias))
+                subset_quickly_append_col(self, None, series, lenth_bias)
 
         miss, row = self._check_sequence(row, self.shape.Col)
         self._dim = SHEET_DIM(self._dim.Ln + 1, max(self._dim.Col, len(row)))
@@ -538,14 +569,14 @@ class BaseSheet(object):
         elif start is None:
             start = 0
         else:
-            raise ValueError('%s is not a title in this sheet' % start)
+            raise ValueError('`%s` is not a title in this sheet' % start)
 
         if stop in self._columns:
             stop = self._columns.index(stop)
         elif stop is None:
             stop = self._dim.Col - 1
         else:
-            raise ValueError('%s is not a title in this sheet' % stop)
+            raise ValueError('`%s` is not a title in this sheet' % stop)
         return start, stop
 
     def _check_operation_key(self, keys):
@@ -568,15 +599,17 @@ class BaseSheet(object):
             return (col,)
 
         if isinstance(col, int):
-            assert abs(col) < self.shape.Col, 'title index is out of range'
+            if col < 0:
+                col += self.shape.Col
+            assert col < self.shape.Col, 'title index is out of range'
             return (self._columns[col],)
 
         if is_seq(col):
             return tuple(self._check_columns_index(_)[0] for _ in col)
 
-        # isinstance(col, slice):
-        start, stop, axis = self._check_slice(col)
-        assert axis == 1, "don't put a row index in here"
+        if isinstance(col, slice):
+            start, stop, axis = self._check_slice(col)
+            assert axis == 1, "don't put a row index in here"
         return self.columns[start, stop]
     
     def _check_rows_index(self, row):
@@ -585,7 +618,9 @@ class BaseSheet(object):
             return range(self.shape.Ln)
         
         if isinstance(row, int):
-            assert abs(row) < self.shape.Ln, 'row index is out of range'
+            if row < 0:
+                row += self.shape.Ln
+            assert row < self.shape.Ln, 'row index is out of range'
             return (row,)
 
         if is_seq(row):
@@ -610,9 +645,7 @@ class BaseSheet(object):
 
     def copy(self):
         '''copy the current sheet'''
-        if isinstance(self.data, dict):
-            return SeriesSet(self)
-        return Frame(self)
+        return SeriesSet(self, nan=self._nan)
 
     def replace(self, old, new, col=None, regex=False):
         '''replace(old, new, col=None, regex=False)
@@ -875,15 +908,19 @@ class BaseSheet(object):
     def _where_by_rows(self, where, limit):
         assert isinstance(limit, int)
         assert callable(where), '`where` is not callable, try: Sheet.query(where)'
-        rows = self.iter_rows()
-
+        
+        rows = self.iter_rows
         try:
             where(tuple())
         except AttributeError:
-            rows = self.__iter__()
+            rows = self.__iter__
+        except TypeError:
+            rows = self.__iter__
+        except:
+            pass 
 
         selected = 0
-        for i, row in enumerate(rows):
+        for i, row in enumerate(rows()):
             if where(row):
                 selected += 1
                 yield i
@@ -942,6 +979,8 @@ class BaseSheet(object):
         if is_seq(nshape):
             total_values = self.shape.Ln * self.shape.Col
             nshape = list(nshape)
+            if len(nshape) == 1:
+                nshape.append(-1)
             assert len(nshape) == 2 and nshape.count(-1) <= 1
             if -1 == nshape[0]:
                 nshape[0] = total_values / float(nshape[1])
@@ -960,11 +999,8 @@ class BaseSheet(object):
                     sheet.append(row)
                     row = []
         else:
-            sheet = SeriesSet(Series(iter_chain), nan=self.nan)
-
-        if isinstance(self.data, dict):
-            return SeriesSet(sheet, nan=self.nan)
-        return Frame(sheet, nan=self.nan)
+            sheet = Series(iter_chain)
+        return type(self)(sheet, nan=self.nan)
         
     def select(self, where, col=None, limit=1000):
         '''Return records from the sheet depending on `where`
@@ -1040,12 +1076,17 @@ class BaseSheet(object):
         return self._iloc(SeriesSet(nan=self.nan), sub_index)[col]
 
     def get(self, key, default=None):
-        '''get(key, default=None)
-           select column from the sheet, 
-           return default if key is not a column name
+        '''get(key, default=None) -> row or Series
+           select column or row from the sheet, 
+           return `default` if `key` is not a column name
         '''
-        if key in self.columns:
+        if is_str(key) and key in self._columns:
             return self[key]
+        if isinstance(key, int):
+            if key < 0:
+                key += self.shape.Ln
+            if key < self.shape.Ln:
+                return self[key]
         return default
 
     def groupby(self, keys, func=None, apply_col=None):
@@ -1322,9 +1363,7 @@ class BaseSheet(object):
         if not (len(symbols) == 1 and isinstance(self._data, dict)):
             columns = tuple(map(self.columns.index, keys))
             temp = hash_sort(self.iter_rows(), *zip(columns, symbols))
-            if isinstance(self._data, dict):
-                return SeriesSet(temp, self.columns)
-            return Frame(temp, self.columns)
+            return type(self)(temp, self.columns)
 
         reverse = False
         if symbols[0] == 'DESC':
@@ -1334,8 +1373,7 @@ class BaseSheet(object):
         sort_subset = SeriesSet(nan=self.nan)
         
         for i, (key, seq) in enumerate(self.iter_items()):
-            subset_quickly_append_col(sort_subset, 
-                                      key,
+            subset_quickly_append_col(sort_subset, key,
                                       seq[new_index],
                                       self._missing[i])
         return sort_subset
@@ -1458,46 +1496,14 @@ class SeriesSet(BaseSheet):
         self._init_col_name(columns)
         self._data = dict(zip(self.columns, data_columns))
 
-    def __repr__(self):
-        if self._dim.Ln > 10:
-            def write_line(title, blank):
-                item = self._data[title]
-                msg = ' ' * blank + title + ': <'
-                msg += ', '.join([str(value) for value in item[:5]])
-                msg += ', ... ,'
-                msg += ', '.join([str(value) for value in item[-5:]])
-                msg += '>\n'
-                return msg
-            
-        elif self._dim.Ln != 0:
-            def write_line(title, blank):
-                item = self._data[title]
-                msg = ' ' * blank + title + ': <'
-                msg += ', '.join([str(value) for value in item])
-                msg += '>\n'
-                return msg
-        else:
-            return 'empty SeriesSet instant'
-
-        msg = ''
-        size = len(max(self._columns, key=len))
-        for title in self._columns:
-            msg += write_line(title, size - len(title))
-        return msg[:-1]
-
     def _getslice_col(self, i, j):
-        subset = SeriesSet(nan=self.nan)
-        for ind, column in enumerate(self._columns[i: j + 1], i):
-            subset_quickly_append_col(
-                subset, 
-                column, 
-                self.data[column], 
-                self._missing[ind]
-                )
+        subset = type(self)(nan=self.nan)
+        for ind, col in enumerate(self._columns[i: j + 1], i):
+            subset_quickly_append_col(subset, col, self._data[col], self._missing[ind])
         return subset
 
     def _getslice_ln(self, i, j, k):
-        subset = SeriesSet(None, None, self.nan)
+        subset = type(self)(nan=self.nan)
         for miss, col in zip(self._missing, self._columns):
             seq = self._data[col][i:j:k]
             if miss != 0:
@@ -1528,11 +1534,10 @@ class SeriesSet(BaseSheet):
 
         if isinstance(interval, Series):
             assert len(interval) == self.shape.Ln
-            return self.iloc([i for i, val in enumerate(interval) if val])
+            return self._iloc([i for i, val in enumerate(interval) if val is True])
 
         if isinstance(interval, (tuple, list)):
-            return self._getitem_by_tuple(interval,
-                                          SeriesSet(nan=self._nan))
+            return self._getitem_by_tuple(interval, type(self)(nan=self._nan))
 
         if isinstance(interval, slice):
             start, stop = interval.start, interval.stop
@@ -1552,15 +1557,10 @@ class SeriesSet(BaseSheet):
         for i in xrange(self._dim.Ln - 1, -1, -1):
             yield Row(self, i)
 
-    def _arrange_by_index(self, self_new_index=None, other_new_index=None):
-        assert (self_new_index, other_new_index).count(None) == 1
-        if self_new_index:
-            getter = self_new_index
-        else:
-            getter = argsort(other_new_index)
-
+    def _arrange_by_index(self, self_new_index=None):
         for title, sequence in self._data.items():
-            self._data[title] = sequence[getter]
+            self._data[title] = sequence[self_new_index]
+        return self
 
     def append_col(self, series, variable_name=None):
         '''append_col([1, 2, 3], 'New_column') -> None
@@ -1724,7 +1724,7 @@ class SeriesSet(BaseSheet):
         if axis == 1:
             err = 'Your are operating columns which are Index. '
             err += 'Please delete that column at first!'
-            assert all(lambda x: x not in self._sorted_index, cols), err
+            assert all(map(lambda x: x not in self._sorted_index, cols)), err
             for name in cols:
                 seq = Series(map(func, self.data[name]))
                 ind = self.columns.index(seq)
@@ -1845,7 +1845,7 @@ class SeriesSet(BaseSheet):
             None -> all columns will be checked
         
         row : None, int, int in list (default=None)
-            rows you want to count with,
+            rows you want to count with
             None -> all rows will be checked
         
         Returns
@@ -1901,6 +1901,18 @@ class SeriesSet(BaseSheet):
         if len(value) == 1:
             return counter[tuple(value)[0]]
         return counter
+    
+    def count_nan(self, axis=0):
+        '''count the frequency of appearing NaN'''
+        assert axis in (0, 1, None)
+        if axis == 1:
+            return self.missing
+        
+        if axis == 0:
+            return Series(sum(map(self._isnan, _)) for _ in self.iter_rows())
+               
+        return sum(self._missing)
+
 
     def count_values(self, col=None):
         '''count_values(col=None) -> Counter
@@ -1955,33 +1967,39 @@ class SeriesSet(BaseSheet):
         '''
         assert level in (0, 1, 2)
         from DaPy import describe
-        info = dict(mins=[], maxs=[], avgs=[], stds=[], skes=[],
+        info = dict(mins=[], maxs=[], avgs=[], stds=[], skes=[], mode=[],
                     kurs=[], miss=list(map(str, self._missing)))
         for sequence in self.iter_values():
-            des = describe(sequence)
-            for arg, val in zip(['mins', 'maxs', 'avgs', 'stds', 'skes', 'kurs'],
-                                [des.Min, des.Max, des.Mean, des.S, des.Skew, des.Kurt]):
-                if val is None:
+            des = describe(filter(lambda x: not self._isnan(x), sequence))
+            for arg, val in zip(['mins', 'maxs', 'avgs', 'stds', 'mode', 'skes', 'kurs', ],
+                                [des.Min, des.Max, des.Mean, des.S, des.Mode, des.Skew, des.Kurt]):
+                if val is None and arg != 'mode':
                     info[arg].append('-')
                 elif isinstance(val, float):
-                    info[arg].append('%.2f' % val)
+                    if val > 9999999999:
+                        float_template = '%g'
+                    else:
+                        float_template = '%10.' + str(11 - len(str(int(val)))) + 'g'
+                    info[arg].append(float_template % val)
                 else:
                     info[arg].append(str(val))
 
         blank_size = [max(len(max(self.columns, key=len)), 5) + 2,
                       max(len(max(info['miss'], key=len)), 4) + 2,
-                      max(len(max(info['mins'], key=len)), 3) + 2,
-                      max(len(max(info['maxs'], key=len)), 3) + 2,
+                      max(len(max(info['mins'], key=len)), 4) + 2,
                       max(len(max(info['avgs'], key=len)), 4) + 2,
-                      max(len(max(info['stds'], key=len)), 3) + 2, ]
+                      max(len(max(info['maxs'], key=len)), 4) + 2,
+                      max(len(max(info['stds'], key=len)), 4) + 2,
+                      max(len(max(info['mode'], key=len)), 4) + 2]
         
         # Draw the title line of description
         message = '|'.join(['Title'.center(blank_size[0]),
                             'Miss'.center(blank_size[1]),
                             'Min'.center(blank_size[2]),
-                            'Max'.center(blank_size[3]),
                             'Mean'.center(blank_size[4]),
-                            'Std'.center(blank_size[5])])
+                            'Max'.center(blank_size[3]),
+                            'Std'.center(blank_size[5]),
+                            'Mode'.center(blank_size[6])])
 
         if level >= 1:
             blank_size.extend([
@@ -1998,22 +2016,22 @@ class SeriesSet(BaseSheet):
         for i, title in enumerate(self._columns):
             message += title.center(blank_size[0]) + '|'
             message += info['miss'][i].center(blank_size[1]) + '|'
-            message += info['mins'][i].center(blank_size[2]) + '|'
-            message += info['maxs'][i].center(blank_size[3]) + '|'
-            message += info['avgs'][i].center(blank_size[4]) + '|'
-            message += info['stds'][i].center(blank_size[5])
+            message += info['mins'][i].rjust(blank_size[2] - 1) + ' |'
+            message += info['avgs'][i].rjust(blank_size[4] - 1) + ' |'
+            message += info['maxs'][i].rjust(blank_size[3] - 1) + ' |'
+            message += info['stds'][i].rjust(blank_size[5] - 1) + ' |'
+            message += info['mode'][i].rjust(blank_size[6] - 1)
             if level >= 1:
-                message += '|' + info['skes'][i].center(blank_size[6]) + '|'
-                message += info['kurs'][i].center(blank_size[7])
+                message += '|' + info['skes'][i].center(blank_size[7]) + '|'
+                message += info['kurs'][i].center(blank_size[8])
             message += '\n'
 
-        lenth = 5 + 2 * level + sum(blank_size)
-        line = '=' * lenth
+        lenth = 6 + 2 * level + sum(blank_size)
         print('1.  Structure: DaPy.SeriesSet\n' +\
               '2. Dimensions: Lines=%d | Variables=%d\n' % self.shape +\
               '3. Miss Value: %d elements\n' % sum(self.missing) +\
               'Descriptive Statistics'.center(lenth) + '\n' +\
-               line + '\n' + message + line)
+               '=' * lenth + '\n' + message + '=' * lenth)
 
     def pop(self, index=-1, axis=0):
         '''pop(index=-1, axis=0) -> SeriesSet
@@ -2528,8 +2546,11 @@ class SeriesSet(BaseSheet):
         first_line : int (default=1)
             the first line with data.
 
-        nan : str (default="NA")
-            the symbol of missing value in csv file.
+        miss_symbol : str or str in list (default=['?', '??', '', ' ', 'NA', 'None'])
+            the miss value symbol in csv file.
+
+        nan : str (default=float('nan'))
+            the symbol of missing value in current sheet
 
         title_line : int (default=0)
             the line with title, rules design as follow:
@@ -2539,27 +2560,34 @@ class SeriesSet(BaseSheet):
         sep : str (default=",")
             the delimiter symbol inside.
 
-        prefer_type : type-object (default=float):
+        dtypes : Type name or dict of columns (default=None):
+            use specific data types for parsing each column
             int -> transfer any possible values into int
             float -> transfer any possible values into float
             str -> keep all values in str type
             datetime -> transfer any possible values into datetime-object
             bool -> transfer any possible values into bool
-
-        dtypes : Type name or dict of columns (default=None):
-            use one type to
         '''
-        sheet = cls()
+        nan = kwrd.get('nan', NaN)
+        sheet = cls(nan=nan)
         first_line = kwrd.get('first_line', 1)
-        title_line = kwrd.get('title_line', 0)
+        title_line = kwrd.get('title_line', first_line - 1)
         columns = list(kwrd.get('columns', []))
-        nan = kwrd.get('nan', set(['nan', '?', '??', '', ' ', 'NA', 'None']))
-        if is_value(nan):
-            nan = set([nan])
         sep = kwrd.get('sep', ',')
-        prefer_type = kwrd.get('prefer_type', None)
-        col_types = kwrd.get('dtypes', [])
-        param, temp_data, miss = {'mode': 'rU'}, (), ()
+
+        dtypes = kwrd.get('dtypes', [])
+        if is_str(dtypes):
+            dtypes = [dtypes]
+
+        miss_symbol = kwrd.get('miss_symbol',
+                               set(['nan', '?', '??', '', ' ', 'NA', 'None']))
+        if is_value(miss_symbol):
+            miss_symbol = [miss_symbol]
+        if isinstance(miss_symbol, set) is False:
+            miss_symbol = set(miss_symbol)
+        miss_symbol.add(None)
+
+        param, data, miss = {'mode': 'rU'}, (), ()
         if PYTHON3:
             param['encoding'] = kwrd.get('encoding', None)
             param['file'] = addr
@@ -2579,44 +2607,40 @@ class SeriesSet(BaseSheet):
                     columns = tuple(map(str.strip, split(line, sep)))
 
             # begin to read the data
-            for line in file_:  # iter row
-                for missing, seq, transfer, value in zip_longest(miss, 
-                                                           temp_data, 
-                                                           col_types, 
-                                                           split(line.strip(), sep)):  # iter value
-
-
-                    if value in nan:
-                        seq.append(sheet.nan)
-                        missing.append(1)
-                        continue
+            for row in file_:  # iter row
+                for mis, seq, transfer, val in zip_longest(miss, data, dtypes, split(row[:-2], sep)):  
+                    # iter value
                     try:
-                        seq.append(transfer(value))
+                        if val in miss_symbol:
+                            seq.append(nan)
+                            mis.append(1)
+                        else:
+                            seq.append(transfer(val))
                     except ValueError:
                         # different types of data in the same column
-                        seq.append(auto_str2value(value))
+                        seq.append(auto_str2value(val))
                     except:
-                        transed = auto_str2value(value, prefer_type)
-                        missing = []
-                        miss += (missing,)
-                        if transed in nan:
-                            transed = sheet.nan
-                            missing.append([1])
+                        val = auto_str2value(val, transfer)
+                        mis = []
+                        miss += (mis,)
+                        if val in miss_symbol:
+                            val = nan
+                            mis.append(1)
                         else:
-                            tranfer_n = str(transed.__class__).split()[1][1:-2].split('.')[0]
-                            col_types.append(fast_str2value[tranfer_n])
+                            dtypes.append(
+                                fast_str2value[str(val.__class__).split()[1][1:-2].split('.')[0]]
+                            )
 
-                        if not temp_data:
-                            temp_data += (Series([transed]),)
+                        if not data:
+                            data += (Series([val]),)
                         else:
-                            missed = len(temp_data[0]) - 1
-                            missing.append(missed)
-                            temp_data += (Series(chain(repeat(sheet.nan, missed), 
-                                [transed])),)
+                            missed = len(data[0]) - 1
+                            mis.append(missed)
+                            data += (Series(chain(repeat(nan, missed), [val])),)
 
-        sheet._dim = SHEET_DIM(len(temp_data[0]), len(temp_data))
+        sheet._dim = SHEET_DIM(len(data[0]), len(data))
         sheet._init_col_name(columns)
-        for i, (missing, seq, col) in enumerate(zip(miss, temp_data, sheet.columns)):
+        for i, (missing, seq, col) in enumerate(zip(miss, data, sheet.columns)):
             add_space = sheet.shape.Ln - len(seq)
             seq.extend(repeat(sheet.nan, add_space))
             sheet._missing.append(add_space + sum(missing))
@@ -2638,7 +2662,7 @@ class SeriesSet(BaseSheet):
 
     def get_date_label(self, cols, daytime=True,
                        weekend=True, season=True, inplace=False):
-        '''transfer a datetime object into categorical variable'''
+        '''transfer a datetime object into categorical variables'''
         cols = self._check_columns_index(cols)
         if inplace is False:
             self = SeriesSet(nan=self.nan)
@@ -2681,7 +2705,7 @@ class SeriesSet(BaseSheet):
         return self
 
     def get_dummies(self, cols=None, value=1, inplace=False):
-        '''Convert categorical variable into dummy variables
+        '''Convert categorical variable into multiple binary variables
 
         Parameters
         ----------
@@ -2726,30 +2750,75 @@ class SeriesSet(BaseSheet):
             self.join(dummies, inplace=True)
         return self
 
-    def get_interactions(self, n_var=2, cols=None, inplace=False):
+    def get_interactions(self, n_power=3, cols=None, inplace=False):
+        '''get_interactions(n_var=3, cols=None, inplace=False) -> SeriesSet
+            create new variables by multipling each other
+
+        Getting interactions of variables is a common operation
+        in Feature Engineering. This function will help you
+        achieve it easily.
+
+        Parameters
+        ----------
+        n_power : int (default=2)
+            the number of features to create interactions.
+            For example, you have variables A and B. You want
+            to create new variable with A * A * B, you should
+            set n_var=3.
+
+        cols : str, str in list (default=None)
+            the features to create interactions.
+
+        inplace : True / False (default=False)
+            save the new_features in current sheet or not
+
+        Returns
+        -------
+        new_features : SeriesSet
+
+        Examples
+        --------
+        
+        '''
+        def combinations(arr, n):
+            if n == 1:
+                return [(val,) for val in arr]
+
+            tup = set()
+            for exist in combinations(arr, n - 1):
+                for val in arr:
+                    tup.add(tuple(sorted(exist + (val,))))
+            return tup
+
         def create_title(title, count):
             n_title = count[title]
             if n_title != 1:
-                return '*%s^%d' % (title, n_title)
+                return '%s^%d' % (title, n_title)
             return title
-        cols = self._check_columns_index(cols)
-        operate_with = SeriesSet(nan=self.nan)
 
-        for combine in combinations(cols, n_var):
-            combine.sort()
+        cols = self._check_columns_index(cols)
+        new_features = SeriesSet(nan=self.nan)
+        assert isinstance(n_power, int) and n_power > 1, '`n_power` must be an integer and greater than 1'
+
+        for combine in combinations(cols, n_power):
             count = Counter(combine)
-            title = create_title(combine[0], count)
-            seq = self._data[combine[0]]
+            title, seq = create_title(combine[0], count), self[combine[0]]
+            miss_values = 0
             for col in combine[1:]:
                 seq *= self._data[col]
+                miss_values += self[col]
                 if col not in title:
                     title += '*' + create_title(col, count)
+            if miss_values > 0:
+                miss_values = count_nan(self._isnan, seq)
+            subset_quickly_append_col(new_features, title, seq, miss_values)
 
         if inplace is False:
-            return operate_with
-        return self.join(operate_with, inplace=True)
+            return new_features
+        return self.join(new_features, inplace=True)
 
     def get_ranks(self, cols=None, duplicate='mean', inplace=False):
+        '''get the ranks of each row'''
         from DaPy.operation import get_ranks
         cols = self._check_columns_index(cols)
         if inplace is False:
@@ -2763,39 +2832,75 @@ class SeriesSet(BaseSheet):
         return operate_with
 
     def items(self):
-        for column in self.columns:
-            yield column, Series(self._data[column])
+        '''items() -> list of tuple(column, Series)'''
+        return [(_, self._data[_]) for _ in self.columns]
 
     def iter_items(self):
+        '''iter_items() -> yield column, Series'''
         for column in self.columns:
             yield column, self._data[column]
 
     def iter_rows(self):
+        '''iter_rows() -> yield tuple'''
         for row in zip(*(self._data[col] for col in self.columns)):
             yield row
 
     def iter_values(self):
+        '''iter_values() -> yield Series'''
         for col in self.columns:
             yield self._data[col]
 
     def _iloc(self, subset, indexs):
-        if is_iter(indexs) is False:
+        if is_seq(indexs) is False:
             indexs = tuple(indexs)
         for miss, (key, sequence) in zip(self._missing, self.iter_items()):
             seq = sequence[indexs]
             if isinstance(seq, Series) is False:
-                seq = Series([seq, ])
+                seq = Series([seq])
             if miss != 0:
                 miss = count_nan(self._isnan, seq)
             subset_quickly_append_col(subset, key, seq, miss)
         return subset
 
     def iloc(self, indexs):
+        '''iloc(indexs) -> SeriesSet'''
         indexs = self._check_rows_index(indexs)
         return self._iloc(SeriesSet(nan=self.nan), indexs)
 
     def insert_row(self, index, item):
-        '''insert a record to the frame, position in <index>
+        '''Insert a new record ``item`` in position ``index``.
+
+        Parameter
+        ---------
+        index : int
+            the position of new record.
+
+        item : value or iter
+            an iterable object containing new record.
+
+        Examples
+        --------
+        >>> sheet = dp.SeriesSet(range(12)).reshape((6, 2))
+        >>> sheet.show()
+         C_0 | C_1
+        -----+-----
+          0  |  1  
+          2  |  3  
+          4  |  5  
+          6  |  7  
+          8  |  9  
+          10 |  11 
+        >>> sheet.insert_row(3, ['Inserted'])
+        >>> sheet.show()
+           C_0    | C_1
+        ----------+-----
+            0     |  1  
+            2     |  3  
+            4     |  5  
+         Inserted | nan # index 3 and automatically add NaN
+            6     |  7  
+            8     |  9  
+            10    |  11 
 
         Notes
         -----
@@ -2806,8 +2911,42 @@ class SeriesSet(BaseSheet):
             seq.insert(index, value)
 
     def insert_col(self, index, series, variable_name=None):
-        '''insert a series of data to the frame, position in <index>
+        '''Insert a new variable named `variable_name` with a sequencial data
+        `series` in position `index`.
 
+        Parameter
+        ---------
+        variable_name : str (default=None)
+            the name of new column.
+
+        series : sequence-like
+            a sequence containing new variable values.
+
+        index : int
+            the position of new variable at.
+
+        Examples
+        --------
+        >>> import DaPy as dp
+        >>> sheet = dp.SeriesSet(range(10)).reshape((5, 2))
+        >>> sheet.show()
+         C_0 | C_1
+        -----+-----
+          0  |  1  
+          2  |  3  
+          4  |  5  
+          6  |  7  
+          8  |  9  
+        >>> sheet.insert_col(1, ['A', 'B', 'C'], 'InsertColumn')
+        >>> sheet.show()
+         C_0 | InsertColumn | C_1
+        -----+--------------+-----
+          0  |      A       |  1  
+          2  |      B       |  3  
+          4  |      C       |  5  
+          6  |     nan      |  7  
+          8  |     nan      |  9  
+        
         Notes
         -----
         1. This function has been added into unit test.
@@ -2828,7 +2967,36 @@ class SeriesSet(BaseSheet):
         self._data[variable_name] = series
 
     def join(self, other, inplace=False):
-        '''right join another sheet to the current sheet
+        '''join(other: SeriesSet, inplace=False) -> SeriesSet
+        right join another sheet to the current sheet
+
+        This function can help you combine another sheet while it considers 
+        the matching column is the index of rows. To be simple, it just 
+        like you map append_col() to each variables in other sheet, 
+        but it is faster and easier to use.
+
+        Examples
+        --------
+        >>> import DaPy as dp
+        >>> sheet1 = dp.SeriesSet(
+                        [[11, 11],
+                        [21, 21],
+                        [31, 31],
+                        [41, 41]],
+                        ['C1', 'C2'])
+        >>> sheet2 = dp.SeriesSet(
+                        [[21, 21],
+                        [22, 22],
+                        [23, 23],
+                        [24, 24]],
+                        ['C2', 'C3'])
+        >>> sheet1.join(sheet2).show()
+         C1 | C2 | C2_1 | C3
+        ----+----+------+----
+         11 | 11 |  21  | 21 
+         21 | 21 |  22  | 22 
+         31 | 31 |  23  | 23 
+         41 | 41 |  24  | 24 
 
         Notes
         -----
@@ -2837,8 +3005,7 @@ class SeriesSet(BaseSheet):
         error = 'can  not join a value to the dataset.'
         assert is_value(other) is False, error
         error = "can't join empty object, given %s" % other
-        assert (hasattr(other, 'shape') and other.shape[0] != 0) or\
-                not other, error
+        assert (hasattr(other, 'shape') and other.shape[0] != 0) or other, error
         if inplace is False:
             self = SeriesSet(self, nan=self.nan)
 
@@ -2848,14 +3015,12 @@ class SeriesSet(BaseSheet):
                 for i, title in enumerate(self._columns):
                     self._data[title].extend(repeat(self.nan, bias))
                     self._missing[i] += bias
-            for title, seq in other.iter_items():
-                title = self._check_col_new_name(title)
-                miss, seq = self._check_sequence(seq, self._dim.Ln)
-                self._missing.append(miss)
-                self._data[title] = seq
-                self._columns.append(title)
-            self._dim = SHEET_DIM(self.shape.Ln + bias, 
-                                  len(self._columns))
+            for (title, seq), miss in zip(other.iter_items(), other._missing):
+                if miss != 0:
+                    miss, seq = self._check_sequence(seq, self._dim.Ln)
+                subset_quickly_append_col(self, title, seq, miss)
+            self._dim = SHEET_DIM(self.shape.Ln + bias, len(self._columns))
+            return self
 
         elif isinstance(other, Frame):
             return self.join(SeriesSet(other), inplace)
@@ -2867,14 +3032,88 @@ class SeriesSet(BaseSheet):
         elif isinstance(other, Series) or all(map(is_value, other)):
             return self.append_col(other, inplace)
 
-        else:
-            raise TypeError('could not extend a single value only.')
-        return self
+        raise TypeError('could not extend a single value only.')
+        
 
     def keys(self):
-        return self._data.keys()
+        '''keys() - > list of column names'''
+        return self.columns
 
-    def normalized(self, process='NORMAL', cols=None, inplace=True, **attr):
+    def normalized(self, process='NORMAL', cols=None, inplace=True):
+        '''normalized(process='NORMAL', cols=None, inplace=False, **kwrds):
+
+        Parameters
+        ----------
+        process : str (default='NORMAL')
+            which process you wish to apply
+            `NORMAL` -> operate the data so that its arrange between 0 to 1.
+            `STANDAR` -> operate the data so that its mean is 0 and variance is 1.
+            `LOG` -> find the logarithm of X.
+            `BOX-COX` -> Box-Cox operation
+
+        col : str, str in list (default='all')
+            which column you wish to operate
+
+        min : float (default=Min(X))
+            Available when process is NORMAL
+
+        range : float, int (default=Range(X))
+            Available when process is NORMAL
+
+        mean : float (default=mean(X))
+            Available when process is STANDAR
+
+        std : float (default=std(X))
+            Available when process is STANDAR
+
+        a : float (default=0)
+            Available when process is BOX-COX
+
+        k : float (default=1)
+            Available when process is BOX-COX
+            
+        lamda : float (default=1)
+            Available when process is BOX-COX
+            
+        base : float (default=e)
+            Available when process is LOG
+            
+        Examples
+        --------
+        >>> from DaPy import datasets
+        >>> data = datasets.example()
+        >>> data.info
+        sheet:sample
+        ============
+        1.  Structure: DaPy.SeriesSet
+        2. Dimensions: Lines=12 | Variables=4
+        3. Miss Value: 0 elements
+                        Descriptive Statistics                
+        ======================================================
+         Title | Miss | Min | Max | Mean | Std  | Skew | Kurt 
+        -------+------+-----+-----+------+------+------+------
+         A_col |  0   |  1  |  6  | 3.00 | 1.35 | 0.63 |57.05 
+         B_col |  0   |  1  |  9  | 4.33 | 2.56 | 3.11 |29.84 
+         C_col |  0   |  1  |  8  | 3.33 | 2.59 | 3.13 |15.63 
+         D_col |  0   |  2  |  6  | 3.50 | 1.38 | 0.61 |81.70 
+        ======================================================
+        >>> data.normalized()
+        >>> data.info
+        sheet:sample
+        ============
+        1.  Structure: DaPy.SeriesSet
+        2. Dimensions: Lines=12 | Variables=4
+        3. Miss Value: 0 elements
+                        Descriptive Statistics                
+        ======================================================
+         Title | Miss | Min | Max | Mean | Std  | Skew | Kurt 
+        -------+------+-----+-----+------+------+------+------
+         A_col |  0   |  0  |  1  | 0.08 | 0.28 | 0.44 |11.28 
+         B_col |  0   |  0  |  1  | 0.17 | 0.37 | 0.41 | 5.64 
+         C_col |  0   |  0  |  1  | 0.17 | 0.37 | 0.41 | 5.64 
+         D_col |  0   |  0  |  1  | 0.08 | 0.28 | 0.44 |11.28 
+        ======================================================
+        '''
         assert process in ('NORMAL', 'STANDAR', 'LOG', 'BOX-COX')
         cols = self._check_columns_index(cols)
         if inplace is False:
@@ -2883,14 +3122,17 @@ class SeriesSet(BaseSheet):
         from DaPy import describe, log, boxcox
         for title in cols:
             if process in ('NORMAL', 'STANDAR'):
-                if not attr:
-                    statis = describe(self._data[title])
+                statis = describe(self._data[title])
+                if None in statis:
+                    continue
+
                 if process == 'NORMAL':
-                    center = float(attr.get('min', statis.Min))
-                    var = float(attr.get('range', statis.Range))
+                    center = float(statis.Min)
+                    var = float(statis.Range)
                 elif process == 'STANDAR':
-                    center = float(attr.get('mean', statis.Mean))
-                    var = float(attr.get('std', statis.Sn))
+                    center = float(statis.Mean)
+                    var = float(statis.Sn)
+
                 assert var != 0, 'range or std of `%s` is 0 ' % title
                 self.apply(
                     lambda val: (val - center) / var,
@@ -2901,14 +3143,14 @@ class SeriesSet(BaseSheet):
             elif process == 'BOX-COX':
                 func = lambda val: boxcox(
                     val, 
-                    attr.get('lamda', 1), 
-                    attr.get('a', 0),
-                    attr.get('k', 1))
+                    kwrds.get('lamda', 1), 
+                    kwrds.get('a', 0),
+                    kwrds.get('k', 1))
                 self.apply(func, col=title, inplace=True, axis=1)
 
             elif process == 'LOG':
                 self.apply(
-                    lambda val: log(val, attr.get('base', 2.71828183)),
+                    lambda val: log(val, kwrds.get('base', 2.71828183)),
                     col=title,
                     inplace=True,
                     axis=1)
@@ -2916,6 +3158,58 @@ class SeriesSet(BaseSheet):
 
     def merge(self, other, how='inner', self_on=0, right_on=0):
         '''right join another sheet and automatically arranged by key columns
+
+        Combind two sheet together according to two keywords. 
+        It exactely matches the records in both sheet. 
+
+        Rules of Combination
+        --------------------
+        <1> It will compare the keywords and find the records which have
+            the same value in the keywords.
+        <2> It will add the new data as new variables behind the exist records.
+        <3> If there is more than one record that matches the keywords of the
+            two data sets, it will correspond to the sequence of the records.
+
+        Parameter
+        ---------
+        other : array-likes
+            the other sheet which is used to extend
+
+        how : 'inner', 'outer', 'left', 'right' (default='inner')
+            how to handle rows which not match the columns
+            `left` -> Keep only all rows in the current sheet;
+            `right` -> Keep only all rows in the other sheet;
+            `inner` -> Keep only rows from the common parts of two tables;
+            `outer` -> Keep all rows from both sheets;
+
+        self_on : int, str (default=0)
+            choose a column as the keyword in this sheet
+
+        right_on : int, str (default=0)
+            choose a column as the keyword in the other sheet
+
+        Return
+        ------
+        None
+
+        Example
+        -------
+        >>> left.show()
+           Name  | Age  | gender
+        ---------+------+--------
+           Alan  |  35  |   M    
+           Bob   |  27  |   M    
+         Charlie |  30  |   F    
+          Daniel |  29  |  None  
+           None  | None |   F   
+        >>> right.show()
+           Name  | gender | Age 
+        ---------+--------+------
+           Alan  |   M    |  35  
+           Bob   |   M    |  27  
+         Charlie |   F    |  30  
+          Janny  |   F    |  26  
+           None  |  None  | None
 
         Notes
         -----
@@ -2927,25 +3221,20 @@ class SeriesSet(BaseSheet):
 
         self_on = self._check_columns_index(self_on)
         right_on = other._check_columns_index(right_on)
-        assert len(self_on) == len(
-            right_on) == 1, 'only support 1 matching index'
+        assert len(self_on) == len(right_on) == 1, 'only support single index'
         self_on, right_on = self_on[0], right_on[0]
 
         # match the records according to the index
         joined = SeriesSet(nan=self.nan)
         if how == 'left':
             return left_join(self, other, self_on, right_on, joined)
-
-        if how == 'right':
-            return left_join(other, self, right_on, self_on, joined)
-
+        if how == 'outer':
+            return outer_join(self, other, self_on, right_on, joined)
         if how == 'inner':
             return inner_join(self, other, self_on, right_on, joined)
+        return left_join(other, self, right_on, self_on, SeriesSet(nan=other.nan))
 
-        # if how == 'outer':
-        return outer_join(self, other, self_on, right_on, joined)
-
-    def reverse(self, axis=0):
+    def _reverse(self, axis=0):
         assert axis in (0, 1)
         if axis == 1:
             self._columns.reverse()
@@ -2953,8 +3242,16 @@ class SeriesSet(BaseSheet):
         else:
             for sequence in self._data.values():
                 sequence.reverse()
+        return self
+    
+    def reverse(self, axis=0, inplace=True):
+        '''reverse(axis=0, inplace=True) -> SeriesSet'''
+        if inplace is True:
+            return self._reverse(axis)
+        return SeriesSet(self)._reverse(axis)
 
     def update(self, where, set_value=None, **set_values):
+        '''update(where, set_value=None, **set_values) -> SeriesSet'''
         if callable(where) is False:
             where = self._trans_where(where, axis=0)
         if set_value is None:
@@ -2974,10 +3271,29 @@ class SeriesSet(BaseSheet):
             for key, value in set_value.items():
                 row[key] = value(row)
 
-    def shuffle(self):
+    def _shuffle(self):
         new_index = range(self._dim.Ln)
         shuffles(new_index)
-        self._arrange_by_index(new_index)
+        return self._arrange_by_index(new_index)
+    
+    def shuffle(self, inplace=True):
+        '''shuffle(inplace=True) -> SeriesSet'''
+        if inplace is True:
+            return self._shuffle()
+        return SeriesSet(self, nan=self._nan)._shuffle()
+    
+    def sum(self, axis=0, col=None):
+        assert axis in (0, 1, None)
+        col = self._check_columns_index(col)
+
+        if axis == 1:
+            values = tuple(sum(_) for _ in self[col].values())
+            return SeriesSet((values,), col, nan=self.nan)[0]
+        
+        if axis == 0:
+            return Series(sum(_) for _ in self[col].iter_rows())
+        
+        return sum(chain(*self[col].values()))
 
     def values(self):
         for col in self.columns:
@@ -2988,338 +3304,316 @@ class Frame(BaseSheet):
     '''Maintains the data as records.
     '''
 
-#     def __init__(self, frame=None, columns=None, nan=None):
-#         self._data = []
-#         BaseSheet.__init__(self, frame, columns, nan)
+    def __init__(self, frame=None, columns=None, nan=None):
+        self._data = []
+        BaseSheet.__init__(self, frame, columns, nan)
 
-#     @property
-#     def info(self):
-#         new_m_v = map(str, self._missing)
-#         max_n = len(max(self._columns, key=len))
+    @property
+    def info(self):
+        new_m_v = map(str, self._missing)
+        max_n = len(max(self._columns, key=len))
 
-#         info = ''
-#         for i in xrange(self._dim.Col):
-#             info += ' ' * 15
-#             info += self._columns[i].center(max_n) + '| '
-#             info += ' ' + new_m_v[i] + '\n'
+        info = ''
+        for i in xrange(self._dim.Col):
+            info += ' ' * 15
+            info += self._columns[i].center(max_n) + '| '
+            info += ' ' + new_m_v[i] + '\n'
 
-#         print('1.  Structure: DaPy.Frame\n' +
-#               '2. Dimensions: Ln=%d | Col=%d\n' % self._dim +
-#               '3. Miss Value: %d elements\n' % sum(self._missing) +
-#               '4.    Columns: ' + 'Title'.center(max_n) + '|' +
-#               '  Miss\n' + info)
+        print('1.  Structure: DaPy.Frame\n' +
+              '2. Dimensions: Ln=%d | Col=%d\n' % self._dim +
+              '3. Miss Value: %d elements\n' % sum(self._missing) +
+              '4.    Columns: ' + 'Title'.center(max_n) + '|' +
+              '  Miss\n' + info)
 
-#     @property
-#     def T(self):
-#         return Frame(self.iter_values(), None, self.nan)
+    @property
+    def T(self):
+        return Frame(self.iter_values(), None, self.nan)
 
-#     def _init_col(self, obj, columns):
-#         if columns is None:
-#             columns = copy(obj._columns)
-#         self._data = [list(record) for record in zip(*list(obj.values()))]
-#         self._missing = copy(obj._missing)
-#         self._dim = SHEET_DIM(obj._dim.Ln, obj._dim.Col)
-#         self._init_col_name(columns)
+    def _init_col(self, obj, columns):
+        if columns is None:
+            columns = copy(obj._columns)
+        self._data = [list(record) for record in zip(*list(obj.values()))]
+        self._missing = copy(obj._missing)
+        self._dim = SHEET_DIM(obj._dim.Ln, obj._dim.Col)
+        self._init_col_name(columns)
 
-#     def _init_frame(self, frame, columns):
-#         if columns is None:
-#             columns = copy(obj._columns)
-#         self._data = deepcopy(frame._data)
-#         self._dim = copy(frame._dim)
-#         self._init_col_name(columns)
-#         self._missing = copy(frame._missing)
+    def _init_frame(self, frame, columns):
+        if columns is None:
+            columns = copy(obj._columns)
+        self._data = deepcopy(frame._data)
+        self._dim = copy(frame._dim)
+        self._init_col_name(columns)
+        self._missing = copy(frame._missing)
 
-#     def _init_dict(self, frame, columns):
-#         if columns is None:
-#             columns = list(obj.keys())
-#         frame = copy(frame)
-#         self._dim = SHEET_DIM(max(map(len, frame.values())), len(frame))
-#         self._missing = [0] * self._dim.Col
-#         self._init_col_name(columns)
-#         for i, (title, col) in enumerate(frame.items()):
-#             miss, sequence = self._check_sequence(col, self._dim.Ln)
-#             frame[title] = sequence
-#             self._missing[i] += miss
-#         self._data = [list(record) for record in zip(*frame.values())]
+    def _init_dict(self, frame, columns):
+        if columns is None:
+            columns = list(obj.keys())
+        frame = copy(frame)
+        self._dim = SHEET_DIM(max(map(len, frame.values())), len(frame))
+        self._missing = [0] * self._dim.Col
+        self._init_col_name(columns)
+        for i, (title, col) in enumerate(frame.items()):
+            miss, sequence = self._check_sequence(col, self._dim.Ln)
+            frame[title] = sequence
+            self._missing[i] += miss
+        self._data = [list(record) for record in zip(*frame.values())]
 
-#     def _init_like_table(self, frame, columns):
-#         self._data = map(list, frame)
-#         dim_Col, dim_Ln = len(max(self._data, key=len)), len(frame)
-#         self._dim = SHEET_DIM(dim_Ln, dim_Col)
-#         self._missing = [0] * self._dim.Col
+    def _init_like_table(self, frame, columns):
+        self._data = map(list, frame)
+        dim_Col, dim_Ln = len(max(self._data, key=len)), len(frame)
+        self._dim = SHEET_DIM(dim_Ln, dim_Col)
+        self._missing = [0] * self._dim.Col
 
-#         for i, item in enumerate(self._data):
-#             if len(item) < dim_Col:
-#                 item.extend([self._nan] * (dim_Col - len(item)))
-#             for j, value in enumerate(item):
-#                 if value == self.nan or value is self.nan:
-#                     self._missing[j] = self._missing[j] + 1
-#         self._init_col_name(columns)
+        for i, item in enumerate(self._data):
+            if len(item) < dim_Col:
+                item.extend([self._nan] * (dim_Col - len(item)))
+            for j, value in enumerate(item):
+                if value == self.nan or value is self.nan:
+                    self._missing[j] = self._missing[j] + 1
+        self._init_col_name(columns)
 
-#     def _init_like_seq(self, frame, columns):
-#         self._data = [[value, ] for value in frame]
-#         self._dim = SHEET_DIM(len(frame), 1)
-#         self._init_col_name(columns)
-#         self._missing.append(self._check_sequence(frame, len(frame))[0])
+    def _init_like_seq(self, frame, columns):
+        self._data = [[value, ] for value in frame]
+        self._dim = SHEET_DIM(len(frame), 1)
+        self._init_col_name(columns)
+        self._missing.append(self._check_sequence(frame, len(frame))[0])
 
-#     def __repr__(self):
-#         return self.show(30)
+    def __repr__(self):
+        return self.show(30)
 
-#     def _getslice_col(self, i, j):
-#         new_data = [record[i: j + 1] for record in self._data]
-#         return Frame(new_data, self._columns[i: j + 1], self._nan)
+    def _getslice_col(self, i, j):
+        new_data = [record[i: j + 1] for record in self._data]
+        return Frame(new_data, self._columns[i: j + 1], self._nan)
 
-#     def _getslice_ln(self, i, j, k):
-#         return Frame(self._data[i:j:k], self._columns, self._nan)
+    def _getslice_ln(self, i, j, k):
+        return Frame(self._data[i:j:k], self._columns, self._nan)
 
-#     def __getitem__(self, interval):
-#         if isinstance(interval, int):
-#             return Row(self, interval)
+    def __getitem__(self, interval):
+        if isinstance(interval, int):
+            return Row(self, interval)
 
-#         elif isinstance(interval, slice):
-#             return self.__getslice__(interval)
+        elif isinstance(interval, slice):
+            return self.__getslice__(interval)
 
-#         elif is_str(interval):
-#             col = self._columns.index(interval)
-#             return [item[col] for item in self._data]
+        elif is_str(interval):
+            col = self._columns.index(interval)
+            return [item[col] for item in self._data]
 
-#         elif isinstance(interval, (tuple, list)):
-#             return_obj = Frame()
-#             return self._getitem_by_tuple(interval, return_obj)
+        elif isinstance(interval, (tuple, list)):
+            return_obj = Frame()
+            return self._getitem_by_tuple(interval, return_obj)
 
-#         else:
-#             raise TypeError('item must be represented as slice, int, str.')
+        else:
+            raise TypeError('item must be represented as slice, int, str.')
 
-#     def __iter__(self):
-#         for i in xrange(self._dim.Ln):
-#             yield Row(self, i)
+    def __iter__(self):
+        for i in xrange(self._dim.Ln):
+            yield Row(self, i)
 
-#     def append_row(self, item):
-#         '''append a new record to the Frame tail
-#         '''
-#         item = self._add_row(item)
-#         self._data.append(item)
+    def append_row(self, item):
+        '''append a new record to the Frame tail
+        '''
+        item = self._add_row(item)
+        self._data.append(item)
 
-#     def append_col(self, series, variable_name=None):
-#         '''append a new variable to the current records tail
-#         '''
-#         miss, series = self._check_sequence(series, self._dim.Ln)
-#         size = len(series) - self._dim.Ln
-#         if size > 0:
-#             self._missing = [m + size for m in self._missing]
-#             self._data.extend(
-#                 [[self._nan] * self._dim.Col for i in xrange(size)])
+    def append_col(self, series, variable_name=None):
+        '''append a new variable to the current records tail
+        '''
+        miss, series = self._check_sequence(series, self._dim.Ln)
+        size = len(series) - self._dim.Ln
+        if size > 0:
+            self._missing = [m + size for m in self._missing]
+            self._data.extend(
+                [[self._nan] * self._dim.Col for i in xrange(size)])
 
-#         self._missing.append(miss)
-#         for record, element in zip(self._data, series):
-#             record.append(element)
-#         self._columns.append(self._check_col_new_name(variable_name))
-#         self._dim = SHEET_DIM(max(self._dim.Ln, len(series)), self._dim.Col + 1)
-#         assert len(self._missing) == self._dim.Col == len(self.columns)
+        self._missing.append(miss)
+        for record, element in zip(self._data, series):
+            record.append(element)
+        self._columns.append(self._check_col_new_name(variable_name))
+        self._dim = SHEET_DIM(max(self._dim.Ln, len(series)), self._dim.Col + 1)
+        assert len(self._missing) == self._dim.Col == len(self.columns)
 
-#     def count(self, X, point1=None, point2=None):
-#         if is_value(X):
-#             X = (X,)
-#         counter = Counter()
-#         L1, C1, L2, C2 = self._check_area(point1, point2)
+    def count(self, X, point1=None, point2=None):
+        if is_value(X):
+            X = (X,)
+        counter = Counter()
+        L1, C1, L2, C2 = self._check_area(point1, point2)
 
-#         for record in self._data[L1:L2 + 1]:
-#             for value in record[C1:C2 + 1]:
-#                 if value in X:
-#                     counter[value] += 1
+        for record in self._data[L1:L2 + 1]:
+            for value in record[C1:C2 + 1]:
+                if value in X:
+                    counter[value] += 1
 
-#         if len(X) == 1:
-#             return counter[X[0]]
-#         return dict(counter)
+        if len(X) == 1:
+            return counter[X[0]]
+        return dict(counter)
 
-#     def extend(self, other, inplace=False):
-#         if isinstance(other, Frame):
-#             if inplace is False:
-#                 self = SeriesSet(Frame)
-#             new_title = 0
-#             for title in other._columns:
-#                 if title not in self._columns:
-#                     self._columns.append(title)
-#                     new_title += 1
+    def extend(self, other, inplace=False):
+        if isinstance(other, Frame):
+            if inplace is False:
+                self = SeriesSet(Frame)
+            new_title = 0
+            for title in other._columns:
+                if title not in self._columns:
+                    self._columns.append(title)
+                    new_title += 1
 
-#             for record in self._data:
-#                 record.extend([self._nan] * new_title)
+            for record in self._data:
+                record.extend([self._nan] * new_title)
 
-#             extend_part = [[self._nan] * len(self._columns)
-#                            for i in xrange(len(other))]
-#             new_title_index = [self._columns.index(title)
-#                                for title in other._columns]
-#             self._dim = SHEET_DIM(len(self) + len(other), len(self._columns))
-#             self._missing.extend([self._dim.Ln] * new_title)
+            extend_part = [[self._nan] * len(self._columns)
+                           for i in xrange(len(other))]
+            new_title_index = [self._columns.index(title)
+                               for title in other._columns]
+            self._dim = SHEET_DIM(len(self) + len(other), len(self._columns))
+            self._missing.extend([self._dim.Ln] * new_title)
 
-#             for i, record in enumerate(other._data):
-#                 for j, value in zip(new_title_index, record):
-#                     if value == other._nan:
-#                         value = self._nan
-#                     extend_part[i][j] = value
-#             self._data.extend(extend_part)
-#             return self
+            for i, record in enumerate(other._data):
+                for j, value in zip(new_title_index, record):
+                    if value == other._nan:
+                        value = self._nan
+                    extend_part[i][j] = value
+            self._data.extend(extend_part)
+            return self
 
-#         elif isinstance(other, SeriesSet):
-#             return self.extend(Frame(other), inplace)
+        elif isinstance(other, SeriesSet):
+            return self.extend(Frame(other), inplace)
 
-#         else:
-#             return self.extend(Frame(other, self._columns), inplace)
+        else:
+            return self.extend(Frame(other, self._columns), inplace)
 
-#     def join(self, other, inplace=False):
-#         if isinstance(other, Frame):
-#             if inplace is False:
-#                 self = Frame(self)
-#             for title in other._columns:
-#                 self._columns.append(self._check_col_new_name(title))
-#             self._missing.extend(other._missing)
+    def join(self, other, inplace=False):
+        if isinstance(other, Frame):
+            if inplace is False:
+                self = Frame(self)
+            for title in other._columns:
+                self._columns.append(self._check_col_new_name(title))
+            self._missing.extend(other._missing)
 
-#             for i, record in enumerate(other._data):
-#                 if i < self._dim.Ln:
-#                     current_record = self._data[i]
-#                 else:
-#                     current_record = [self._nan] * self._dim.Col
-#                     self._data.append(current_record)
-#                 for value in record:
-#                     if value == other.nan:
-#                         value = self._nan
-#                     current_record.append(value)
-#             if i < self._dim.Ln:
-#                 for record in self._data[i + 1:]:
-#                     record.extend([self._nan] * other.shape.Col)
-#             self._dim = SHEET_DIM(len(self._data), len(self._columns))
-#             return self
+            for i, record in enumerate(other._data):
+                if i < self._dim.Ln:
+                    current_record = self._data[i]
+                else:
+                    current_record = [self._nan] * self._dim.Col
+                    self._data.append(current_record)
+                for value in record:
+                    if value == other.nan:
+                        value = self._nan
+                    current_record.append(value)
+            if i < self._dim.Ln:
+                for record in self._data[i + 1:]:
+                    record.extend([self._nan] * other.shape.Col)
+            self._dim = SHEET_DIM(len(self._data), len(self._columns))
+            return self
 
-#         else:
-#             self.join(Frame(other, nan=self.nan), inplace)
+        else:
+            self.join(Frame(other, nan=self.nan), inplace)
 
-#     def insert_row(self, index, item):
-#         '''insert a new record to the frame with position `index`
-#         '''
-#         item = self._add_row(item)
-#         self._data.insert(index, item)
+    def insert_row(self, index, item):
+        '''insert a new record to the frame with position `index`
+        '''
+        item = self._add_row(item)
+        self._data.insert(index, item)
 
-#     def insert_col(self, index, series, variable_name=None):
-#         '''insert a new variable to the current records in position `index`
-#         '''
-#         miss, series = self._check_sequence(series)
+    def insert_col(self, index, series, variable_name=None):
+        '''insert a new variable to the current records in position `index`
+        '''
+        miss, series = self._check_sequence(series)
 
-#         size = len(series) - self._dim.Ln
-#         if size > 0:
-#             for i in xrange(self._dim.Col):
-#                 self._missing[i] += size
-#             self._data.extend([[self._nan] * self._dim.Col
-#                                for i in xrange(size)])
+        size = len(series) - self._dim.Ln
+        if size > 0:
+            for i in xrange(self._dim.Col):
+                self._missing[i] += size
+            self._data.extend([[self._nan] * self._dim.Col
+                               for i in xrange(size)])
 
-#         self._missing.insert(index, miss)
-#         for i, element in enumerate(series):
-#             self._data[i].insert(index, element)
-#         self._columns.insert(index, self._check_col_new_name(variable_name))
-#         self._dim = SHEET_DIM(max(self._dim.Ln, size), self._dim.Col + 1)
+        self._missing.insert(index, miss)
+        for i, element in enumerate(series):
+            self._data[i].insert(index, element)
+        self._columns.insert(index, self._check_col_new_name(variable_name))
+        self._dim = SHEET_DIM(max(self._dim.Ln, size), self._dim.Col + 1)
 
-#     def items(self):
-#         for i, sequence in enumerate(zip(*self._data)):
-#             yield self._columns[i], list(sequence)
+    def items(self):
+        for i, sequence in enumerate(zip(*self._data)):
+            yield self._columns[i], list(sequence)
 
-#     def keys(self):
-#         return self._columns
+    def keys(self):
+        return self._columns
 
-#     def pop_row(self, pos=-1):
-#         '''pop(remove & return) a record from the Frame
-#         '''
-#         err = 'an int or ints in list is required.'
-#         assert isinstance(pos, (int, list, tuple)), err
-#         if isinstance(pos, int):
-#             pos = [pos, ]
-#         pos = sorted(pos, reverse=True)
-#         pop_item = Frame([self._data.pop(pos_)
-#                           for pos_ in pos], list(self._columns))
-#         self._dim = SHEET_DIM(self._dim.Ln - len(pos), self._dim.Col)
-#         self._missing = map(
-#             lambda x, y: x - y,
-#             self._missing,
-#             pop_item._missing)
-#         return pop_item
+    def pop_row(self, pos=-1):
+        '''pop(remove & return) a record from the Frame
+        '''
+        err = 'an int or ints in list is required.'
+        assert isinstance(pos, (int, list, tuple)), err
+        if isinstance(pos, int):
+            pos = [pos, ]
+        pos = sorted(pos, reverse=True)
+        pop_item = Frame([self._data.pop(pos_)
+                          for pos_ in pos], list(self._columns))
+        self._dim = SHEET_DIM(self._dim.Ln - len(pos), self._dim.Col)
+        self._missing = map(
+            lambda x, y: x - y,
+            self._missing,
+            pop_item._missing)
+        return pop_item
 
-#     def pop_col(self, pos=-1):
-#         '''pop(remove & return) a series from the Frame
-#         '''
-#         pop_name = self._check_columns_index(pos)
-#         for name in pop_name:
-#             index = self._columns.index(name)
-#             self._columns.pop(index)
-#             self._missing.pop(index)
+    def pop_col(self, pos=-1):
+        '''pop(remove & return) a series from the Frame
+        '''
+        pop_name = self._check_columns_index(pos)
+        for name in pop_name:
+            index = self._columns.index(name)
+            self._columns.pop(index)
+            self._missing.pop(index)
 
-#         pop_data = [[] for i in xrange(len(pop_name))]
-#         new_data = [0] * self._dim.Ln
-#         for j, record in enumerate(self._data):
-#             line = []
-#             for i, value in enumerate(record):
-#                 if i in pop_name:
-#                     pop_data[pop_name.index(i)].append(value)
-#                 else:
-#                     line.append(value)
-#             new_data[j] = line
+        pop_data = [[] for i in xrange(len(pop_name))]
+        new_data = [0] * self._dim.Ln
+        for j, record in enumerate(self._data):
+            line = []
+            for i, value in enumerate(record):
+                if i in pop_name:
+                    pop_data[pop_name.index(i)].append(value)
+                else:
+                    line.append(value)
+            new_data[j] = line
 
-#         self._dim = SHEET_DIM(self._dim.Ln, self._dim.Col - len(pos))
-#         self._data = new_data
-#         return SeriesSet(dict(zip(pop_name, pop_data)))
+        self._dim = SHEET_DIM(self._dim.Ln, self._dim.Col - len(pos))
+        self._data = new_data
+        return SeriesSet(dict(zip(pop_name, pop_data)))
 
-#     def dropna(self, axis='LINE'):
-#         '''pop all records that maintains miss value while axis is `LINE` or
-#         pop all variables that maintains miss value while axis is `COL`
-#         '''
-#         pops = []
-#         if str(axis).upper() in ('0', 'LINE'):
-#             for i, record in enumerate(self._data):
-#                 if self._nan in record:
-#                     pops.append(i)
+    def dropna(self, axis='LINE'):
+        '''pop all records that maintains miss value while axis is `LINE` or
+        pop all variables that maintains miss value while axis is `COL`
+        '''
+        pops = []
+        if str(axis).upper() in ('0', 'LINE'):
+            for i, record in enumerate(self._data):
+                if self._nan in record:
+                    pops.append(i)
 
-#         if str(axis).upper() in ('1', 'COL'):
-#             for i, sequence in enumerate(zip(*self._data)):
-#                 if self._nan in sequence:
-#                     pops.append(self._columns[i])
+        if str(axis).upper() in ('1', 'COL'):
+            for i, sequence in enumerate(zip(*self._data)):
+                if self._nan in sequence:
+                    pops.append(self._columns[i])
 
-#         if len(pops) != 0:
-#             self.__delitem__(pops)
+        if len(pops) != 0:
+            self.__delitem__(pops)
 
-#     def from_file(self, addr, **kwrd):
-#         '''read dataset from csv or txt file.
-#         '''
-#         f = open(addr, 'r')
-#         freader, col_types, nan, prefer = self._check_read_text(f, **kwrd)
-#         self._data = [0] * self.shape.Ln
-#         try:
-#             for line, record in enumerate(freader):
-#                 line = tuple(
-#                     self._trans_str2val(
-#                         i,
-#                         v,
-#                         col_types,
-#                         nan,
-#                         prefer) for i,
-#                     v in enumerate(record))
-#                 if len(line) != self._dim.Col:
-#                     line = list(chain(line, (self._nan) *
-#                                       (self._dim.Col - len(line))))
-#                 self._data[line] = line
-#         except MemoryError:
-#             self._dim = SHEET_DIM(len(self._data), self._dim.Col)
-#             warn('since the limitation of memory, DaPy can not read the' +
-#                  ' whole file.')
-#         finally:
-#             f.close()
+    def from_file(self, addr, **kwrd):
+        '''read dataset from csv or txt file.
+        '''
+        raise NotImplementedError('use DaPy.SeriesSet.from_file()')
+        
+    def reverse(self):
+        self._data.reverse()
 
-#     def reverse(self):
-#         self._data.reverse()
+    def shuffle(self):
+        shuffles(self._data)
 
-#     def shuffle(self):
-#         shuffles(self._data)
+    def _values(self):
+        for sequence in zip(*self._data._data):
+            yield list(sequence)
 
-#     def _values(self):
-#         for sequence in zip(*self._data._data):
-#             yield list(sequence)
-
-#     def values(self):
-#         for sequence in zip(*self._data):
-#             yield Series(sequence)
+    def values(self):
+        for sequence in zip(*self._data):
+            yield Series(sequence)

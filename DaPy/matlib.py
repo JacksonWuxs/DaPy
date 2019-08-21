@@ -5,11 +5,11 @@ from .core import range, filter, zip, range
 from .core import is_math, is_seq, is_iter, is_value
 from .core.base import STR_TYPE
 from .core.base.IndexArray import SortedIndex
-from collections import namedtuple, deque, Iterable, deque
-from itertools import repeat
+from collections import namedtuple, deque, Iterable, deque, Counter
+from itertools import repeat, chain
 from warnings import warn
 from functools import reduce
-import math
+from math import sqrt, exp as math_exp
     
 __all__ = ['dot', 'multiply', 'exp', 'zeros', 'ones', 'C', 'P',
            'cov', 'corr', 'frequency', 'quantiles', '_sum', '_max',
@@ -67,7 +67,7 @@ def _abs(data):
             data = data.tolist()
         for i, line in enumerate(data):
             try:
-                new[i] = map(abs, line)
+                new[i] = Series(map(abs, line))
             except TypeError:
                 new[i] = abs(line)
         return Matrix(new)
@@ -76,10 +76,15 @@ def _abs(data):
         return abs(data)
 
     if is_iter(data):
-        return map(_abs, data)
+        return Series(map(_abs, data))
 
     raise TypeError('expects an iterable or numeric for exp(), got %s'%type(other))
 
+def sign(x):
+    '''sign([-2, -3, 2, 2, 1]) -> [-1, -1, 1, 1, 1])'''
+    if not hasattr(x, '__abs__') or not hasattr(x, '__div__'):
+        x = Matrix(x)
+    return x / abs(x)
 
 def multiply(m1, m2):
     if is_math(m1) and is_math(m2):
@@ -121,11 +126,11 @@ def exp(other):
     if hasattr(other, 'shape'):
         new = [0] * other.shape[0]
         for i, line in enumerate(other):
-            new[i] = map(math.exp, line)
+            new[i] = map(math_exp, line)
         return Matrix(new)
     
     if is_math(other):
-        return math.exp(other)
+        return math_exp(other)
 
     if is_iter(other):
         new_ = list()
@@ -214,8 +219,11 @@ def _sum(data, axis=None):
     '''
     if hasattr(data, 'sum'):
         return data.sum(axis)
+
+    if is_math(data):
+        return data
     
-    if is_seq(data) is False:
+    if is_iter(data) and not is_seq(data):
         data = tuple(data)
         
     if axis is None:
@@ -538,7 +546,7 @@ def distribution(data, breaks=10, x_label=False):
     return [float(i)/size for i in groups]
 
 
-def describe(data):
+def describe(data, detail=0):
     '''
     Help you compute some basic describe statistic indexes.
     It only supports 1 dimention data.
@@ -588,7 +596,8 @@ def describe(data):
     '''
     statistic = namedtuple('STAT',
                            ['Mean', 'S', 'Sn', 'CV', 'Range',
-                            'Min', 'Max', 'Skew', 'Kurt'])
+                            'Min', 'Max', 'Mode', 'Skew', 'Kurt'])
+    mode = Counter(data).most_common(1)[0][0]
     try:
         data = array('f', x)
     except:
@@ -596,7 +605,7 @@ def describe(data):
         
     size = float(len(data))
     if size == 0:
-        return statistic(*[None] * 9)
+        return statistic(*chain(repeat(None, 7), [mode, None, None]))
 
     min_, max_ = min(data), max(data)
     if is_math(min_) and is_math(max_):
@@ -608,21 +617,22 @@ def describe(data):
     for i in data:
         Ex += i; i *= i
         Ex2 += i; i *= i
-        Ex3 += i; i *= i
-        Ex4 += i
+        if detail == 1:
+            Ex3 += i; i *= i
+            Ex4 += i
     Ex /= size
     Ex2 /= size
-    Ex3 /= size
-    Ex4 /= size
-
     std = (Ex2 - Ex**2) ** 0.5
     std_n = size / (size - 1.0) * std
-    if std == 0:
-        S,K = '-','-'
-    else:
-        S = (Ex3 - 3 * Ex * std ** 2 - Ex ** 3) / std ** 1.5
-        K = Ex4 / std ** 4 - 3
+    
+    S, K = '-','-'
+    if detail == 1:
+        Ex3 /= size
+        Ex4 /= size
+        if std != 0:
+            S = (Ex3 - 3 * Ex * std ** 2 - Ex ** 3) / std ** 1.5
+            K = Ex4 / std ** 4 - 3
     
     if Ex == 0:
-        return statistic(Ex, std, std_n, None, rang, min_, max_, S, K)
-    return statistic(Ex, std, std_n, std/Ex, rang, min_, max_, S, K)
+        return statistic(Ex, std, std_n, None, rang, min_, max_, mode, S, K)
+    return statistic(Ex, std, std_n, std/Ex, rang, min_, max_, mode, S, K)

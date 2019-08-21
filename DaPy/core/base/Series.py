@@ -29,7 +29,8 @@ def quickly_apply(operation, left, right):
 
 class Series(list):
     def __init__(self, array=[]):
-        assert is_iter(array), 'array object is not iterable'
+        if is_iter(array) is False:
+            array = (array,)
         list.__init__(self, array)
 
     @property
@@ -38,7 +39,7 @@ class Series(list):
 
     @property
     def shape(self):
-        return (len(self._data), 1)
+        return (len(self), 1)
 
     def __repr__(self):
         if len(self) > 10:
@@ -97,13 +98,17 @@ class Series(list):
             assert len(key) == len(self)
             return Series(val for key_, val in zip(key, self) if key_)
 
-        if isinstance(key, (tuple, list)):
-            if len(key) < len(self) * 0.1:
-                return Series(map(list.__getitem__, repeat(self, len(key)), key))
-            key = itemgetter(*key)
+        if is_seq(key) and len(key) < len(self) * 0.1:
+            return Series(map(list.__getitem__, repeat(self, len(key)), key))
+        
+        if is_iter(key):
+            try:
+                key = itemgetter(*key)
+            except TypeError:
+                return Series()
             
         if isinstance(key, itemgetter):
-            list_self = list(self) 
+            list_self = list(self)
             return Series(key(list_self)) 
         
         if isinstance(key, slice):
@@ -253,6 +258,15 @@ class Series(list):
         return Series(map(func, self))
 
     def between(self, left, right, boundary='both'):
+        '''select the values which fall between `left` and `right`
+
+        this function quickly select the values which are larger
+        than `left` as well as smaller than `right`
+
+        Parameters
+        ----------
+        left :
+        '''
         assert boundary in ('both', False, 'left', 'right')
         bound_left, bound_right = ge, ge
         if boundary in (False, 'right'):
@@ -286,6 +300,12 @@ class Series(list):
 
     def dropna(self):
         return Series((val for val in self if not isnan(val)))
+    
+    def get(self, index, default=None):
+        try:
+            return list.__getitem__(self, index)
+        except Exception:
+            return default
 
     def normalize(self):
         pass
@@ -330,7 +350,7 @@ class Series(list):
 
     def std(self):
         Ex, Ex2, length = 0, 0, float(len(self))
-        for i in series:
+        for i in self:
             Ex += i
             Ex2 += pow(i, 2)
         Ex /= length

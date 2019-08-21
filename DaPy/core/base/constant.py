@@ -22,7 +22,8 @@ except ImportError:
     import pickle
 
 try:
-    from numpy import ndarray
+    from numpy import ndarray, array, float64, float32, int64, int32
+    MATH_TYPE.extend([float64, float32, int64, int32])
     from numpy.matrixlib.defmatrix import matrix
     SEQ_TYPE.extend([ndarray, matrix])
     from pandas import Series, DataFrame, Index

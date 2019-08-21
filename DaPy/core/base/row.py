@@ -57,8 +57,7 @@ class Row(Sequence):
 
     @property
     def data(self):
-        _data = self._sheet.data
-        return [_data[title][self._line] for title in self.columns]
+        return [_[self._line] for _ in self._sheet.values()]
 
     def __iter__(self):
         for seq in self._sheet.values():
@@ -160,11 +159,19 @@ class Row(Sequence):
         return self.data.count(value)
 
     def extend(self, iterable):
-        extend_col = [[self._sheet.miss_symbol] * len(iterable)\
-                      for i in range(self._sheet.shape.Ln)]
-        extend_col[self._line] = list(iterable)
-        self._sheet.extend_col(extend_col)
-
+        exist = self.data
+        exist.extend(iterable)
+        self._sheet[self._line] = exist
+    
+    def get(self, index, default=None):
+        if isinstance(index, int):
+            if index < 0:
+                index += len(self.columns)
+            if index >= len(self.columns):
+                return default
+            index = self.columns[index]
+        return self._sheet.get(index, default)
+            
     def index(self, value):
         return self.data.index(value)
 

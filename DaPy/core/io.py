@@ -105,6 +105,7 @@ def parse_html(text, dtype, miss_symbol, nan, sheetname):
                           'please try command: pip install bs4.')
     if not is_iter(miss_symbol):
         miss_symbol = [miss_symbol]
+        
     soup = bs(text, 'html.parser')
     for table in soup.findAll('table'):
         sheet = table.attrs.get('class', [sheetname])[0]
@@ -133,10 +134,9 @@ def parse_html(text, dtype, miss_symbol, nan, sheetname):
         except RuntimeError:
             warn('Table "%s" can not be auto parsed.' % sheet)
             
-def write_txt(f, data, newline, delimiter, encode, decode):
+def write_txt(f, data, newline, delimiter):
     def writeline(f, record):
-        msg = delimiter.join(map(str, record)) + newline
-        f.write(msg)
+        f.write(delimiter.join(map(str, record)) + newline)
 
     if hasattr(data, 'columns'):
         writeline(f, data.columns)
@@ -159,7 +159,7 @@ def write_txt(f, data, newline, delimiter, encode, decode):
         else:
             raise ValueError('DaPy can save the object with same value styles only.')
 
-    elif is_iter(data) or isinstance(data, Frame):
+    elif is_iter(data):
         for record in data:
             if is_iter(record):
                 writeline(f, record)
@@ -214,8 +214,7 @@ def write_xls(worksheet, data, decode, encode):
 
 def write_html(f, data, encode, decode):
     def writeline(f, record):
-        msg = '<tr><td>' + '</td><td>'.join(map(str, record)) + '</td></tr>'
-        f.write(msg.decode(decode).encode(encode))
+        f.write('<tr><td>' + '</td><td>'.join(map(str, record)) + '</td></tr>')
 
     if hasattr(data, 'columns'):
         f.write('<thead>')

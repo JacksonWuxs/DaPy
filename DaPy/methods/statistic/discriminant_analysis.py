@@ -1,14 +1,14 @@
 from DaPy.core import DataSet, Matrix as mat, SeriesSet
 from DaPy.matlib import cov, mean
 from DaPy.operation import column_stack, row_stack
-from DaPy.methods.utils import str2engine, engine2str
+from DaPy.methods.core.base import BaseEngineModel
 from DaPy.methods.evaluator import Accuracy, Kappa, ConfuMat
 
 __all__ = ['LinearDiscriminantAnalysis']
 
-class DiscriminantAnalysis(object):
+class DiscriminantAnalysis(BaseEngineModel):
     def __init__(self, engine='numpy', solve='FISHER'):
-        self._engine = str2engine(engine)
+        BaseEngineModel.__init__(self, engine)
         self._solve = solve
         self._confumat = None
         self._report = DataSet()
@@ -30,18 +30,6 @@ class DiscriminantAnalysis(object):
     @property
     def confumat(self):
         return self._confumat
-
-    @property
-    def engine(self):
-        '''Return the calculating tool that you are using
-        '''
-        return engine2str(self._engine)
-
-    @engine.setter
-    def engine(self, value):
-        '''Reset the calculating library (DaPy or Numpy)
-        '''
-        self._engine = str2engine(value)
 
     def _create_report(self, **kwrds):
         self._report = DataSet()

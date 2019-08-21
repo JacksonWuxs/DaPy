@@ -12,13 +12,12 @@ class SortedIndex(Sequence):
         
         if not index:
             self._val = sorted(array)
-            self._ind = argsort(array)
+            self._ind = list(argsort(array))
         else:
             val_ind = sorted(zip(array, index), key=itemgetter(0))
             self._val, self._ind = tuple(zip(*val_ind))
             self._val, self._ind = list(self._val), list(self._ind)
-        
-        
+
     def __getitem__(self, indices):
         if isinstance(indices, (slice, int)):
             return self._ind[indices], self._val[indices]

@@ -25,7 +25,7 @@ class Test_Tools(TestCase):
         
     def test_GetSortedIndex(self):
         self.assertEqual(argsort([3, 1, 2, 6, 4, 2, 1, 3]),
-                         [1, 6, 2, 5, 0, 7, 4, 3])
+                         (1, 6, 2, 5, 0, 7, 4, 3))
 
     def test_hash_sort(self):
         self.assertEqual(

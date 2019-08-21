@@ -1,10 +1,10 @@
-from collections import OrderedDict, Counter, defaultdict
+from collections import Counter
 from math import log
-from DaPy import mat, concatenate, SeriesSet, io, Series
+from DaPy import SeriesSet, Series
 from copy import copy, deepcopy
 from pprint import pformat
 
-class DecisionTree(object):
+class DecisionTreeClassifier(object):
     '''Implement of decision tree with C4.5 algorithm'''
     def __init__(self, max_depth=None):
         self._feature_name = []
@@ -122,10 +122,11 @@ class DecisionTree(object):
                     break
             else:
                 return node[feature]['???']
+        return self._root['???']
 
     def predict(self, X):
         assert X.shape[1] == self.n_features
-        return [self.predict_once(row) for row in X]
+        return Series(self.predict_once(row) for row in X)
 
     def export_graphviz(self, outfile=None):
         global nodeNum, doc

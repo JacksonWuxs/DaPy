@@ -3,7 +3,7 @@ from .Matrix import Matrix
 from .Series import Series
 from .utils import is_seq, is_iter, is_math, is_value, is_str, pickle
 from .utils import auto_plus_one, argsort, auto_str2value, fast_str2value
-from .utils import range, xrange, map, zip, filter 
+from .utils import range, xrange, map, zip, filter, PYTHON3, PYTHON2
 from .constant import VALUE_TYPE, STR_TYPE, MATH_TYPE, SEQ_TYPE
 from .constant import pickle, nan, inf
 from .constant import LogInfo, LogWarn, LogErr

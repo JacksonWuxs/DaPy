@@ -64,20 +64,17 @@ def left_join(left, right, left_on, right_on, joined):
     return create_join_by_index(left, right, left_ind, right_ind, joined, True)
 
 def create_join_by_index(left, other, left_index, right_index, joined, add_last):
-    lgetter, rgetter = itemgetter(*left_index), itemgetter(*right_index)
     if add_last:
         left.append_row([])
         other.append_row([])
         
-    for getter, data in zip([lgetter, rgetter], [left, other]):
+    for getter, data in zip([left_index, right_index], [left, other]):
         for miss, (col, seq) in zip(data._missing, data.iter_items()):
             col = joined._check_col_new_name(col)
-            subseq = getter(seq)
+            subseq = seq[getter]
             if miss != 0:
                 miss = count_nan(data._isnan, subseq)
                 subseq = [left.nan if data._isnan(v) else v for v in subseq]
-            else:
-                subseq = list(subseq)
             joined._data[col] = subseq
             joined._missing.append(miss)
             joined._columns.append(col)

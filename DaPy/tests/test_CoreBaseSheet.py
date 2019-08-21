@@ -40,10 +40,10 @@ class Test0_InitData(TestCase):
         #self.isinit_sheet_success(dframe, [[1], [3], [None], [2], [4]], (5, 1), ['T1'], None, [1])
         self.isinit_sheet_success(dcol, OrderedDict(T1=SEQ_DATA), (5, 1), ['T1'], None, [1])
 
-    def test_init_frame(self):
-        original = Frame(TABLE_DATA, TABLE_COL, None)
+    #def test_init_frame(self):
+        #original = Frame(TABLE_DATA, TABLE_COL, None)
         # self.isinit_sheet_success(Frame(original), TABLE_DATA, (3, 4), TABLE_COL, None, [0, 0, 1, 0])
-        self.isinit_sheet_success(SeriesSet(original, nan=None), DICT_DATA, (3, 4), TABLE_COL, None, [0, 0, 1, 0])
+        #self.isinit_sheet_success(SeriesSet(original, nan=None), DICT_DATA, (3, 4), TABLE_COL, None, [0, 0, 1, 0])
 
     def test_init_col(self):
         original = SeriesSet(TABLE_DATA, TABLE_COL, None)

@@ -1,33 +1,18 @@
 from math import sqrt
 from random import gauss, randint, uniform
 
-from DaPy.core.base import Matrix, STR_TYPE
-from DaPy.methods.utils import engine2str, str2engine
+from DaPy.core.base import Matrix
+
+from .models import BaseEngineModel
 
 
-class Layer(object):
+class Layer(BaseEngineModel):
     def __init__(self, engine, function):
-        self._engine = engine
-        self._func = function
+        BaseEngineModel.__init__(self, engine)
+        self.activation = function
 
     def __repr__(self):
         return self.__name__
-
-    @property
-    def engine(self):
-        if self._engine is None:
-            return ''
-        return engine2str(self._engine)
-
-    @engine.setter
-    def engine(self, other):
-        if isinstance(other, STR_TYPE):
-            if other != '':
-                self._engine = str2engine(other)
-            else:
-                self._engine = None
-        else:
-            self._engine = other
 
     @property
     def activation(self):
@@ -35,13 +20,12 @@ class Layer(object):
 
     @activation.setter
     def activation(self, other):
-        assert callable(other), 'activation should bu callable object'
+        assert callable(other) or other is None, 'activation should bu callable object'
         self._func = other
 
     def __getstate__(self):
         obj = self.__dict__.copy()
         obj['_engine'] = self.engine
-        obj['_func'] = None
         return obj
 
     def __setstaet__(self, dict):
@@ -50,23 +34,21 @@ class Layer(object):
         if '_weight' in dict:
             self._weight = dict['_weight']
 
-    def propagation(self):
+    def propagation(self, *args, **kwrds):
         pass
 
-    def backward(self):
+    def backward(self, *args, **kwrds):
         pass
 
 class Input(Layer):
-    '''Input layer in the model
-    '''
+    '''Input layer in the model'''
     
     __name__ = 'Input'
     
-    def __init__(self, in_cells, *args, **kwrds):
-        assert isinstance(in_cells, int)
-        Layer.__init__(self, None, None)
+    def __init__(self, engine, in_cells, *args, **kwrds):
+        Layer.__init__(self, engine, None)
         self._in_cells = in_cells
-        self._weight = 0
+        self._weight = self._engine.zeros((in_cells, in_cells))
 
     @property
     def shape(self):
@@ -74,10 +56,9 @@ class Input(Layer):
 
     def propagation(self, x):
         assert x.shape[1] == self._in_cells
+        self._input = self._output = x
         return x
-
-    def backward(self, x, error, y, alpha, beta):
-        pass
+    
 
 class Dense(Layer):
     '''A type of common layer for multilayer perceptron
@@ -88,15 +69,15 @@ class Dense(Layer):
 
     __name__ = 'Dense'
     
-    def __init__(self, engine, in_cells, out_cells, activation, init_weight='Xavier'):
+    def __init__(self, engine, n_in, n_out, activation, init_weight='Xavier'):
         Layer.__init__(self, engine, activation)
-        self.__init__weight(in_cells, out_cells, init_weight)
+        self._init_parameters(n_in, n_out, init_weight)
 
     @property
     def shape(self):
         return self._weight.shape
 
-    def __init__weight(self, in_cells, out_cells, mode='MSRA'):
+    def _init_parameters(self, in_cells, out_cells, mode='MSRA'):
         '''inintialized the weight matrix in this layer.
 
         Paramters
@@ -114,7 +95,7 @@ class Dense(Layer):
 
         elif mode == 'Xavier':
             low = in_cells + out_cells
-            t1, t2, f = -sqrt(6.0 / low), sqrt(6.0 / low), uniform
+            t1, t2, f = - sqrt(6.0 / low), sqrt(6.0 / low), uniform
 
         elif mode == 'Gauss':
             t1, t2, f = 0, 1, gauss
@@ -124,12 +105,25 @@ class Dense(Layer):
                             'Xavier, and Gauss.')
         
         weight = [[f(t1, t2) for j in range(out_cells)] for i in range(in_cells)]
-        self._weight = Matrix(weight)
+        self._weight = self._engine.mat(weight)
 
-    def propagation(self, x):
-        return self._func(self._engine.dot(x, self._weight))
+    def propagation(self, input_):
+        self._input = input_
+        self._output = self._func(input_.dot(self._weight))
+        return self._output
 
-    def backward(self, x, error, y, alpha, beta):
-        delta = error * self._func(y, True)
-        self._weight += self._engine.dot(x.T, delta) * (alpha + beta)
-        return self._engine.dot(delta, self._weight.T)
+    def backward(self, gradient, alpha):
+        gradient = self._mul(gradient, self._func(self._output, True))
+        self._weight += self._input.T.dot(gradient) * alpha
+        return self._dot(gradient, self._weight.T)
+
+
+class Output(Dense):
+    '''Output layer in the model'''
+    
+    __name__ = 'Output'
+
+    def __init__(self, engine, n_in, n_out, activation, init_weight='Xavier'):
+        Dense.__init__(self, engine, n_in, n_out, activation, init_weight)
+
+

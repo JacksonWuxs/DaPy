@@ -8,7 +8,7 @@ from pprint import pprint
 
 from .base import (Frame, LogErr, LogInfo, LogWarn, Matrix, Series, SeriesSet,
                    auto_plus_one, filter, is_iter, is_seq, is_str, is_value,
-                   map, pickle, range, zip)
+                   map, pickle, range, zip, PYTHON3)
 from .io import (parse_addr, parse_excel, parse_html, parse_sav, parse_sql,
                  write_db, write_html, write_txt, write_xls)
 
@@ -294,24 +294,16 @@ class DataSet(object):
             return [self._check_sheet_index(_) for _ in sheet]
 
     def __getstate__(self):
-        unpack_obj = dict()
-        for i, (sheet, data) in enumerate(zip(self._sheets, self._data)):
-            if not hasattr(data, '__getstate__'):
-                unpack_obj[sheet] = data
-                del self._data[i], self._sheets[i], self._types[i]
-                LogErr('Sheet (%s) can not be pickled, ignored.' % sheet)
-                
-        obj = self.__dict__.copy()
-        for sheet, data in unpack_obj.items():
-            self._data.append(data)
-            self._sheets.append(sheet)
-            self._types.append(type(sheet))
-        return obj
+        toreturn = self.__dict__.copy()
+        for key in toreturn:
+            if key not in ('_data', '_sheets', '_types'):
+                del toreturn[key]
+        return toreturn
 
-    def __setstate__(self, dict):
-        self._data = dict['_data']
-        self._sheets = dict['_sheets']
-        self._types = dict['_types']
+    def __setstate__(self, arg):
+        self._data = arg['_data']
+        self._sheets = arg['_sheets']
+        self._types = arg['_types']
 
     def __contains__(self, e):
         '''__contains__(e) -> e in DataSet
@@ -543,79 +535,14 @@ class DataSet(object):
         pass
                                  
     @timer
+    @operater
     def insert_row(self, index, item):
-        '''Insert a new record ``item`` in position ``index``.
-
-        Parameter
-        ---------
-        index : int
-            the position of new record.
-
-        item : value or iter
-            an iterable object containing new record.
-
-        Examples
-        --------
-        >>> d = dp.DataSet([1,2,3,4,5,6])
-        >>> d.insert(3, 'insert_item')
-        >>> d
-        sheet:sheet0
-        ============
-        [1, 2, 3, 'insert_item', 4, 5, 6]
-        '''
-        if isinstance(item, DataSet):
-            map(self.insert_row, [index] * item.level, item._data)
-            return
-
-        for sheet, data in zip(self._sheets, self._data):
-            if hasattr(data, 'insert_row'):
-                try:
-                    data.insert_row(index, item)
-                except Exception as e:
-                    LogErr('%s.insert_row() failed because %s.'%(sheet, e))
-            else:
-                LogErr('%s has no attribute insert_row(), ignored.' % sheet)
+        pass
 
     @timer
+    @operater
     def insert_col(self, index, series, variable_name=None):
-        '''Insert a new variable named ``variable_name`` with a sequence of data
-        ``series`` in position ``index``.
-
-        Parameter
-        ---------
-        variable_name : str
-            the name of new column.
-
-        series : sequence-like
-            a sequence containing new variable values.
-
-        index : int
-            the position of new variable at.
-
-        Examples
-        --------
-        >>> import DaPy as dp
-        >>> data = dp.DataSet(dp.SeriesSet([1,2,3,4,5,6], 'A'))
-        >>> data.insert_col(3, ['New', 'New', 'New'], 'insert_col')
-        >>> data
-        sheet:sheet0
-        ============
-            A_0: <1, 2, 3, 4, 5, 6>
-        insert_col: <New, New, New, None, None, None>
-        '''
-        if isinstance(series, DataSet):
-            map(self.insert_col, [index] * series.level, series._data,
-                [variable_name] * series.level)
-            return
-
-        for sheet, data in zip(self._sheets, self._data):
-            if hasattr(data, 'insert_col') is False:
-                LogErr('sheet: %s has no attribute insert_col(), ignored.' % sheet)
-                continue
-            try:
-                data.insert_col(index, series, variable_name)
-            except Exception as e:
-                LogErr('%s.insert_col() failed because %s.'%(sheet, e))          
+        pass        
 
     @timer
     @operater
@@ -704,300 +631,20 @@ class DataSet(object):
             except Exception as e:
                 LogErr('sheet: %s.extend() failed because %s.'%(sheet, e))
 
-    @timer         
+    @timer 
+    @operater        
     def join(self, other):
-        '''extend your dataset by another object, new data seems as new variables.
+        pass
 
-        This function can help you combine another data set while it considers 
-        the variables in the other are new variables. To be simple, the operation 
-        in this function, just like you map append_col() to every new variables, 
-        but this function will faster and easier to use.
-
-        Examples
-        --------
-        >>> import DaPy as dp
-        >>> data = dp.DataSet()
-        >>> data.add(dp.Frame(
-                        [[11, 11],
-                        [21, 21],
-                        [31, 31],
-                        [41, 41]],
-                        ['C1', 'C2']), sheet='Table1')
-        >>> data.add(dp.Frame(
-                        [[21, 21],
-                        [22, 22],
-                        [23, 23],
-                        [24, 24]],
-                        ['C2', 'C3']), sheet='Table2')
-        >>> data['Table1'].join(data['Table2'])
-        >>> data
-        sheet:Table1
-        ============
-        C1 | C2 | C2_1 | C3
-        ----+----+------+----
-        11 | 11 |  21  | 21 
-        21 | 21 |  22  | 22 
-        31 | 31 |  23  | 23 
-        41 | 41 |  24  | 24 
-
-        sheet:Table2
-        ============
-        C2 | C3
-        ----+----
-        21 | 21 
-        22 | 22 
-        23 | 23 
-        24 | 24 
-        '''
-        if isinstance(other, DataSet):
-            for left, right in zip(self._data, other._data):
-                left.join(right)
-            return
-
-        for sheet, data in zip(self._sheets, self._data):
-            if hasattr(data, 'join') is False:
-                LogErr('sheet: %s has no attribute join(), ignored.' % sheet)
-                continue
-            try:
-                data.join(other)
-            except Exception as e:
-                LogErr('sheet: %s.join() failed because %s.'%(sheet, e))
-
-    @timer     
+    @timer  
+    @operater   
     def normalized(self, process='NORMAL', col=None, **kwrds):
-        '''Apply a data operation to your data
-
-        Parameters
-        ----------
-        process : str (default='NORMAL')
-            which process you wish to apply
-            `NORMAL` -> operate the data so that its arrange between 0 to 1.
-            `STANDAR` -> operate the data so that its mean is 0 and variance is 1.
-            `LOG` -> find the logarithm of X.
-            `BOX-COX` -> Box-Cox operation
-
-        col : str, str in list (default='all')
-            which column you wish to operate
-
-        min : float (default=Min(X))
-            Available when process is NORMAL
-
-        range : float, int (default=Range(X))
-            Available when process is NORMAL
-
-        mean : float (default=mean(X))
-            Available when process is STANDAR
-
-        std : float (default=std(X))
-            Available when process is STANDAR
-
-        a : float (default=0)
-            Available when process is BOX-COX
-
-        k : float (default=1)
-            Available when process is BOX-COX
-            
-        lamda : float (default=1)
-            Available when process is BOX-COX
-            
-        base : float (default=e)
-            Available when process is LOG
-            
-        Examples
-        --------
-        >>> from DaPy import datasets
-        >>> data = datasets.example()
-        >>> data.info
-        sheet:sample
-        ============
-        1.  Structure: DaPy.SeriesSet
-        2. Dimensions: Lines=12 | Variables=4
-        3. Miss Value: 0 elements
-                        Descriptive Statistics                
-        ======================================================
-         Title | Miss | Min | Max | Mean | Std  | Skew | Kurt 
-        -------+------+-----+-----+------+------+------+------
-         A_col |  0   |  1  |  6  | 3.00 | 1.35 | 0.63 |57.05 
-         B_col |  0   |  1  |  9  | 4.33 | 2.56 | 3.11 |29.84 
-         C_col |  0   |  1  |  8  | 3.33 | 2.59 | 3.13 |15.63 
-         D_col |  0   |  2  |  6  | 3.50 | 1.38 | 0.61 |81.70 
-        ======================================================
-        >>> data.normalized()
-        >>> data.info
-        sheet:sample
-        ============
-        1.  Structure: DaPy.SeriesSet
-        2. Dimensions: Lines=12 | Variables=4
-        3. Miss Value: 0 elements
-                        Descriptive Statistics                
-        ======================================================
-         Title | Miss | Min | Max | Mean | Std  | Skew | Kurt 
-        -------+------+-----+-----+------+------+------+------
-         A_col |  0   |  0  |  1  | 0.08 | 0.28 | 0.44 |11.28 
-         B_col |  0   |  0  |  1  | 0.17 | 0.37 | 0.41 | 5.64 
-         C_col |  0   |  0  |  1  | 0.17 | 0.37 | 0.41 | 5.64 
-         D_col |  0   |  0  |  1  | 0.08 | 0.28 | 0.44 |11.28 
-        ======================================================
-        '''
-        for i, data in enumerate(self._data):
-            if hasattr(data, 'normalized'):
-                data.normalized(process, col, **kwrds)
+        pass
 
     @timer
+    @operater
     def merge(self, other, self_key=0, other_key=0, keep_key=True, keep_same=True):
-        '''laterally merge another data to exist sheet. 
-
-        In this function, people could use this function to combind two
-        datasets into one in light of two keywords. It will try to match the
-        records in both dataset. Anyway, the difference 
-        between self.update is that this function will seems the variables
-        in the other dataset as new variables. Therefore, after it match
-        the keywords, it will do the simillar opeartion like extend_col().
-
-        Rules of Combination
-        --------------------
-        <1> It will compare the keywords and find the records which have
-            the same value in the keywords.
-        <2> It will add the new data as new variables behind the exist records.
-        <3> If there is more than one record that matches the keywords of the
-            two data sets, it will correspond to the sequence of the records.
-
-        Parameter
-        ---------
-        other : array-like, Frame, SeriesSet and any other data structures
-            the other dataset which is used to extend this one.
-
-        self_key : int, str (default=0)
-            choose a column as the keyword in this sheet, it is similar to
-            the Index. 
-
-        other_key : int, str(default=0)
-            choose a column as the keyword in the other sheet.
-
-        keep_key : True, False, 'self' and 'other' (default=True)
-            how to handle the key columns.
-            `self` -> keep the self key column only;
-            `other` -> keep the other key column only;
-            `True` -> both keep two key columns;
-            `False` -> drop out two key columns;
-
-        keep_same : True, False(default=True)
-            when other data set has the same column name with current dataset,
-            how to handle the same columns?
-            `True` -> keep the same column in other dataset;
-            `False` -> not merge the same column in other dataset;
-
-        Return
-        ------
-        None
-
-        Example
-        -------
-        >>> left.show()
-           Name  | Age  | gender
-        ---------+------+--------
-           Alan  |  35  |   M    
-           Bob   |  27  |   M    
-         Charlie |  30  |   F    
-          Daniel |  29  |  None  
-           None  | None |   F   
-        >>> right.show()
-           Name  | gender | Age 
-        ---------+--------+------
-           Alan  |   M    |  35  
-           Bob   |   M    |  27  
-         Charlie |   F    |  30  
-          Janny  |   F    |  26  
-           None  |  None  | None
-        >>> # we settle down the self_key=="Name" and other_key=="Name
-        >>> # change different parameters between keep_key and keep_same
-        >>> # results shows below
-        MERGE with keep_key=True and keep_same=True
-           Name  | Age  |  Name_1 | gender | Age_1
-        ---------+------+---------+--------+-------
-           Alan  |  35  |   Alan  |   M    |   35  
-           Bob   |  27  |   Bob   |   M    |   27  
-         Charlie |  30  | Charlie |   F    |   30  
-          Daniel |  29  |   None  |  None  |  None 
-           None  | None |  Janny  |   F    |   26  
-
-        MERGE with keep_key=True and keep_same=False
-           Name  | Age  |  Name_1 | gender
-        ---------+------+---------+--------
-           Alan  |  35  |   Alan  |   M    
-           Bob   |  27  |   Bob   |   M    
-         Charlie |  30  | Charlie |   F    
-          Daniel |  29  |   None  |  None  
-           None  | None |  Janny  |   F    
-
-        MERGE with keep_key=False and keep_same=True
-         Age  | gender | Age_1
-        ------+--------+-------
-          35  |   M    |   35  
-          27  |   M    |   27  
-          30  |   F    |   30  
-          29  |  None  |  None 
-         None |   F    |   26  
-
-        MERGE with keep_key=False and keep_same=False
-         Age  | gender
-        ------+--------
-          35  |   M    
-          27  |   M    
-          30  |   F    
-          29  |  None  
-         None |   F    
-
-        MERGE with keep_key=other and keep_same=True
-         Age  |  Name_1 | gender | Age_1
-        ------+---------+--------+-------
-          35  |   Alan  |   M    |   35  
-          27  |   Bob   |   M    |   27  
-          30  | Charlie |   F    |   30  
-          29  |   None  |  None  |  None 
-         None |  Janny  |   F    |   26  
-
-        MERGE with keep_key=other and keep_same=False
-         Age  |  Name_1 | gender
-        ------+---------+--------
-          35  |   Alan  |   M    
-          27  |   Bob   |   M    
-          30  | Charlie |   F    
-          29  |   None  |  None  
-         None |  Janny  |   F    
-
-        MERGE with keep_key=self and keep_same=True
-           Name  | Age  | gender | Age_1
-        ---------+------+--------+-------
-           Alan  |  35  |   M    |   35  
-           Bob   |  27  |   M    |   27  
-         Charlie |  30  |   F    |   30  
-          Daniel |  29  |  None  |  None 
-           None  | None |   F    |   26  
-
-        MERGE with keep_key=self and keep_same=False
-           Name  | Age  | gender
-        ---------+------+--------
-           Alan  |  35  |   M    
-           Bob   |  27  |   M    
-         Charlie |  30  |   F    
-          Daniel |  29  |  None  
-           None  | None |   F    
-        '''
-        if isinstance(other, DataSet):
-            map(self.merge, other._data,
-                [self_key]*other.level, [other_key]*other.level,
-                [keep_key]*other.level, [keep_same]*other.level)
-            return
-
-        for sheet, data in zip(self._sheets, self._data):
-            if hasattr(data, 'merge') is False:
-                LogErr('%s has no attribute merge(), ignored.' % sheet)
-                continue
-            try:
-                data.merge(other, self_key, other_key, keep_key, keep_same)
-            except Exception as e:
-                LogErr('%s.merge() failed because %s.'%(sheet, e))
+        pass
 
     @timer
     @operater
@@ -1024,9 +671,6 @@ class DataSet(object):
         addr : str
             the address of data file.
 
-        dtype : str (default='col')
-            the target data structure you prefer.
-
         ftype : str (default=None)
             the file type of this address
             `None` -> automtotally analysis the file type
@@ -1036,18 +680,18 @@ class DataSet(object):
             "db" -> SQLite3 database file
             "sav" -> SPSS data file
             "xls" -> Excel data file
-            "csv" -> Text file with ',' as delimeter
-            "txt" -> Text file with ' ' as delimeter
+            "csv" -> Text file with ',' as delimeters
+            "txt" -> Text file with ' ' as delimeters
             "pkl" -> Python pickle file
             "mysql" -> MySQL database link
 
         sheet_name : str (default=None)
             the sheet name of new table.
 
-        miss_symbol : str or str in list (default='')
+        miss_symbol : str or str in list (default=['?', '??', '', ' ', 'NA', 'None'])
             the miss value symbol in this data file.
 
-        nan : value ( default=nan)
+        nan : value (default=nan)
             the miss value symbol in your new data set.
 
         first_line : int (default=1)
@@ -1061,7 +705,7 @@ class DataSet(object):
         sep : str (default=",")
             the delimiter symbol inside.
 
-        types : type name in str or dict of columns (default=None):
+        dtypes : type name in str or dict of columns (default=None):
             DaPy autometally transfers the str source text into the most
             suitable data type in efficiency, whereas some of process costs
             long time. For example, "2018-1-1" is a datetime label, however,
@@ -1071,9 +715,9 @@ class DataSet(object):
             "float", "str", "datetime" and "bool".
             
             use this keyword as following samples
-            >>> read("addr.csv", types={'A_col': int, 'B_col': float})
-            >>> read("addr.csv", types="float")
-            >>> read("addr.csv", types=["float", "int"])
+            >>> read("addr.csv", dtypes={'A_col': int, 'B_col': float})
+            >>> read("addr.csv", dtypes="float")
+            >>> read("addr.csv", dtypes=["float", "int"])
 
         Examples
         --------
@@ -1083,7 +727,7 @@ class DataSet(object):
         '''
         nan = kwrd.get('nan', float('nan'))
         sheet_name = kwrd.get('sheet_name', None)
-        miss_symbol = kwrd.get('miss_symbol', ('?', '??', '', ' ', 'NA', 'None'))
+        miss_symbol = kwrd.get('miss_symbol', set(['?', '??', '', ' ', 'NA', 'None']))
         fpath, fname, fbase, ftype = parse_addr(addr)
         ftype = kwrd.get('ftype', ftype)
         assert ftype in ('web', 'html', 'htm', 'db', 'sav', 'xls', 'xlsx', 'csv', 'txt', 'pkl', 'mysql')
@@ -1091,6 +735,7 @@ class DataSet(object):
             raise IOError('can not find the target file or auto analysis data source type failed')
         if sheet_name is None:
             sheet_name = fbase
+
         if ftype == 'db':
             for sheet, name in parse_sql(addr, dtype, nan):
                 self._add(sheet, name)
@@ -1101,20 +746,14 @@ class DataSet(object):
         elif ftype == 'xls' or ftype == 'xlsx':
             first_line = kwrd.get('first_line', 1)
             title_line = kwrd.get('title_line', 0)
-            for sheet, name in parse_excel(dtype, addr, first_line, title_line,
-                                           nan):
+            for sheet, name in parse_excel(dtype, addr, first_line, title_line, nan):
                 self._add(sheet, name)
 
         elif ftype in ('txt', 'csv'):
-            sep = kwrd.get('sep')
-            if not isinstance(sep, str):
-                sep_dic = {'csv':',', 'txt':'\t'}
-                kwrd['sep'] = sep_dic[ftype]
-
+            kwrd['sep'] = kwrd.get('sep', {'csv':',', 'txt':'\t'}[ftype])
             dtype_dic = {'COL': SeriesSet, 'SERIESSET': SeriesSet, 
-                         'MATRIX': Matrix, 'MAT': Matrix, 'FRAME': Frame}
+                         'MATRIX': Matrix, 'MAT': Matrix}
             dtype = dtype_dic.get(dtype.upper(), SeriesSet)
-            kwrd['nan'] = miss_symbol
             self._data.append(dtype.from_file(addr, **kwrd))
             self._types.append(dtype)
             self._sheets.append(self._check_sheet_new_name(sheet_name))
@@ -1215,9 +854,6 @@ class DataSet(object):
         encode : str (default='utf-8')
             saving the file in such code type
 
-        decode : str (default='utf-8')
-            parse your data in such code type
-
         ftype : str
             the file type you want to save as. Use the file type in
             your address as default. For example, 'data.save("test.csv")'
@@ -1225,7 +861,7 @@ class DataSet(object):
             following file types since V1.5.1:
             .csv, .txt, .xls, .pkl, .db, .html
 
-        newline : str (default='\\n')
+        newline : str (default='\n')
             use this simble to mark change line.
 
         delimiter : str (default=',')
@@ -1233,7 +869,7 @@ class DataSet(object):
 
         if_exists : str (default='fail')
             when saving the data into a exist database file, how to face the
-            delimma while the sheet name has been inside the database.
+            delimma that the sheet name has been existed in the database.
             'fail' -> raise an error;
             'replace' -> replace the exist table with current data;
             'append' -> append these records to the exist sheet
@@ -1241,20 +877,26 @@ class DataSet(object):
         '''
         fpath, fname, fbase, ftype = parse_addr(addr)
         encode = kwrds.get('encode', 'utf-8')
-        decode = kwrds.get('decode', 'utf-8')
         ftype = kwrds.get('ftype', ftype)
-        
+
         if ftype in ('csv', 'txt'):
             newline = kwrds.get('newline', '\n')
             delimiter = kwrds.get('delimiter', ',')
+            para = dict(mode='w', buffering=2048)
+            if PYTHON3:
+                para['encoding'] = encode
+                para['file'] = addr
+            else:
+                para['name'] = addr
+
             for data, sheet in zip(self._data, self._sheets):
                 if data is None:
                     continue
                 if len(self._data) > 1:
                     addr = fpath + fbase + '_' + sheet + '.' + ftype
-                f = open(addr, 'w')
+                f = open(**para)
                 try:
-                    write_txt(f, data, newline, delimiter, encode, decode)
+                    write_txt(f, data, newline, delimiter)
                 finally:
                     f.close()
 
