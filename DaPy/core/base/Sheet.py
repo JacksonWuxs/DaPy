@@ -50,12 +50,14 @@ SIMPLE_EQUAL_PATTERN = ('!=', '<=', '>=')
 
 LOCK_ERROR = 'sheet is locked by indexes, See drop_index()'
 
-def subset_quickly_append_col(subset, col, seq, miss):
+def subset_quickly_append_col(subset, col, seq, miss, pos=None):
     '''append a new column to the sheet without checking'''
     col = subset._check_col_new_name(col)
+    if pos is None:
+        pos = len(subset.columns)
     subset.data[col] = seq
-    subset._columns.append(col)
-    subset._missing.append(miss)
+    subset._columns.insert(pos, col)
+    subset._missing.insert(pos, miss)
     subset._dim = SHEET_DIM(len(seq), subset._dim.Col + 1)
     return subset
 
@@ -467,35 +469,33 @@ class BaseSheet(object):
         return eval(where)
 
     def _add_row(self, row):
+        # when user just input a single value as a row
         if is_value(row):
             if self._isnan(row) is True:
                 self._missing = [_ + 1 for _ in self._missing]
             self._dim = SHEET_DIM(self._dim.Ln + 1, self._dim.Col)
             return [row] * self._dim.Col
-            
 
+        # when user input a dict as a row
         if hasattr(row, '_asdict'):
             row = row._asdict()
-
         if isinstance(row, (dict, OrderedDict)):
             row, dic_row = [row.get(col, self.nan) for col in self.columns], row
             for key, value in dic_row.items():
                 if key not in self._data:
                     row.append(value)
-                    self._data[key] = Series(repeat(self.nan, self.shape.Ln))
-                    self._missing.append(self.shape.Ln)
-                    self._columns.append(key)
-                    self._dim = SHEET_DIM(self._dim.Ln, self.shape.Col + 1)
+                    seq = Series(repeat(self.nan, self.shape.Ln))
+                    subset_quickly_append_col(self, key, seq, self.shape.Ln)
 
+        # in the normal way, we first calculate the bias of length
         lenth_bias = len(row) - self._dim.Col
         if lenth_bias > 0 and self.shape.Ln == 0:
             for i in xrange(lenth_bias):
                 self.append_col(Series())
         elif lenth_bias > 0:
             for _ in xrange(lenth_bias):
-                series = Series(repeat(self._nan, lenth_bias))
-                subset_quickly_append_col(self, None, series, lenth_bias)
-
+                series = Series(repeat(self._nan, self.shape.Ln))
+                subset_quickly_append_col(self, None, series, self.shape.Ln)
         miss, row = self._check_sequence(row, self.shape.Col)
         self._dim = SHEET_DIM(self._dim.Ln + 1, max(self._dim.Col, len(row)))
         if miss != 0:
@@ -2778,7 +2778,25 @@ class SeriesSet(BaseSheet):
 
         Examples
         --------
-        
+        >>> sheet = SeriesSet({'A': [1, 1, 1, float('nan')],
+                               'B': [2, 2, 2, 2],
+                               'C': [3, 3, 3, 3]})
+        >>> sheet.get_interactions(2).show()
+         B*C | A^2 | B^2 | C^2 | A*B | A*C
+        -----+-----+-----+-----+-----+-----
+          6  |  1  |  4  |  9  |  2  |  3  
+          6  |  1  |  4  |  9  |  2  |  3  
+          6  |  1  |  4  |  9  |  2  |  3  
+          6  | nan |  4  |  9  | nan | nan
+        >>> sheet = SeriesSet({'A': [1, 1, 1, 1],
+                               'B': [2, 2, 2, 2],})
+        >>> sheet.get_interactions(3).show()
+         B^3 | A*B^2 | A^3 | A^2*B
+        -----+-------+-----+-------
+          8  |   4   |  1  |   2   
+          8  |   4   |  1  |   2   
+          8  |   4   |  1  |   2   
+          8  |   4   |  1  |   2   
         '''
         def combinations(arr, n):
             if n == 1:
@@ -2818,18 +2836,45 @@ class SeriesSet(BaseSheet):
         return self.join(new_features, inplace=True)
 
     def get_ranks(self, cols=None, duplicate='mean', inplace=False):
-        '''get the ranks of each row'''
+        '''get_ranks(cols=None, duplicate='mean', inplace=False) -> SeriesSet
+        get the ranks of each row in each column
+
+        Parameters
+        ----------
+        cols : str, str in list (default=None)
+
+        duplicate : 'mean', 'first' (default='mean')
+            how to rank the records which obtain the same value
+
+        inplace : True / False (default=False)
+            restore the ranks in a new SeriesSet or not
+
+        Returns
+        -------
+        ranks : SeriesSet
+
+        Examples
+        --------
+        >>> sheet = SeriesSet({'A': [2, 2, 1, 1],
+                               'B': [2, 7, 5, 2],})
+        >>> sheet.get_ranks(inplace=True).show()
+         A | B | A_rank | B_rank
+        ---+---+--------+--------
+         2 | 2 |  3.5   |  1.5   
+         2 | 7 |  3.5   |   4    
+         1 | 5 |  1.5   |   3    
+         1 | 2 |  1.5   |  1.5   
+        '''
         from DaPy.operation import get_ranks
         cols = self._check_columns_index(cols)
-        if inplace is False:
-            operate_with = SeriesSet(nan=self.nan)
-        else:
-            operate_with = self
+        ranks = SeriesSet(nan=self.nan)
 
         for col in cols:
             rank_col = get_ranks(self[col], duplicate)
-            operate_with.append_col(rank_col, '%s_rank' % col)
-        return operate_with
+            ranks.append_col(rank_col, '%s_rank' % col)
+        if inplace is False:
+            return ranks
+        return self.join(ranks, inplace=True)
 
     def items(self):
         '''items() -> list of tuple(column, Series)'''
@@ -2867,8 +2912,9 @@ class SeriesSet(BaseSheet):
         indexs = self._check_rows_index(indexs)
         return self._iloc(SeriesSet(nan=self.nan), indexs)
 
-    def insert_row(self, index, item):
-        '''Insert a new record ``item`` in position ``index``.
+    def insert_row(self, index, new_row):
+        '''insert_row(index, new_row) -> None
+        Insert a new record ``item`` in position ``index``.
 
         Parameter
         ---------
@@ -2906,12 +2952,13 @@ class SeriesSet(BaseSheet):
         -----
         1. This function has been added into unit test.
         '''
-        item = self._add_row(item)
-        for value, seq in zip(item, self.iter_values()):
+        new_row = self._add_row(new_row)
+        for value, seq in zip(new_row, self.iter_values()):
             seq.insert(index, value)
 
-    def insert_col(self, index, series, variable_name=None):
-        '''Insert a new variable named `variable_name` with a sequencial data
+    def insert_col(self, index, new_series, new_name=None):
+        '''insert_col(index, new_series, new_name=None) -> None
+        Insert a new variable named `variable_name` with a sequencial data
         `series` in position `index`.
 
         Parameter
@@ -2919,10 +2966,10 @@ class SeriesSet(BaseSheet):
         variable_name : str (default=None)
             the name of new column.
 
-        series : sequence-like
+        new_series : sequence-like
             a sequence containing new variable values.
 
-        index : int
+        new_name : int
             the position of new variable at.
 
         Examples
@@ -2951,20 +2998,13 @@ class SeriesSet(BaseSheet):
         -----
         1. This function has been added into unit test.
         '''
-        variable_name = self._check_col_new_name(variable_name)
-        miss, series = self._check_sequence(series, self._dim.Ln)
-
-        empty_size = len(series) - self.shape.Ln
+        miss, new_series = self._check_sequence(new_series, self._dim.Ln)
+        empty_size = len(new_series) - self.shape.Ln
         if empty_size > 0:
-            empty_seq = [self.nan] * empty_size
             for i, sequence in enumerate(self.iter_values()):
-                sequence.extend(empty_seq)
+                sequence.extend(repeat(self.nan, empty_size))
                 self._missing[i] += empty_size
-
-        self._columns.insert(index, variable_name)
-        self._dim = SHEET_DIM(len(series), self._dim.Col + 1)
-        self._missing.insert(index, miss)
-        self._data[variable_name] = series
+        subset_quickly_append_col(self, new_name, new_series, miss, index)
 
     def join(self, other, inplace=False):
         '''join(other: SeriesSet, inplace=False) -> SeriesSet

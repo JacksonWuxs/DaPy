@@ -147,7 +147,7 @@ class Test1_CoreOperations(TestCase):
             sheet.insert_row(1, ROW_2)
             self.assertEqual(tuple(sheet.shape), (5, 5))
             self.assertEqual(sheet.missing, [0, 0, 2, 0, 4])
-            self.assertEqual(sheet.columns, ['A', 'B', 'C', 'D', 'A_1'])
+            self.assertEqual(sheet.columns, ['A', 'B', 'C', 'D', 'C_4'])
             self.assertEqual(sheet[0], ['ROW1', 'ROW1', None, 'ROW1', None])
             self.assertEqual(sheet[1], ROW_2)
             self.assertEqual(sheet[-1], [6, 7, 8, 9, None])
