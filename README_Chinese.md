@@ -9,13 +9,65 @@
 
 ### 简介
 
-DaPy是一个在设计时就非常关注易用性的数据分析库。通过为您提供设计合理的**数据结构**和丰富的**机器学习模型**，它能帮您快速地实现数据分析思路。简单来说，本项目能帮你完成数据挖掘任务中的每一步，如导入导出数据、预处理数据、特征工程、模型训练和模型评估等。
+DaPy是一个在设计时就非常关注易用性的数据分析库。通过为您提供设计合理的**数据结构**和丰富的**机器学习模型**，它能帮您快速地实现数据分析思路。简单来说，本项目能帮你完成数据挖掘任务中的每一步，导入导出数据、预处理数据、特征工程、模型训练和模型评估等。
 
 ### 示例
 
 本示例简单展示了DaPy的功能。我们的任务是为鸢尾花分类任务训练一个分类器。更详细的信息可以参阅[这里](https://github.com/JacksonWuxs/DaPy/blob/master/doc/Quick%20Start/English.md)。
 
 ![](https://github.com/JacksonWuxs/DaPy/blob/master/doc/Quick%20Start/quick_start.gif)
+
+### Why I need DaPy?
+
+我们已经有了例如Numpy和Pandas这样优秀的数据分析库，为什么我们还需要DaPy？ 
+
+上面那个问题的答案就是， <u>*DaPy专为数据分析师设计，而不是程序员.*</u>  DaPy的用户只需要关注于他们解决问题的思路，而不必太在意数据结构这些编程陷阱。
+
+例如，由于Pandas最早是为了处理时间序列而设计的，它不支持对于`DataFrame.iterrows()`迭代出来的行进行操作，故在Pandas中对行操作数据是一个不太好的想法。然而，DaPy依靠“视图”这个概念解决了这个问题，能让大家轻松地按照符合人们习惯的方式按行处理数据。
+
+```python
+>>> import DaPy as dp
+>>> sheet = dp.SeriesSet({'A': [1, 2, 3], 'B': [4, 5, 6]})
+>>> for row in sheet:
+		print(row.A, row[0])   # 按照下标或者列名访问行数据的值
+		row[1] = 'b'   # 用下表为行赋值
+1, 1
+2, 2
+3, 3
+>>> sheet.show()   # 你的操作会映射到原表中
+ A | B
+---+---
+ 1 | b 
+ 2 | b 
+ 3 | b 
+>>> row0 = sheet[0]   # 拿到行的索引 
+>>> row0
+[1, 'b']
+>>> sheet.append_col(series=[7, 8, 9], variable_name='newColumn') # 为表添加新列
+>>> sheet.show()
+ A | B | newColumn
+---+---+-----------
+ 1 | b |     7     
+ 2 | b |     8     
+ 3 | b |     9     
+>>> row0   # 表的操作会时时刻刻反映到行上
+[1, 'b', 7]
+```
+
+### 特性
+
+我们希望DaPy是一个对用户友好的框架，为此, 我们极力优化DaPy的API接口设计，以便让你更快地适应和灵活地使用它。下面是DaPy较为友好的功能:  
+
+- 多种在CMD中呈现数据的方式
+- 符合Python语法习惯的二维数据表结构
+- 与SQL语法相似的函数封装方法
+- 封装了许多常用的数据预处理或者特征工程方法
+- 支持多种文件格式的I/O工具 (支持格式：.html, .xls, .db, .csv, .sav)
+- 内建基本机器学习模型(决策树、多层感知机、线性回归等)
+
+另外, 为了让DaPy能应付真实世界中的任务, 我们还时刻关注DaPy的*性能表现*。虽然DaPy目前是由纯Python语言实现的，但它与现有的数据处理框架在性能上也具有可比性。下图展示了使用具有432万条记录及7个变量的数据集的性能测试结果。
+
+![](https://github.com/JacksonWuxs/DaPy/blob/master/doc/material/Result.jpg)
 
 ### 安装
 
@@ -32,45 +84,40 @@ DaPy中的部分功能依赖于下述这些第三方库：
 - **bs4.BeautifulSoup**: auto downloading data from a website【可选】
 - **numpy**: dramatically increase the efficiency of ML models【推荐】 
 
-### 特性
-
-我们希望DaPy是一个对用户友好的框架，为此, 我们极力优化DaPy的API接口设计，以便让你更快地适应和灵活地使用它。下面是DaPy较为友好的功能:  
-
-- 多种在CMD中呈现数据的方式
-
-- 符合Python语法习惯的二维数据表结构
-- 与SQL语法相似的函数封装方法
-- 支持多种文件格式的I/O工具 (支持格式：.html, .xls, .db, .csv, .sav)
-- 内建基本机器学习模型(决策树、多层感知机、线性回归等)
-
-另外, 为了让DaPy能应付真实世界中的任务, 我们还时刻关注DaPy的*性能表现*。虽然DaPy目前是由纯Python语言实现的，但它与现有的数据处理框架在性能上也具有可比性。下图展示了使用具有432万条记录及7个变量的数据集的性能测试结果。
-
-![](https://github.com/JacksonWuxs/DaPy/blob/master/doc/material/Result.jpg)
-
 ### 用法说明
 
-- 加载源数据
-  - 从本地csv, sav, sqlite3 或 xls文件中加载数据: ```sheet = DaPy.read(file_addr)```
+- 加载数据 & 数据探索
+  - 从本地csv, sav, sqlite3或xls文件中加载数据: ```sheet = DaPy.read(file_addr)```
   - 显示数据的前后5条记录: ```sheet.show(lines=5)```
-- 预处理数据
-  - 删除重复记录: ```sheet.drop_duplicates(col, keep='first')```
-  - 合并另一张表中新的字段: ```sheet.merge(sheet2, keep_same=False)```
-  - 用线性插值法填充缺失值或者直接去除: ```sheet.fillna(method='linear')``` , ```sheet.dropna(axis=0)```
-  - 移除一些无用变量（如. 客户*ID*）: ```sheet.drop('ID', axis=1)```
-  - 基于某一列数据进行排序: ```sheet = sheet.sort('Age', 'DESC')```
-- 数据探索
   - 汇总每一个变量的统计指标（均值、方差等）: ```sheet.info```
   - 统计某分类变量的取值分布情况: ```sheet.count_values('gender')```
   - 探索分类变量不同取值之间的差异: ```sheet.groupby('city')```
   - 计算连续变量间的相关性: ```sheet.corr(['age', 'income'])```
+- 预处理数据 & 数据清洗
+  - 删除重复记录: `sheet.drop_duplicates(col, keep='first')`
+  - 用线性插值法填充缺失值: ```sheet.fillna(method='linear')``` 
+  - 去除缺失值数量超过50%的记录```sheet.dropna(axis=0, how=0.5)```
+  - 移除一些无用变量（如. 客户*ID*）: ```sheet.drop('ID', axis=1)```
+  - 基于某一列数据进行排序: ```sheet = sheet.sort('Age', 'DESC')```
+  - 合并另一张表中新的字段: ```sheet.merge(sheet2, keep_same=False)```
+  - 合并另一张表中新的记录: `sheet.join(sheet2)`
+  - 逐条添加记录: `sheet.append_row(new_row)`
+  - 逐个添加变量: `sheet.append_col(new_col)`
+  - 按索引去除部分数据: `sheet[:10, 20: 30, 50: 100]`
+  - 按列名去除部分数据: `sheet['age', 'income', 'name']`
 - 特征工程
-  - 使用日期变量构造一些分类变量（季节、周末等）: ```sheet.label_date('birth')```
-  - 为分类变量引入虚拟变量: ```sheet.get_dummies(['city', 'education'])```
+
+  
+
+  - 使用日期变量构造一些分类变量（季节、周末等）: `sheet.label_date('birth')`
+  - 将连续变量通过“封箱”转换为分类变量: `sheet.get_categories(cols='age', cutpoints=[18, 30, 50], group_name=['Juveniles', 'Adults', 'Wrinkly', 'Old'])`
+  - 将单个分类变量转换为多个虚拟变量: `sheet.get_dummies(['city', 'education'])`
+  - 为你选定的变量之间构建高阶交叉项: `sheet.get_interactions(n_power=3, col=['income', 'age', 'gender', 'education'])`
+  - 为每个变量中的记录添加排名: `sheet.get_ranks(cols='income', duplicate='mean')`
   - 归一化一些连续变量: ```sheet.normalized(col='age')```
   - 对数归一化一些连续变量: ```sheet.normalized('log', col='salary')```
-  - 使用符合您业务需求的函数构造新变量: ```sheet.apply(func=tax_rate, col=['salary', 'income'])```
-  - 使用差分让时间序列平稳: ```DaPy.diff(sheet.income)```
-  - 构造交叉项: ```sheet.get_cross_terms(col=['income', 'age', 'gender', 'education'])```
+  - 使用符合您业务需求的函数构造新变量: ```sheet.apply(func=calculate_tax, col=['salary', 'income'])```
+  - 使用差分让时间序列平稳: `DaPy.diff(sheet.income)`
 - 模型训练
   - 选择并初始化一个模型: ```m = MLP()```, ```m = LinearRegression()```, ```m = DecisionTree()``` or  ```m = DiscriminantAnalysis()``` 
   - 训练模型参数: ```m.fit(X_train, Y_train)```

@@ -23,7 +23,7 @@ We already have abundant of great libraries for Data Science like Numpy and Pand
 
 The answer is <u>*DaPy is designed for Data Analysis, not for coders.*</u>  In DaPy, users only need to focus on their thought of handling data, and pay less attention to coding tricks like data types in Pandas.
 
-For example, in Pandas, it is not a good idea to operate in rows, because Pandas is build for operate time series data and it is forbidden to operate rows from `DataFrame.iterrows()`.  However, in DaPy, we introduce the concept of "View" to solve that problem. Again, you don't need to worry about the data type, just to what you want to do.
+For example, while manipulating data by rows fits for people's habits, it is not a good idea in Pandas. Because Pandas is build for operate time series data, it is forbidden to operate rows from `DataFrame.iterrows()`.  However, DaPy relies on the concept of "views" to solve this problem, making it easy to process data in rows in a way that suits people's habits.
 
 ```python
 >>> import DaPy as dp
@@ -112,7 +112,7 @@ Some of functions in DaPy depend on requirements.
   - Transfer a date time into  categorical variables: `sheet.get_date_label('birth')`
   - Transfer numerical variables into categorical variables: `sheet.get_categories(cols='age', cutpoints=[18, 30, 50], group_name=['Juveniles', 'Adults', 'Wrinkly', 'Old'])`
   - Transfer categorical variables into dummy variables: `sheet.get_dummies(['city', 'education'])`
-  - Constructing cross terms: `sheet.get_interactions(n_power=3, col=['income', 'age', 'gender', 'education'])`
+  - Create higher-order crossover terms between your selected variables: `sheet.get_interactions(n_power=3, col=['income', 'age', 'gender', 'education'])`
   - Introduce the ranks of each records: `sheet.get_ranks(cols='income', duplicate='mean')`
   - Standardize some normal continuous variables: ```sheet.normalized(col='age')```
   - Special processing for some special variables: ```sheet.normalized('log', col='salary')```
@@ -150,7 +150,7 @@ Some of functions in DaPy depend on requirements.
   * Correlation (spearman & pearson) :heavy_check_mark:
 
   * Analysis of variance :heavy_check_mark:
-  * Compare Means (simple T-test, independent T-test) :thinking:
+  * Compare Means (simple T-test, independent T-test) :heavy_check_mark:
 
 * Operations
 
