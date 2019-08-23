@@ -17,18 +17,51 @@ This example simply shows you what DaPy can do for you. Our goal in this example
 
 ![](https://github.com/JacksonWuxs/DaPy/blob/master/doc/Quick%20Start/quick_start.gif)
 
-### Comparison
+### Why I need DaPy?
 
+We already have abundant of great libraries for Data Science like Numpy and Pandas, why we need DaPy? 
 
+The answer is <u>*DaPy is designed for Data Analysis, not for coders.*</u>  In DaPy, users only need to focus on their thought of handling data, and pay less attention to coding tricks like data types in Pandas.
 
-### Features
+For example, in Pandas, it is not a good idea to operate in rows, because Pandas is build for operate time series data and it is forbidden to operate rows from `DataFrame.iterrows()`.  However, in DaPy, we introduce the concept of "View" to solve that problem. Again, you don't need to worry about the data type, just to what you want to do.
 
-We hope DaPy is an user-friendly tool. Therefore, we pay attention to the design of API in DaPy in order to let you quickly adept it and use it flexibly. Here are just a few of things that make DaPy simple:  
+```python
+>>> import DaPy as dp
+>>> sheet = dp.SeriesSet({'A': [1, 2, 3], 'B': [4, 5, 6]})
+>>> for row in sheet:
+		print(row.A, row[0])   # get the value by column name or index
+		row[1] = 'b'   # assign value by index
+1, 1
+2, 2
+3, 3
+>>> sheet.show()
+ A | B
+---+---
+ 1 | b 
+ 2 | b 
+ 3 | b 
+>>> row0 = sheet[0]   # get row view object 
+>>> row0
+[1, 'b']
+>>> sheet.append_col(series=[7, 8, 9], variable_name='newColumn') # operate the sheet
+>>> sheet.show()
+ A | B | newColumn
+---+---+-----------
+ 1 | b |     7     
+ 2 | b |     8     
+ 3 | b |     9     
+>>> row0
+[1, 'b', 7]
+```
+
+### Features of DaPy
+
+We hope DaPy is an user-friendly tool. Therefore, we effort to the design of APIs in DaPy in order to let you quickly adept it and use it flexibly. Here are just a few of things that make DaPy simple:  
 
 - Variety of ways to visualize data in CMD
-
-- 2D data sheet structures following Python syntax habbits
+- 2D data sheet structures following Python syntax habits
 - SQL-like APIs to process data
+- Variety functions for preprocessing and feature engineering
 - Flexible IO tools for loading and saving data (e.g. Website, Excel, Sqlite3, SPSS, Text)
 - Built-in basic models (e.g. Decision Tree, Multilayer Perceptron, Linear Regression, ...)
 
@@ -54,30 +87,37 @@ Some of functions in DaPy depend on requirements.
 - **numpy**: dramatically increase the efficiency of ML models【Recommand】 
 
 
-### Example Useages
+### Usages
 
-- Loading Source Data
+- Load & Explore Data
   - Load data from a local csv, sav, sqlite3 or xls file: ```sheet = DaPy.read(file_addr)```
-  - Display the first five and the last five records: ```sheet.show(lines=5)```
-- Preprocessing Data
-  - Remove duplicate records: ```sheet.drop_duplicates(col, keep='first')```
-  - Merge external features from another table: ```sheet.merge(sheet2, left_key='ID', other_key='ID', keep_key='self', keep_same=False)```
-  - Use linear interpolation to fill in NaN or remove them: ```sheet.fillna(method='linear')``` , ```sheet.dropna(axis=0)```
-  - Remove some meaningless columns (e.g. *ID*): ```sheet.drop('ID', axis=1)```
-  - Sort records by some columns: ```sheet = sheet.sort('Age', 'DESC')```
-- Explore Data
-  - Summary the statistic information of each column: ```sheet.info```
+  - Display the first five and the last five records: `sheet.show(lines=5)`
+  - Summary the statistical information of each columns: ```sheet.info```
   - Count distribution of categorical variable: ```sheet.count_values('gender')```
   - Find differences of the labels in categorical variables: ```sheet.groupby('city')```
   - Calculate the correlation between the continuous variables: ```sheet.corr(['age', 'income'])```
+- Preprocessing & Clean Up Data
+  - Remove duplicate records: `sheet.drop_duplicates(col, keep='first')`
+  - Use linear interpolation to fill in NaN : ```sheet.fillna(method='linear')``` 
+  - Remove the records which contains more than 50% variables are NaN: `sheet.dropna(axis=0, how=0.5)`
+  - Remove some meaningless columns (e.g. *ID*): ```sheet.drop('ID', axis=1)```
+  - Sort records by some columns: `sheet = sheet.sort('Age', 'DESC')`
+  - Merge external features from another table: `sheet.merge(sheet2, left_key='ID', other_key='ID', keep_key='self', keep_same=False)`
+  - Merge external records from another table: `sheet.join(sheet2)`
+  - Append records one by one: `sheet.append_row(new_row)`
+  - Append new variables one by one: `sheet.append_col(new_col)`
+  - Get parts of records by index: `sheet[:10, 20: 30, 50: 100]`
+  - Get parts of columns by column name: `sheet['age', 'income', 'name']`
 - Feature Engineering
-  - Constructing some meaningful variables to use date time: ```sheet.label_date('birth')```
-  - Transfer categorical variables into dummy variables: ```sheet.get_dummies(['city', 'education'])```
+  - Transfer a date time into  categorical variables: `sheet.get_date_label('birth')`
+  - Transfer numerical variables into categorical variables: `sheet.get_categories(cols='age', cutpoints=[18, 30, 50], group_name=['Juveniles', 'Adults', 'Wrinkly', 'Old'])`
+  - Transfer categorical variables into dummy variables: `sheet.get_dummies(['city', 'education'])`
+  - Constructing cross terms: `sheet.get_interactions(n_power=3, col=['income', 'age', 'gender', 'education'])`
+  - Introduce the ranks of each records: `sheet.get_ranks(cols='income', duplicate='mean')`
   - Standardize some normal continuous variables: ```sheet.normalized(col='age')```
   - Special processing for some special variables: ```sheet.normalized('log', col='salary')```
   - Create new variables by some business logical formulas: ```sheet.apply(func=tax_rate, col=['salary', 'income'])```
-  - Difference process to make time-series stable: ```DaPy.diff(sheet.income)```
-  - Constructing cross terms: ```sheet.get_cross_terms(col=['income', 'age', 'gender', 'education'])```
+  - Difference process to make time-series stable: `DaPy.diff(sheet.income)`
 - Developing Models
   - Choose a model and initialize it: ```m = MLP()```, ```m = LinearRegression()```, ```m = DecisionTree()``` or  ```m = DiscriminantAnalysis()``` 
   - Train the model parameters: ```m.fit(X_train, Y_train)```
@@ -88,7 +128,7 @@ Some of functions in DaPy depend on requirements.
 - Saving Result
   - Save the model: ```m.save(addr)```
   - Save the final dataset: ```sheet.save(addr)```
-  
+
   
 ### TODO  
 
@@ -154,7 +194,7 @@ Some of functions in DaPy depend on requirements.
 
 ### Version-Log
 
-* V1.10.1 (2019-06-13)
+* V1.10.1 (2019-08-22)
   * Added ```SeriesSet.update()```, update some values of specific records;
   * Added ```BaseSheet.tolist()``` and ```BaseSheet.toarray()```, transfer your data to list or numpy.array;
   * Added ```BaseSheet.query()```, select records with a python statement in string;
