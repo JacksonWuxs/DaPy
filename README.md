@@ -90,7 +90,7 @@ Some of functions in DaPy depend on requirements.
 ### Usages
 
 - Load & Explore Data
-  - Load data from a local csv, sav, sqlite3 or xls file: ```sheet = DaPy.read(file_addr)```
+  - Load data from a local csv, sav, sqlite3, mysql server, mysql dump file or xls file: ```sheet = DaPy.read(file_addr)```
   - Display the first five and the last five records: `sheet.show(lines=5)`
   - Summary the statistical information of each columns: ```sheet.info```
   - Count distribution of categorical variable: ```sheet.count_values('gender')```
