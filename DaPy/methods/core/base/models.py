@@ -68,7 +68,7 @@ class BaseEngineModel(object):
         return self._engine.sum(x, axis)
 
     def _check_addr(self, addr, mode):
-        if isinstance(addr, STR_TYPE):
+        if is_str(addr):
             return open(addr, mode)
         return addr
 

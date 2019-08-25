@@ -1,8 +1,11 @@
 from os.path import split
 from warnings import warn
+from datetime import datetime
+from itertools import repeat
 
-from .base import Frame, Matrix, SeriesSet, is_iter, is_math, is_seq, is_value
+from .base import Frame, Matrix, SeriesSet, Series, is_iter, is_math, is_seq, is_value
 from .base import auto_str2value, fast_str2value, STR_TYPE, zip
+from .sqlparser import parse_insert_statement, parse_create_statement
 
 
 def create_sheet(dtype, data, titles, nan):
@@ -19,12 +22,24 @@ def create_sheet(dtype, data, titles, nan):
         raise RuntimeError('unrecognized symbol of data type')
 
 def parse_addr(addr):
-    if addr.startswith('http'):
+    if addr.lower().startswith('http'):
         fname = addr.split(':')[1].split('.')
         if fname[0].startswith('name'):
             return None, None, fname[1], 'web'
         return None, None, fname[0], 'web'
-    
+
+    if addr.lower().startswith('mysql'):
+        assert addr.count(':') == 3 and addr.count('@') == 1
+        spliter = addr[6]
+        addr, file_name = addr[8:].split(spliter, 1)
+        file_name = file_name.split(spliter)
+        file_type = 'mysql'
+        file_path, file_base = addr.split('@')
+        return file_path, file_name, file_base, file_type
+
+    maybe_error = 'you may connect a mysql database, try to write `addr` like: "mysql://[username]:[password]@[server_ip]:[server_port]/[database_name]"'
+    if addr.count('@') == 1 and addr.count(':') >= 2 and addr.count('.') == 0:
+        maybe_error
     file_path, file_name = split(addr)
     if file_name.count('.') > 1:
         file_base = '.'.join(file_name.split('.')[:-1])
@@ -37,42 +52,38 @@ def parse_addr(addr):
                              'seems like "test.xls"')
     return file_path, file_name, file_base, file_type
 
-def parse_sql(addr, dtype, nan):
-    try:
-        import sqlite3 as sql3
-    except ImportError:
-        raise ImportError('DaPy uses "sqlite3" to access a database.')
-    
-    with sql3.connect(addr) as conn:
-        cur = conn.cursor()
-        cur.execute('SELECT name FROM sqlite_master WHERE type="table"')
-        table_list = cur.fetchall()
-        for table in table_list:
-            table = str(table[0])
-            cur.execute('SELECT * FROM %s' % table)
-            data = cur.fetchall()
+def parse_mysql_server(cur, fname):
+    if len(fname) == 1:
+            cur.execute('SHOW TABLES;')
+            for table in cur.fetchall():
+                fname.append(table[0])
+        
+    for table in fname[1:]:
+        cur.execute('SELECT column_name FROM information_schema.columns WHERE table_name="%s";' % table)
+        columns = [_[0] for _ in cur.fetchall()]
+        cur.execute('SELECT * FROM %s;' % table)
+        yield SeriesSet(cur.fetchall(), columns), '%s_%s' % (fname[0], table)
 
-            cur.execute('PRAGMA table_info(%s)' % table)
-            titles = [title[1] for title in cur.fetchall()]
+def parse_db(cur, dtype, nan):
+    cur.execute('SELECT name FROM sqlite_master WHERE type="table"')
+    table_list = cur.fetchall()
+    for table in table_list:
+        table = str(table[0])
+        cur.execute('PRAGMA table_info(%s)' % table)
+        titles = [title[1] for title in cur.fetchall()]
+        cur.execute('SELECT * FROM %s' % table)
 
-            try:
-                yield (create_sheet(dtype, data, titles, nan), table)
-            except UnicodeEncodeError:
-                warn("'ascii' can not encode characters, use dp.io.encode to fix.")
+        try:
+            yield create_sheet(dtype,  cur.fetchall(), titles, nan),  table
+        except UnicodeEncodeError:
+            warn("'ascii' can not encode characters, use dp.io.encode to fix.")
 
-def parse_sav(addr, dtype, nan):
-    try:
-        import savReaderWriter
-    except ImportError:
-        raise ImportError('DaPy uses "savReaderWriter" to open a .sav file, '+\
-                          'please try command: pip install savReaderWriter.')
+def parse_sav(doc, dtype, nan):
+    titles = doc.getSavFileInfo()[2]
+    data = list(readocder)
+    return create_sheet(dtype, data, titles, nan)
 
-    with savReaderWriter.SavReader(addr) as reader:
-        titles = reader.getSavFileInfo()[2]
-        data = list(reader)
-        return create_sheet(dtype, data, titles, nan)
-
-def parse_excel(dtype, addr, first_line, title_line, nan):
+def parse_excel(dtype, addr, fline, tline, nan):
     try:
         import xlrd
     except ImportError:
@@ -80,22 +91,19 @@ def parse_excel(dtype, addr, first_line, title_line, nan):
                           'please try command: pip install xlrd.')
 
     book = xlrd.open_workbook(addr)
-    for sheet in book.sheets():
-        data = [0] * (sheet.nrows - first_line)
-        for index, i in enumerate(range(first_line, sheet.nrows)):
-            data[index] = [cell.value for cell in sheet.row(i)]
-
-        if title_line >= 0:
-            try:
-                titles = [cell.value for cell in sheet.row(title_line)]
-            except IndexError:
-                titles = None
-        else:
-            titles = None
+    for sheet, name in zip(book.sheets(), book.sheet_names()):
         try: 
-            yield (create_sheet(dtype, data, titles, nan), sheet.name)
+            series_set = SeriesSet(None, None, nan)
+            for cols in range(sheet.ncols):
+                column = Series(sheet.col_values(cols))
+                title = column.get(tline)
+                if tline >= 0:
+                    column.pop(tline)
+                series_set.append_col(series=column,
+                                      variable_name=title)
+            yield series_set, name
         except UnicodeEncodeError:
-            warn('"ascii" can not encode characters, use dp.io.encode() to fix.')
+            warn('can not decode characters, use `DaPy.io.encode()` to fix.')
 
 def parse_html(text, dtype, miss_symbol, nan, sheetname):
     try:
@@ -106,7 +114,8 @@ def parse_html(text, dtype, miss_symbol, nan, sheetname):
     if not is_iter(miss_symbol):
         miss_symbol = [miss_symbol]
         
-    soup = bs(text, 'html.parser')
+    soup = bs(text.replace('\n', ''), 'html.parser')
+
     for table in soup.findAll('table'):
         sheet = table.attrs.get('class', [sheetname])[0]
         title = table.find('thead')
@@ -133,7 +142,51 @@ def parse_html(text, dtype, miss_symbol, nan, sheetname):
                 warn('"ascii" can not encode characters, use dp.io.encode() to fix.')
         except RuntimeError:
             warn('Table "%s" can not be auto parsed.' % sheet)
+
+def parse_sql(doc, nan):
+    command = ''
+    for row in doc:
+        if row[:6].lower() in ('create', 'insert'):
+            command = row.replace('\n', '')
             
+        elif command:
+            command += row.replace('\n', '')
+
+        if command.endswith(';'):
+            if command.lower().startswith('create table'):
+                table_name, columns, dtypes = parse_create_statement(command)
+
+            if command.lower().startswith('insert into'):
+                sheet = parse_insert_statement(command, dtypes, nan)
+                sheet.columns = columns
+                yield sheet, table_name
+            command = ''
+
+
+type2str = {int: 'int', float:'float', str:'varchar', datetime:'datetime'}
+def write_sql(doc, sheet, sheet_name):
+    doc.write('DROP TABLE IF EXISTS `%s`;\n' % sheet_name)
+    doc.write('SET character_set_client = utf8mb4;\n')
+    doc.write('CREATE TABLE `%s` (\n' % sheet_name)
+    for key, column in sheet.items():
+        for val in column:
+            if sheet._isnan(val) is False:
+                doc.write('`%s` %s,\n' % (key, type2str[type(val)]))
+                break
+    doc.write('  PRIMARY KEY (`%s`)\n' % sheet.columns[0])
+    doc.write(') ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;\n')
+    
+    doc.write('LOCK TABLES `%s` WRITE;\n' % sheet_name)
+    doc.write('INSERT INTO `%s` VALUES ' % sheet_name)
+    string_nan = str(sheet.nan)
+    for i, row in enumerate(sheet.iter_rows()):
+        if i != 0:
+            doc.write(',')
+        doc.write(str(row).replace(string_nan, 'NULL'))
+    else:
+        doc.write(';\n')
+    doc.write('UNLOCK TABLES;\n\n')
+
 def write_txt(f, data, newline, delimiter):
     def writeline(f, record):
         f.write(delimiter.join(map(str, record)) + newline)
@@ -169,7 +222,7 @@ def write_txt(f, data, newline, delimiter):
         raise ValueError('DaPy can save a sequence object, dict-like object ' +\
                      'and sheet-like object only.')
 
-def write_xls(worksheet, data, decode, encode):
+def write_xls(worksheet, data):
     def writeline(f, i, record):
         for j, value in enumerate(record):
             f.write(i, j, value)
@@ -212,7 +265,7 @@ def write_xls(worksheet, data, decode, encode):
     except ValueError:
         warn('.xls format only allows 65536 lines per sheet.')
 
-def write_html(f, data, encode, decode):
+def write_html(f, data):
     def writeline(f, record):
         f.write('<tr><td>' + '</td><td>'.join(map(str, record)) + '</td></tr>')
 
@@ -252,22 +305,27 @@ def write_html(f, data, encode, decode):
                      'and sheet-like object only.')
     f.write('</tbody>')
 
-def write_db(conn, sheet, data, if_exists):
-    cur = conn.cursor()
+def write_db(cur, sheet, data, if_exists, mode):
+    
     if not isinstance(data, (Frame, SeriesSet)):
         data = SeriesSet(data)
-        
-    tables = cur.execute(\
-            "SELECT name FROM sqlite_master WHERE type='table'").fetchall()
+    
+    SELECT_STATEMENT = {
+        'mysql': [u"SHOW TABLES;", u'SELECT column_name FROM information_schema.columns WHERE table_name="%s"', u'%s'], 
+        'sqlite3': [u"SELECT name FROM sqlite_master WHERE type='table'", u'PRAGMA table_info(%s)', u'?']
+    }
+    cur.execute(SELECT_STATEMENT[mode][0])
+    tables = cur.fetchall()
     tables = [table[0] for table in tables]
     if sheet in tables and if_exists == 'replace':
-        cur.execute(u'DROP TABLE IF EXISTS %s' % unicode(sheet))
+        cur.execute(u'DROP TABLE IF EXISTS %s' % sheet)
         tables.remove(sheet)
     elif sheet in tables and if_exists == 'fail':
         raise ValueError('table "%s" already exists, ' % sheet +\
                          'change keyword ``if_exists``.')
     elif sheet in tables and if_exists == 'append':
-        cols = cur.execute(u'PRAGMA table_info(%s)' % unicode(sheet)).fetchall()
+        cols = cur.execute(SELECT_STATEMENT[mode][1] % sheet)
+        cols = cur.fetchall()
         if [col[1] for col in cols] != data.columns:
             raise ValueError('The columns in exist table are not match those '+\
                              'in saving table `%s`. ' % sheet)
@@ -276,15 +334,16 @@ def write_db(conn, sheet, data, if_exists):
         cols = []
         for column, records in data.items():
             column = column.replace(' ', '').replace('-', '').replace(':', '')
-            if not all(map(is_math, records)):
-                cols.append('%s STRING' % column)
-            elif all(map(isinstance, records, [float] * data.shape.Ln)):
-                cols.append('%s INTEGER' % column)
+            if all(map(isinstance, records, repeat(float, data.shape.Ln))):
+                cols.append('`%s` float' % column)
+            elif all(map(is_math, records)):
+                cols.append('`%s` int' % column)
+            elif all(map(isinstance, records, repeat(datetime, data.shape.Ln))):
+                cols.append('`%s` date' % column)
             else:
-                cols.append('%s REAL' % column)
-        cur.execute(u'CREATE TABLE %s(%s)' % (unicode(sheet), ','.join(cols)))
+                cols.append('`%s` varchar(30)' % column)
+        cur.execute(u'CREATE TABLE `%s` (%s);' % (sheet, ','.join(cols)))
 
-    INSERT = 'INSERT INTO %s VALUES (%s)' % (sheet, ','.join(['?'] * data.shape.Col))
-    for record in data:
+    INSERT = 'INSERT INTO %s VALUES (%s);' % (sheet, ','.join(repeat(SELECT_STATEMENT[mode][2], data.shape.Col)))
+    for record in data.iter_rows():
         cur.execute(INSERT, record)
-    conn.commit()

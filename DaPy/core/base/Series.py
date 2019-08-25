@@ -98,8 +98,12 @@ class Series(list):
             assert len(key) == len(self)
             return Series(val for key_, val in zip(key, self) if key_)
 
-        if is_seq(key) and len(key) < len(self) * 0.1:
-            return Series(map(list.__getitem__, repeat(self, len(key)), key))
+        if is_seq(key):
+            if len(key) == 1:
+                return Series([list.__getitem__(self, 0)])
+            
+            if len(key) < len(self) * 0.1:
+                return Series(map(list.__getitem__, repeat(self, len(key)), key))
         
         if is_iter(key):
             try:

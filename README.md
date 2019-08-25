@@ -21,7 +21,7 @@ This example simply shows you what DaPy can do for you. Our goal in this example
 
 We already have abundant of great libraries for Data Science like Numpy and Pandas, why we need DaPy? 
 
-The answer is <u>*DaPy is designed for Data Analysis, not for coders.*</u>  In DaPy, users only need to focus on their thought of handling data, and pay less attention to coding tricks like data types in Pandas.
+The answer is <u>*DaPy is designed for Data Analysis, not for coders.*</u>  In DaPy, users only need to focus on their thought of handling data, and pay less attention to coding tricks. 
 
 For example, while manipulating data by rows fits for people's habits, it is not a good idea in Pandas. Because Pandas is build for operate time series data, it is forbidden to operate rows from `DataFrame.iterrows()`.  However, DaPy relies on the concept of "views" to solve this problem, making it easy to process data in rows in a way that suits people's habits.
 

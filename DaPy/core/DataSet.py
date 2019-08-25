@@ -9,8 +9,8 @@ from pprint import pprint
 from .base import (Frame, LogErr, LogInfo, LogWarn, Matrix, Series, SeriesSet,
                    auto_plus_one, filter, is_iter, is_seq, is_str, is_value,
                    map, pickle, range, zip, PYTHON3)
-from .io import (parse_addr, parse_excel, parse_html, parse_sav, parse_sql,
-                 write_db, write_html, write_txt, write_xls)
+from .io import (parse_addr, parse_excel, parse_html, parse_sav, parse_sql, parse_db, parse_mysql_server,
+                 write_db, write_html, write_txt, write_xls, write_sql)
 
 __all__ = ['DataSet']
 
@@ -339,14 +339,8 @@ class DataSet(object):
         if isinstance(key, slice):
             return self.__getslice__(key.start, key.stop)
 
-        key = self._check_sheet_index(key)
-        title = [self._sheets[_] for _ in key]
-        src = [self._data[_] for _ in key]
-        return DataSet(title, src)
-
     def __getslice__(self, i, j):
-        if len(self._data) == 1:
-            return DataSet(self._data[0][i:j], self._sheets[0])
+        return DataSet([_[i:j] for _ in self._data], self._sheets)
         
         start, stop = self._check_sheet_index_slice(pos)
         return DataSet(self._data[start: stop], self._sheets[start: stop])
@@ -524,6 +518,12 @@ class DataSet(object):
     def get(self, key, default):
         pass
 
+    def get_tables(self, cols=None):
+        key = self._check_sheet_index(cols)
+        title = [self._sheets[_] for _ in key]
+        src = [self._data[_] for _ in key]
+        return DataSet(src, title)
+
     @timer
     @operater
     def get_dummies(self, col=None, value=1):
@@ -669,7 +669,10 @@ class DataSet(object):
         Parameters
         ----------
         addr : str
-            the address of data file.
+            the address of data file or a statement like: 
+            "mysql://[username]:[password]@[server_ip]:[server_port]/[database_name]/[table1]/[table2]..."
+            to access a mysql database. Attention, if `table` keyword is missing 
+            in this address, all records will be loaded.
 
         ftype : str (default=None)
             the file type of this address
@@ -683,7 +686,8 @@ class DataSet(object):
             "csv" -> Text file with ',' as delimeters
             "txt" -> Text file with ' ' as delimeters
             "pkl" -> Python pickle file
-            "mysql" -> MySQL database link
+            "sql" -> MySQL database commands file
+            "mysql" -> MySQL database Server
 
         sheet_name : str (default=None)
             the sheet name of new table.
@@ -730,18 +734,31 @@ class DataSet(object):
         miss_symbol = kwrd.get('miss_symbol', set(['?', '??', '', ' ', 'NA', 'None']))
         fpath, fname, fbase, ftype = parse_addr(addr)
         ftype = kwrd.get('ftype', ftype)
-        assert ftype in ('web', 'html', 'htm', 'db', 'sav', 'xls', 'xlsx', 'csv', 'txt', 'pkl', 'mysql')
+        assert ftype in ('web', 'html', 'htm', 'db', 'sav', 'xls', 'xlsx', 'csv', 'txt', 'pkl', 'sql', 'mysql')
         if ftype not in ('web', 'html', 'htm', 'mysql') and not isfile(addr):
             raise IOError('can not find the target file or auto analysis data source type failed')
         if sheet_name is None:
             sheet_name = fbase
 
         if ftype == 'db':
-            for sheet, name in parse_sql(addr, dtype, nan):
-                self._add(sheet, name)
+            try:
+                import sqlite3 as sql3
+            except ImportError:
+                raise ImportError('DaPy uses "sqlite3" to access a database local file.')
+            
+            with sql3.connect(addr) as conn:
+                cur = conn.cursor()
+                for sheet, name in parse_db(addr, dtype, nan):
+                    self._add(cur, sheet, name)
 
         elif ftype == 'sav':
-            self._add(parse_sav(addr, dtype, nan), sheet_name)
+            try:
+                import savReaderWriter
+            except ImportError:
+                raise ImportError('DaPy uses "savReaderWriter" to open a .sav file, '+\
+                                'please try command: pip install savReaderWriter.')
+            with savReaderWriter.SavReader(addr) as reader:
+                self._add(parse_sav(reader, dtype, nan), sheet_name)
                 
         elif ftype == 'xls' or ftype == 'xlsx':
             first_line = kwrd.get('first_line', 1)
@@ -770,15 +787,35 @@ class DataSet(object):
                 else:
                     text = get(addr).text
             else:
-                with open(addr) as f:
-                    text = f.read()
+                with open(addr) as doc:
+                    text = doc.read()
 
-            if '<table' not in text:
-                raise ValueError('there is no tag <table> in the html file.')
+            assert '<table' in text, 'there is no tag <table> in the html file.'
+            for sheet, name in parse_html(text, dtype, miss_symbol, nan, sheet_name):
+                self._add(sheet, name)
+            return self
+        
+        elif ftype == 'mysql':
+            user, psd = fpath.split(':')
+            host, port = fbase.split(':')
+            try:
+                import pymysql as sql
+            except ImportError:
+                try:
+                    import MySQLdb as sql
+                except ImportError:
+                    raise ImportError('DaPy uses "pymysql" or "MySQLdb" libraries to access a database server.')
             
-            for sheet, name in parse_html(\
-                        text, dtype, miss_symbol, nan, sheet_name):
-                return self._add(sheet, name)
+            with sql.connect(host=host, port=int(port), user=user, passwd=psd, db=fname[0], charset='utf8') as cur:
+                for sheet, name in parse_mysql_server(cur, fname):
+                    self._add(sheet, name)
+        
+        elif ftype == 'sql':
+            with open(addr) as doc:
+                for sheet, name in parse_sql(doc, nan):
+                    self._add(sheet, name)
+            return self
+
         else:
             raise ValueError('DaPy singly supports file types as'+\
                              '(xls, xlsx, csv, txt, pkl, db, sav, html, htm).')
@@ -828,14 +865,9 @@ class DataSet(object):
         pass
 
     @timer
+    @operater
     def shuffle(self):
-        ''' Mess up your data
-        '''
-        for data in self._data:
-            if hasattr(data, 'shuffles'):
-                data.shuffles()
-            elif hasattr(data, 'shuffle'):
-                data.shuffle()
+        pass
 
     @timer
     @operater
@@ -911,7 +943,7 @@ class DataSet(object):
                 if not data:
                     continue
                 worksheet = workbook.add_sheet(sheet)
-                write_xls(worksheet, data, decode, encode)
+                write_xls(worksheet, data)
             workbook.save(addr)
 
         elif ftype == 'pkl':
@@ -921,7 +953,7 @@ class DataSet(object):
             import sqlite3 as sql
             with sql.connect(addr) as conn:
                 for data, sheet in zip(self._data, self._sheets):
-                    write_db(conn, sheet, data, kwrds.get('if_exists', 'fail'))
+                    write_db(conn.cursor(), sheet, data, kwrds.get('if_exists', 'fail'), 'sqlite3')
 
         elif ftype == 'html':
             with open(addr, 'w') as f:
@@ -929,9 +961,28 @@ class DataSet(object):
                     if not data:
                         continue
                     f.write('<table border="1" class="%s">' % sheet)
-                    write_html(f, data, encode, decode)
+                    write_html(f, data)
                     f.write('</table>')
-            
+        
+        elif ftype == 'sql':
+            with open(addr, 'w') as doc:
+                for name, sheet in zip(self._sheets, self._data):
+                    write_sql(doc, sheet, name)
+        
+        elif ftype == 'mysql':
+            try:
+                import pymysql as sql
+            except ImportError:
+                try:
+                    import MySQLdb as sql
+                except ImportError:
+                    raise ImportError('DaPy uses "pymysql" or "MySQLdb" libraries to access a database server.')
+            user, psd = fpath.split(':')
+            host, port = fbase.split(':')
+            with sql.connect(host=host, port=int(port), user=user, passwd=psd, db=fname[0], charset='utf8') as conn:
+                for data, sheet in zip(self._data, self._sheets):
+                    write_db(conn, sheet, data, kwrds.get('if_exists', 'fail'), 'mysql')
+
         else:
             raise ValueError('unrecognized file type')
 

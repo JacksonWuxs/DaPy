@@ -597,7 +597,10 @@ def describe(data, detail=0):
     statistic = namedtuple('STAT',
                            ['Mean', 'S', 'Sn', 'CV', 'Range',
                             'Min', 'Max', 'Mode', 'Skew', 'Kurt'])
+    if len(data) == 0:
+        return statistic(*chain(repeat(None, 10)))
     mode = Counter(data).most_common(1)[0][0]
+    
     try:
         data = array('f', x)
     except:

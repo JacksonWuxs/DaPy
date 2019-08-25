@@ -238,7 +238,7 @@ class BaseSheet(object):
     def __contains__(self, cmp_):
         '''3 in sheet -> True / False'''
         if is_str(cmp_):
-            return cmp_ in self._columns
+            return cmp_ in self._data
 
         if is_seq(cmp_):
             if len(cmp_) == self._dim.Col:
@@ -471,6 +471,7 @@ class BaseSheet(object):
     def _add_row(self, row):
         # when user just input a single value as a row
         if is_value(row):
+            assert self._dim.Col != 0, 'Adding a single value into an empty sheet is illegal.'
             if self._isnan(row) is True:
                 self._missing = [_ + 1 for _ in self._missing]
             self._dim = SHEET_DIM(self._dim.Ln + 1, self._dim.Col)
@@ -496,6 +497,7 @@ class BaseSheet(object):
             for _ in xrange(lenth_bias):
                 series = Series(repeat(self._nan, self.shape.Ln))
                 subset_quickly_append_col(self, None, series, self.shape.Ln)
+
         miss, row = self._check_sequence(row, self.shape.Col)
         self._dim = SHEET_DIM(self._dim.Ln + 1, max(self._dim.Col, len(row)))
         if miss != 0:
@@ -511,7 +513,7 @@ class BaseSheet(object):
         else size = self.shape.Col
         '''
         if is_value(series):
-            return 0, [series] * size
+            return 0, Series(repeat(series, size))
 
         assert is_iter(series), "append item should be an iterable object"
         series = Series(series)
@@ -1970,7 +1972,7 @@ class SeriesSet(BaseSheet):
         info = dict(mins=[], maxs=[], avgs=[], stds=[], skes=[], mode=[],
                     kurs=[], miss=list(map(str, self._missing)))
         for sequence in self.iter_values():
-            des = describe(filter(lambda x: not self._isnan(x), sequence))
+            des = describe(Series(filter(lambda x: not self._isnan(x), sequence)))
             for arg, val in zip(['mins', 'maxs', 'avgs', 'stds', 'mode', 'skes', 'kurs', ],
                                 [des.Min, des.Max, des.Mean, des.S, des.Mode, des.Skew, des.Kurt]):
                 if val is None and arg != 'mode':
@@ -2579,13 +2581,16 @@ class SeriesSet(BaseSheet):
         if is_str(dtypes):
             dtypes = [dtypes]
 
-        miss_symbol = kwrd.get('miss_symbol',
-                               set(['nan', '?', '??', '', ' ', 'NA', 'None']))
+        miss_symbol = kwrd.get('miss_symbol', set(['nan', '?', '??', '', ' ', 'NA', 'None']))
         if is_value(miss_symbol):
             miss_symbol = [miss_symbol]
         if isinstance(miss_symbol, set) is False:
             miss_symbol = set(miss_symbol)
         miss_symbol.add(None)
+        split = str.split
+        if kwrd.get('careful_cut', None):
+            pattern = re_compile(sep + '(?=(?:[^"]*"[^"]*")*[^"]*$)')
+            split = pattern.split
 
         param, data, miss = {'mode': 'rU'}, (), ()
         if PYTHON3:
@@ -2898,6 +2903,7 @@ class SeriesSet(BaseSheet):
     def _iloc(self, subset, indexs):
         if is_seq(indexs) is False:
             indexs = tuple(indexs)
+
         for miss, (key, sequence) in zip(self._missing, self.iter_items()):
             seq = sequence[indexs]
             if isinstance(seq, Series) is False:
@@ -3079,7 +3085,7 @@ class SeriesSet(BaseSheet):
         '''keys() - > list of column names'''
         return self.columns
 
-    def normalized(self, process='NORMAL', cols=None, inplace=True):
+    def normalized(self, process='NORMAL', cols=None, inplace=False):
         '''normalized(process='NORMAL', cols=None, inplace=False, **kwrds):
 
         Parameters
@@ -3316,7 +3322,7 @@ class SeriesSet(BaseSheet):
         shuffles(new_index)
         return self._arrange_by_index(new_index)
     
-    def shuffle(self, inplace=True):
+    def shuffle(self, inplace=False):
         '''shuffle(inplace=True) -> SeriesSet'''
         if inplace is True:
             return self._shuffle()

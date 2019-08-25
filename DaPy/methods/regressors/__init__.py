@@ -1,1 +1,1 @@
-from lr import LinearRegressor
+from .lr import LinearRegressor

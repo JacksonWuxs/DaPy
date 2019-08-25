@@ -64,9 +64,9 @@ class Row(Sequence):
             yield seq[self._line]
 
     def __getattr__(self, index):
-        if index in self.columns:
-            return self.data[self.columns.index(index)]
-        raise AttributeError('has not attribute or column named %s.' % index)
+        if index in self._sheet.data:
+            return self.sheet[index][self.columns.index(index)]
+        raise AttributeError('Row has not attribute or column named %s.' % index)
 
     def __eq__(self, y):
         if is_iter(y) is True and len(y) == len(self):

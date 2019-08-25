@@ -51,7 +51,6 @@ class DecisionTreeClassifier(object):
         size = float(X.shape[0])
         base_entropy = self._cal_shannon(Y)
         best_gain_ratio, best_feature = tol_gain_ratio, None
-        
         for feature in X.columns:
             if feature == '__target__':
                 continue
@@ -74,7 +73,6 @@ class DecisionTreeClassifier(object):
             return Y[0]
 
         most_common_Y = Counter(Y).most_common()[0][0]
-        
         if X.shape[1] == 1 and X.columns[0] == '__target__':
             return most_common_Y
         
@@ -83,8 +81,7 @@ class DecisionTreeClassifier(object):
             return most_common_Y
 
         feature_name.remove(best_feature)
-        self._shannon.setdefault(best_feature,
-                                 [best_info_gain, 1])
+        self._shannon.setdefault(best_feature, [best_info_gain, 1])
         subColumn = X.columns
         subColumn.remove(best_feature)
         subX = X[subColumn]
@@ -193,9 +190,9 @@ if __name__ == '__main__':
                  'soft sticky ', 'hard slip', 'hard slip', 'soft sticky ', 'hard slip', 'hard slip'],
         'good': ['good'] * 8 + ['bad'] * 9})
     test_data = test_data[['color', 'root', 'response',  'texture',  'navel', 'touch', 'good']]
-    print(test_data.show())
+##    print(test_data.show())
     X, Y = test_data[:'touch'], test_data['good']
-    mytree = DecisionTree()
+    mytree = DecisionTreeClassifier()
     mytree.fit(X, Y)
     import pydotplus
     graph = pydotplus.graph_from_dot_data(mytree.export_graphviz())

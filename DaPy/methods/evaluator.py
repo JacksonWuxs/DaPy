@@ -9,7 +9,6 @@ def ConfuMat(Y, y_, labels=None):
     labels = sorted(set(Y) | set(y_))
     confu = zeros((len(labels) + 1, len(labels) + 1))
     temp = SeriesSet({'Y': Y, 'y': y_})
-    temp.show()
     for i, l1 in enumerate(labels):
         subtemp = temp.select(lambda row: row[0] == l1)
         for j, l2 in enumerate(labels):

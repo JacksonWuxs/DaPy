@@ -7,9 +7,10 @@ from .models import BaseEngineModel
 
 
 class Layer(BaseEngineModel):
-    def __init__(self, engine, function):
+    def __init__(self, engine, function, str_activation):
         BaseEngineModel.__init__(self, engine)
         self.activation = function
+        self.strfunc = str_activation
 
     def __repr__(self):
         return self.__name__
@@ -26,19 +27,21 @@ class Layer(BaseEngineModel):
     def __getstate__(self):
         obj = self.__dict__.copy()
         obj['_engine'] = self.engine
+        del obj['_func']
         return obj
 
-    def __setstaet__(self, dict):
-        self._func = dict['_func']
-        self.engine = dict['_engine']
-        if '_weight' in dict:
-            self._weight = dict['_weight']
+    def __setstate__(self, pkl):
+        self.engine = pkl['_engine']
+        self.strfunc = pkl['strfunc']
+        if '_weight' in pkl:
+            self._weight = pkl['_weight']
 
     def propagation(self, *args, **kwrds):
         pass
 
     def backward(self, *args, **kwrds):
         pass
+    
 
 class Input(Layer):
     '''Input layer in the model'''
@@ -46,7 +49,7 @@ class Input(Layer):
     __name__ = 'Input'
     
     def __init__(self, engine, in_cells, *args, **kwrds):
-        Layer.__init__(self, engine, None)
+        Layer.__init__(self, engine, None, None)
         self._in_cells = in_cells
         self._weight = self._engine.zeros((in_cells, in_cells))
 
@@ -69,8 +72,8 @@ class Dense(Layer):
 
     __name__ = 'Dense'
     
-    def __init__(self, engine, n_in, n_out, activation, init_weight='Xavier'):
-        Layer.__init__(self, engine, activation)
+    def __init__(self, engine, n_in, n_out, activation, str_act, init_weight='Xavier'):
+        Layer.__init__(self, engine, activation, str_act)
         self._init_parameters(n_in, n_out, init_weight)
 
     @property

@@ -252,8 +252,8 @@ class Test1_CoreOperations(TestCase):
     def test_count(self):
         data = SeriesSet(TABLE_DATA, TABLE_COL, None)
         self.assertEqual(data.count(2), 1)
-        self.assertEqual(list(data.count([2, 3]).values()), [1, 2])
-        self.assertEqual(list(data.count([2, 3]).keys()), [2, 3])
+        self.assertEqual(sorted(data.count([2, 3]).values()), [1, 2])
+        self.assertEqual(sorted(data.count([2, 3]).keys()), [2, 3])
         self.assertEqual(data.count(None, (1, 2), (0, 1)), 1)
 
     def test_count_values(self):

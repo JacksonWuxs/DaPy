@@ -96,7 +96,6 @@ class BaseMLP(BaseBPModel):
         self._upfactor = upfactor               # Upper Rate
         self._downfactor = downfactor           # Down Rate
         self._layers = []                       # restore each Dense layers
-        self._loss_func = None 
         self._size = 0
 
     @property
@@ -117,7 +116,7 @@ class BaseMLP(BaseBPModel):
         assert new in ('MSE', 'binary_classifier', 'multiple_classifer')
         self._loss_func = new
 
-    def __str__(self):
+    def __repr__(self):
         max_size_y = max([layer.shape[1] for layer in self._layers]) * 2
         size_x = [layer.__repr__() for layer in self._layers]
         print_col = list()
@@ -148,6 +147,9 @@ class BaseMLP(BaseBPModel):
         self._layers = pkl['_layers']
         self._upfactor = pkl['_upfactor']
         self._downfactor = pkl['_downfactor']
+        for layer in self._layers:
+            if layer.strfunc is not None:
+                layer.activation = self._activator(layer.strfunc)
 
     def add_layer(self, layer):
         self._layers.append(layer)
@@ -190,10 +192,10 @@ class BaseMLP(BaseBPModel):
         assert len(funcs) == len(layers) - 2, 'the number of activations does not match layers.'
         
         self.add_layer(Input(self._engine, n_in))
-        for in_, out_, func_ in zip(layers[:-2], layers[1:-1], funcs):
-            actfun = self._activator(func_)
-            self.add_layer(Dense(self._engine, in_, out_, actfun))
-        self.add_layer(Output(self._engine, out_, n_out, self._activator(self._final_func)))
+        for in_, out_, strfunc in zip(layers[:-2], layers[1:-1], funcs):
+            actfunc = self._activator(strfunc)
+            self.add_layer(Dense(self._engine, in_, out_, actfunc, strfunc))
+        self.add_layer(Output(self._engine, out_, n_out, self._activator(self._final_func), self._final_func))
         LogInfo('Structure | ' + ' - '.join(['%s:%d' % (layer, layer.shape[1]) for layer in self.layers]))
 
     def _check_cells(self, input_, hidden, output):
@@ -245,24 +247,11 @@ class BaseMLP(BaseBPModel):
         try:
             pkl.dump(self, file_)
         finally:
-            fp.close()
+            file_.close()
 
     def load(self, fp):
         file_ = self._check_addr(fp, 'rb')
         try:
             self.__setstate__(pkl.load(fp).__getstate__())
         finally:
-            fp.close()
-
-    def plot_accuracy(self):
-        '''use matplotlib library to draw the error curve during the training.
-        '''
-        try:
-            import matplotlib.pyplot as plt
-            plt.title('%d Layers MLP Model Training Result'%(self._size - 1))
-            plt.plot(self._cost_history[1:])
-            plt.ylabel('Error %')
-            plt.xlabel('Epoch')
-            plt.show()
-        except ImportError:
-            raise ImportError('DaPy uses `matplotlib` to draw picture, try: pip install matplotlib.')
+            file_.close()

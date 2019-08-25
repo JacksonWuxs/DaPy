@@ -51,13 +51,19 @@ class BaseBPModel(BaseEngineModel):
         assert new_l2 >= 0, '`l2_penalty` must be greater than 0'
         self._l2 = new_l2
 
+    def __getstate__(self):
+        pkl = BaseEngineModel.__getstate__(self)
+        del pkl['_activator']
+        return pkl
+
     def __setstate__(self, pkl):
         BaseEngineModel.__setstate__(self, pkl)
-        self.learn_rate = pkl['learn_rate']
-        self.l1_penalty = pkl['l1_penalty']
-        self.l2_penalty = pkl['l2_penalty']
+        self._activator = Activators(self.engine)
+        self.learn_rate = pkl['_learn_rate']
+        self.l1_penalty = pkl['_l1']
+        self.l2_penalty = pkl['_l2']
         self._cost_history = pkl['_cost_history']
-        self._accuracy = pkl['_cost_history']
+        self._accuracy = pkl['_accuracy']
 
     def _train(self, X, Y, epoch=500, verbose=True, early_stop=False):
         assert early_stop in (True, False)
@@ -99,3 +105,16 @@ class BaseBPModel(BaseEngineModel):
 
         time = clock() - start
         LogInfo('Finish Train | Time:%.1fs\tEpoch:%d\tAccuracy:%.2f'%(time, term, self._accuracy * 100) + '%')
+
+    def plot_error(self):
+        '''use matplotlib library to draw the error curve during the training.
+        '''
+        try:
+            import matplotlib.pyplot as plt
+            plt.title('Model Training Result')
+            plt.plot(self._cost_history[1:])
+            plt.ylabel('Error %')
+            plt.xlabel('Epoch')
+            plt.show()
+        except ImportError:
+            raise ImportError('DaPy uses `matplotlib` to draw picture, try: pip install matplotlib.')
