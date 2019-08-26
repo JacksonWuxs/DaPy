@@ -59,14 +59,14 @@ sheet:data
 
 ```python
 >>> import DaPy as dp
->>> sheet = dp.SeriesSet({'A': [1, 2, 3], 'B': [4, 5, 6]})
->>> for row in sheet:
+>>> sheet = dp.SeriesSet({'A': [1, 2, 3], 'B': [4, 5, 6]})   # 初始化一张表
+>>> for row in sheet:   # 对表进行迭代
 	print(row.A, row[0])   # 按照下标或者列名访问行数据的值
-	row[1] = 'b'   # 用下表为行赋值
+	row[1] = 'b'   # 用下标为行赋值
 1, 1
 2, 2
 3, 3
->>> sheet.show()   # 你的操作会映射到原表中
+>>> sheet.show()   # 你对行的赋值操作会映射到原表中
  A | B
 ---+---
  1 | b 
@@ -104,7 +104,7 @@ sheet:data
 >>> from DaPy.datasets import iris
 >>> sheet, info = iris()
  - read() in 0.001s.
->>> sheet.normalized().query('sepal length < petal length').groupby('class').sort('petal width')[:10].info
+>>> sheet.normalized().query('sepal length < petal length').groupby('class').sort(' petal width')[:10].info
  - normalized() in 0.005s.
  - query() in 0.000s.
  - groupby() in 0.000s.
@@ -129,7 +129,7 @@ sheet:('setos',)
 1.  Structure: DaPy.SeriesSet
 2. Dimensions: Lines=6 | Variables=5
 3. Miss Value: 0 elements
-                                Descriptive Statistics                                       
+                                Descriptive Statistics                                 
 =======================================================================================
     Title     | Miss |    Min    |   Mean   |    Max    |     Std      |      Mode     
 --------------+------+-----------+----------+-----------+--------------+---------------
@@ -144,7 +144,7 @@ sheet:('versicolo',)
 1.  Structure: DaPy.SeriesSet
 2. Dimensions: Lines=10 | Variables=5
 3. Miss Value: 0 elements
-                                Descriptive Statistics                                   
+                                Descriptive Statistics                                 
 =======================================================================================
     Title     | Miss |   Min    |   Mean   |    Max     |     Std      |     Mode     
 --------------+------+----------+----------+------------+--------------+--------------

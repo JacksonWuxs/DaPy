@@ -248,6 +248,7 @@ class BaseMLP(BaseBPModel):
             pkl.dump(self, file_)
         finally:
             file_.close()
+        return self
 
     def load(self, fp):
         file_ = self._check_addr(fp, 'rb')

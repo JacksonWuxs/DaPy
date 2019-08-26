@@ -9,11 +9,16 @@
 
 ### Overview
 
-DaPy is a data analysis library designed with ease of use in mind, which lets you smoothly implement your thoughts by providing well-designed **data structures** and abundant  **professional ML models**. In short, this project can help you complete data mining tasks in each step, such as loading data, preprocessing data, feature engineering, developing models, model evaluation and result export.
+DaPy is a data analysis library designed with ease of use in mind, which lets you smoothly implement your thoughts by providing well-designed **data structures** and abundant  **professional ML models**. There has been a lot of famous data operation modules like Pandas already, but there is no module, which
+
+* can write the codes in Chain Programming;
+* can quickly do simple feature engineering with simple APIs;
+* can easily operate the data row by row;
+* can show the log of each steps on console like MySQL.
 
 ### Example
 
-This example simply shows you what DaPy can do for you. Our goal in this example is to train a classifier for Iris classification task. Detail information can be read from [here](https://github.com/JacksonWuxs/DaPy/blob/master/doc/Quick%20Start/English.md).
+This example simply shows the characters of DaPy of **chain programming**, **working log** and **simple feature engineering method**. Our goal in this example is to train a classifier for Iris classification task. Detail information can be read from [here](https://github.com/JacksonWuxs/DaPy/blob/master/doc/Quick%20Start/English.md).
 
 ![](https://github.com/JacksonWuxs/DaPy/blob/master/doc/Quick%20Start/quick_start.gif)
 

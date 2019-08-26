@@ -555,12 +555,10 @@ class BaseSheet(object):
         elif start > lenth:
             start = lenth
 
-        if stop is None:
-            stop = lenth - 1
+        if stop is None or stop > lenth:
+            stop = lenth
         elif stop < 0:
             stop += lenth
-        elif stop > lenth:
-            stop = lenth
         error = 'Index out of range'
         assert 0 <= start <= lenth and 0 <= stop <= lenth, error
         return start, stop
