@@ -45,7 +45,7 @@ from datetime import datetime
 __title__ = 'DaPy'
 __description__ = 'Enjoy the tour in data mining !'
 __url__ = 'http://dapy.kitgram.cn'
-__version__ = '1.10.6'
+__version__ = '1.10.8'
 __build__ = 0x201908
 __author__ = 'Xuansheng Wu (wuxsmail@163.com)'
 __license__ = '''DaPy  Copyright (C) 2018 - 2019 WU Xuansheng'+\

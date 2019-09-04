@@ -1,0 +1,14 @@
+
+Hope you enjoy your new logo, here are the people that
+made your beautiful logo happen :)
+font name: Aleo-Regular
+font link: https://alessiolaiso.com/aleo-font
+font author: Alessio Laiso
+font author site: https://alessiolaiso.com/
+
+
+icon designer: Andrew Sloan
+icon designer link: /sloanal
+        
+{"bg-gradient-0":"#0076DD","bg-gradient-1":"#E600E9","icon":"#ffffff","font":"#ffffff","slogan":"#ffffff"}
+      

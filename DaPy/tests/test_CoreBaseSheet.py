@@ -62,6 +62,39 @@ class Test0_InitData(TestCase):
                                   ['A', 'B'], None, [0, 0])
 
 
+class Test2_Transfer(TestCase):
+    def setUp(self):
+        import numpy as np
+        self.np = np
+        import pandas as pd
+        self.pd = pd
+        
+    def test_numpy_dapy(self):
+        arr = self.np.array(TABLE_DATA)
+        
+        sheet = SeriesSet(arr, nan=None)
+        self.assertEqual(tuple(sheet.shape), (3, 4))
+        self.assertEqual(sheet.missing, [0, 0, 1, 0])
+        self.assertEqual(sheet[0], [1, 2, 3, 4])
+        self.assertEqual(sheet.columns, ['C_0', 'C_1', 'C_2', 'C_3'])
+        
+        arr = self.np.array(sheet)
+        self.assertEqual(arr.shape, (3, 4))
+        assert (arr[0] == [1, 2, 3, 4]).all()
+
+    def test_pandas_dapy(self):
+        df = self.pd.DataFrame(DICT_DATA)
+
+        sheet = SeriesSet(df)
+        self.assertEqual(tuple(sheet.shape), (3, 4))
+        self.assertEqual(sheet.missing, [0, 0, 1, 0])
+        self.assertEqual(sheet.columns, ['A', 'B', 'C', 'D'])
+
+        df = self.pd.DataFrame(sheet.to_dict())
+        self.assertEqual(df.shape, (3, 4))
+        assert (df.columns == ['A', 'B', 'C', 'D']).all()
+
+
 class Test1_CoreOperations(TestCase):
     def setUp(self):
         pass

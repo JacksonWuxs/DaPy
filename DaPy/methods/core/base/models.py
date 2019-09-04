@@ -46,6 +46,9 @@ class BaseEngineModel(object):
     def _exp(self, x):
         return self._engine.exp(x)
 
+    def _mat(self, x):
+        return self._engine.mat(x)
+
     def _mul(self, a, b):
         return self._engine.multiply(a, b)
 

@@ -100,6 +100,11 @@ class BaseSheet(object):
         self._init_nan_func()
         self._sorted_index = {}
 
+        if hasattr(obj, 'values') and not callable(obj.values):
+            # Pandas DataFrame -> Numpy array
+            columns = obj.columns
+            obj = obj.values 
+
         if isinstance(obj, BaseSheet): 
             if isinstance(self.data, dict):
                 # initialize from a SeriesSet
@@ -732,6 +737,9 @@ class BaseSheet(object):
                 for i, val in enumerate(sequence):
                     sequence[i] = where(val)
         return self
+    
+    def to_dict(self):
+        return self.data
 
     def tolist(self):
         '''return the data as lists in list'''
@@ -2585,7 +2593,7 @@ class SeriesSet(BaseSheet):
         if isinstance(miss_symbol, set) is False:
             miss_symbol = set(miss_symbol)
         miss_symbol.add(None)
-        split = str.split
+        split, strip = str.split, str.strip
         if kwrd.get('careful_cut', None):
             pattern = re_compile(sep + '(?=(?:[^"]*"[^"]*")*[^"]*$)')
             split = pattern.split
@@ -2607,11 +2615,11 @@ class SeriesSet(BaseSheet):
                 line = file_.readline()
                 if i == title_line:
                     # setup the title line
-                    columns = tuple(map(str.strip, split(line, sep)))
+                    columns = tuple(map(strip, split(line, sep)))
 
             # begin to read the data
             for row in file_:  # iter row
-                for mis, seq, transfer, val in zip_longest(miss, data, dtypes, split(row[:-2], sep)):  
+                for mis, seq, transfer, val in zip_longest(miss, data, dtypes, split(strip(row), sep)):  
                     # iter value
                     try:
                         if val in miss_symbol:

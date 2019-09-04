@@ -523,10 +523,31 @@ class DataSet(object):
         title = [self._sheets[_] for _ in key]
         src = [self._data[_] for _ in key]
         return DataSet(src, title)
+    
+    @timer
+    @operater
+    def get_categories(self, cols, cut_points, group_name, boundary=(False, True), inplace=False):
+        pass
+    
+    @timer
+    @operater
+    def get_date_label(self, cols, daytime=True,
+                       weekend=True, season=True, inplace=False):
+        pass
+    
+    @timer
+    @operater
+    def get_interactions(self, n_power=3, cols=None, inplace=False):
+        pass
 
     @timer
     @operater
-    def get_dummies(self, col=None, value=1):
+    def get_ranks(self, cols=None, duplicate='mean', inplace=False):
+        pass
+
+    @timer
+    @operater
+    def get_dummies(self, col=None, value=1, inplace=False):
         pass
     
     @timer
@@ -985,6 +1006,11 @@ class DataSet(object):
 
         else:
             raise ValueError('unrecognized file type')
+    
+    @timer
+    @operater
+    def to_dict(self):
+        pass
 
     @timer
     def toframe(self):
