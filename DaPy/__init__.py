@@ -3,7 +3,7 @@
 # Author         : Xuansheng Wu           
 # Email          : wuxsmail@163.com 
 # created        : 2017-11-01 00:00 
-# Last modified  : 2019-08-21 15:32
+# Last modified  : 2019-10-8 15:32
 # Filename       : DaPy.__init__.py
 # Description    : initial file for DaPy                     
 #########################################
@@ -31,7 +31,7 @@ __all__ = [ 'Frame', 'SeriesSet', 'mat', 'DataSet', 'datasets', 'methods',
             'merge', 'row_stack', 'boxcox', 'show_time', 'get_dummies']
 
 from .core import Frame, SeriesSet, DataSet, Matrix as mat, Series
-from .core import nan, inf, LogInfo, LogWarn, LogErr
+from .core import nan, inf, LogInfo, LogWarn, LogErr, SHOW_LOG
 from .core import argsort
 from .matlib import exp, dot, multiply, zeros, ones, C, P, add, diag, log, boxcox
 from .matlib import cov, corr, frequency, quantiles, _sum as sum, diff, cumsum
@@ -45,8 +45,8 @@ from datetime import datetime
 __title__ = 'DaPy'
 __description__ = 'Enjoy the tour in data mining !'
 __url__ = 'http://dapy.kitgram.cn'
-__version__ = '1.10.8'
-__build__ = 0x201908
+__version__ = '1.10.16'
+__build__ = 0x201910
 __author__ = 'Xuansheng Wu (wuxsmail@163.com)'
 __license__ = '''DaPy  Copyright (C) 2018 - 2019 WU Xuansheng'+\
               This program comes with ABSOLUTELY NO WARRANTY;
@@ -54,7 +54,7 @@ __license__ = '''DaPy  Copyright (C) 2018 - 2019 WU Xuansheng'+\
               and you are welcome to redistribute it under certain
               conditions; type `show c' for details.'''
 __copyright__ = 'Copyright 2018-2019 Xuansheng Wu.'
-__date__ = datetime(2019, 8, 24)
+__date__ = datetime(2019, 10, 8)
 
 def _unittests():
     from unittest import TestSuite, defaultTestLoader, TextTestRunner

@@ -14,6 +14,7 @@ from .io import (parse_addr, parse_excel, parse_html, parse_sav, parse_sql, pars
 
 __all__ = ['DataSet']
 
+SHOW_LOG = True
 
 def timer(func):
     @wraps(func)
@@ -40,14 +41,9 @@ def operater(callfunc):
             elif isinstance(ret, (dict, Counter)):
                 for name_, ret_ in ret.items():
                     ret_set._add(ret_, name_)
-            
-            # try:
-            #     ret = callfunc(sheet, *args, **kwrds)
-            #     ret_set._add(ret, name)
-            # except Exception as e:
-            #     LogErr('sheet:%s.apply() failed, because %s' % (name, e))
         return ret_set
     return operate_func
+
 
 class DataSet(object):
     '''A easy-to-use functional data structure similar to MySQL
@@ -99,7 +95,7 @@ class DataSet(object):
                'normalized', 'read', 'reverse', 'replace', 'shuffles','corr',
                'sort', 'save', 'tomat', 'toframe', 'tocol', 'show', 'log']
 
-    def __init__(self, obj=None, sheet='sheet0', log=True):
+    def __init__(self, obj=None, sheet='sheet0', log=SHOW_LOG):
         '''
         Parameter
         ---------
@@ -334,16 +330,13 @@ class DataSet(object):
         
     def __getitem__(self, key):
         if len(self._data) == 1 and (key not in self._sheets):
-            return self._data[0][key]
-        
+            return DataSet(self._data[0][key], self._sheets[0])
+
         if isinstance(key, slice):
             return self.__getslice__(key.start, key.stop)
 
     def __getslice__(self, i, j):
         return DataSet([_[i:j] for _ in self._data], self._sheets)
-        
-        start, stop = self._check_sheet_index_slice(pos)
-        return DataSet(self._data[start: stop], self._sheets[start: stop])
 
     def __setitem__(self, key, val):
         if len(self._data) == 1 and key not in self._sheets:
@@ -523,7 +516,12 @@ class DataSet(object):
         title = [self._sheets[_] for _ in key]
         src = [self._data[_] for _ in key]
         return DataSet(src, title)
-    
+
+    @timer
+    @operater
+    def get_best_features(self, method='variance', X=None, Y=None, top_k=1, inplace=False):
+        pass
+
     @timer
     @operater
     def get_categories(self, cols, cut_points, group_name, boundary=(False, True), inplace=False):
@@ -548,6 +546,16 @@ class DataSet(object):
     @timer
     @operater
     def get_dummies(self, col=None, value=1, inplace=False):
+        pass
+
+    @timer
+    @operater
+    def get_nan_instrument(cols=None, inplace=False):
+        pass
+
+    @timer
+    @operater
+    def get_numeric_label(self, cols=None, inplace=False):
         pass
     
     @timer
@@ -681,6 +689,11 @@ class DataSet(object):
     @operater
     def drop_col(self, index=-1, axis=0, inplace=False):
         pass
+
+    @timer
+    @operater
+    def fillna(self, fill_with=None, col=None, method=None, limit=None):
+        pass
         
     @timer
     def read(self, addr, dtype='col', **kwrd):
@@ -769,8 +782,8 @@ class DataSet(object):
             
             with sql3.connect(addr) as conn:
                 cur = conn.cursor()
-                for sheet, name in parse_db(addr, dtype, nan):
-                    self._add(cur, sheet, name)
+                for sheet, name in parse_db(cur, dtype, nan):
+                    self._add(sheet, name)
 
         elif ftype == 'sav':
             try:

@@ -10,53 +10,31 @@ __all__ = ['ANOVA']
 ANOVA_result = namedtuple('one_way_ANOVA_Result', ['F', 'pvalue'])
 MoodTestResult = namedtuple('MoodTestResult', ['Statistic', 'pvalue', 'Decision'])
 
-def ANOVA(data, cluster, control=None, report=False):
+def ANOVA(data, cluster):
     if not isinstance(data, SeriesSet):
         data = SeriesSet(data)
-    assert data.shape.Col > 2, 'ANOVA() expects more than 1 comparing group.'
+    assert data.shape.Col > 1, 'ANOVA() expects more than 1 comparing group.'
     assert data.shape.Ln > 2, 'at least 2 records in the data'
     assert is_str(cluster), '`cluster` must be a string object to represent the categorical variable in the data'
     assert is_str(control) or control == None, '`control` must be False or a string object'
     assert report in (True, False)
     assert cluster in data.columns
     cluster = [cluster]
-    if is_str(control) is True:
-        assert control in data.columns
-        cluster.append(control)
 
-    value_column = set(data.columns) - set(cluster)
-    value_data = data[value_column]
-    sum_x = sum(ser.sum() for ser in data[value_column].values())
-    num_of_value = float(value_data.shape.Ln * value_data.shape.Col)
-
-    report_ = SeriesSet(None, ['Source', 'DF', 'SS', 'MS', 'F', 'Sig'], '')
-    SST = sum((val ** 2).sum() for val in value_data.values()) - sum_x ** 2 / num_of_value
-    report_.append_row(['Total', sum_of_value - 1, SST])
-    for subclass in cluster:
-        subset = data[set(data.columns) - set([subclass])]
-        SSR = sum(i for val in data[set(data.columns) - set(cluster)])
+    value_column = tuple(set(data.columns) - set(cluster))[0]
+    SST = data[value_column].std()
     
-    
-
-    new_classes = list()
-    for sequence in classes:
-        sequence = Series(filter(is_math, sequence))
-        assert len(sequence) > 1, 'ANOVA() expects more than 1 samples in each class.'
-        new_classes.append(sequence)
-        
-    ni = list(map(len, new_classes))
-    n = sum(ni)
-    r = len(new_classes)
-    Ti = map(sum, new_classes)
-    G = sum([sum(map(lambda x: x ** 2, sequence)) for sequence in new_classes])
-    
-    totals = sum([Ti[i]**2 / float(ni[i]) for i in range(r)])
-    Sa = totals - sum(Ti)**2/float(sum(ni))
-    Se = G - totals
-    MSa = Sa / float(r - 1)
-    MSe = Se / float(sum(ni) - r)
-    F = MSa / MSe
-    return ANOVA_result([F, 1 - Fcdf(F, r-1, n-r)])
+    total_mean = data[value_column].mean()
+    SSA, SSE, r, n = 0.0, 0.0, 0.0, data.shape.Ln
+    for label, subset in data.iter_groupby(cluster):
+        seq = subset[value_column]
+        r += 1
+        SSA += len(seq) * (seq.mean() - total_mean) ** 2
+        SSE += len(seq) * seq.std() ** 2
+    MSA = SSA / (r - 1.0)
+    MSE = SSE / (n - r) if SSE != 0 else 0.00001
+    F = MSA / MSE 
+    return ANOVA_result(F, 1 - Fcdf(F, r-1, n-r))
 
 def MoodTest(X, Y, side='equal', alpha=0.05):
     assert side in ('equal', 'upper', 'lower')

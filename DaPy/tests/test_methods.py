@@ -2,19 +2,22 @@ from unittest import TestCase
 
 from DaPy import datasets, io, Series, exp
 from DaPy.methods.classifiers import MLPClassifier
-from DaPy.methods.evaluator import Performance
+from DaPy.methods.evaluator import Performance, Kappa
 io.encode()
 
-class Test_Tools(TestCase):   
-iris, info = datasets.iris()
-iris.normalized()
-iris.shuffle()
-X, Y = iris[:'petal width'], iris['class']
-##
-##
-##mlp = MLPClassifier('numpy', 0.05)
-##mlp.fit(X[:120], Y[:120], 500, verbose=False)
-##print(Performance(mlp, X[120:], Y[120:], 'clf'))
+class Test_Tools(TestCase):
+    def setUp(self):
+        iris, info = datasets.iris()
+        iris = iris.data
+        iris.normalized()
+        iris.shuffle(inplace=True)
+        self.X, self.Y = iris[:'petal width'], iris['class']
+        
+    def test_mlpclf(self):
+        mlp = MLPClassifier('numpy', 0.001)
+        mlp.fit(self.X[:120], self.Y[:120], 500, verbose=False)
+        confu = Performance(mlp, self.X[120:], self.Y[120:], 'clf')
+        self.assertEqual(Kappa(confu) > 0.75,  True)
 ##
 ##from DaPy.methods.regressors import LinearRegressor
 ##from DaPy.methods.classifiers import LogistClassifier

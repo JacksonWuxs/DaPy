@@ -67,7 +67,7 @@ def Performance(predictor, data, target, mode='reg'):
         confuMat = ConfuMat(target, result, predictor.labels)
         LogInfo('Classification Accuracy: %.4f' % Accuracy(confuMat) + '%')
         LogInfo('Classification Kappa: %.4f' % Kappa(confuMat))
-        if confuMat.shape[1] == 3:
+        if confuMat.shape[1] == 2:
             proba = predictor.predict_proba(data)
             if proba.shape[1] == 2:
                 proba = proba[:, 0]

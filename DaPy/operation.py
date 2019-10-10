@@ -276,9 +276,8 @@ def get_dummies(data, value=1, dtype='mat'):
     assert is_value(value), 'parameter should be a value, not %s' % type(value)
     assert is_seq(data), 'converted object should be a sequence'
     assert str(dtype).lower() in ('frame', 'set', 'mat', 'matrix', 'seriesset')
-
-    set_data = set(data)
-    settle = dict(zip(sorted(set_data), xrange(len(set_data))))
+    set_data = sorted(set(data))
+    settle = dict(zip(set_data, xrange(len(set_data))))
     dummies = [[0] * len(settle) for i in range(len(data))]
 
     for record, original in zip(dummies, data):

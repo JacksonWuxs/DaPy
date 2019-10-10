@@ -626,7 +626,10 @@ def describe(data, detail=0):
     Ex /= size
     Ex2 /= size
     std = (Ex2 - Ex**2) ** 0.5
-    std_n = size / (size - 1.0) * std
+    if std == 0 or size == 1.0:
+        std_n = size
+    else:
+        std_n = size / (size - 1.0) * std
     
     S, K = '-','-'
     if detail == 1:

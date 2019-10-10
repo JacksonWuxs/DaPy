@@ -1,9 +1,11 @@
 from copy import copy
+from collections import Counter
 from itertools import repeat
 from datetime import datetime, timedelta
 from operator import add, sub, mul, mod, pow
 from operator import eq, gt, ge, lt, le
 from math import sqrt
+from heapq import nlargest, nsmallest
 from time import clock
 
 try:
@@ -100,7 +102,7 @@ class Series(list):
 
         if is_seq(key):
             if len(key) == 1:
-                return Series([list.__getitem__(self, 0)])
+                return Series([list.__getitem__(self, key[0])])
             
             if len(key) < len(self) * 0.1:
                 return Series(map(list.__getitem__, repeat(self, len(key)), key))
@@ -269,7 +271,13 @@ class Series(list):
 
         Parameters
         ----------
-        left :
+        left : val
+            to select values which are all larger than `left`
+
+        right : val
+            to select values which are all less than `right`
+
+        boundary : 'both', False, 'left', 'right (default='both')
         '''
         assert boundary in ('both', False, 'left', 'right')
         bound_left, bound_right = ge, ge
@@ -280,6 +288,32 @@ class Series(list):
         def func(x):
             bound_left(left, x) and bound_rgiht(right, x)
         return Series(map(func, self))
+
+    def cv(self):
+        Ex, Ex2, length = 0, 0, float(len(self))
+        if length <= 1:
+            return 0
+        
+        for val in self:
+            Ex += val
+            Ex2 += pow(val, 2)
+        if Ex == 0:
+            return sqrt((Ex2 - Ex ** 2 / length) / (length - 1.0))
+        return sqrt((Ex2 - Ex ** 2 / length) / (length - 1.0)) / (Ex / length)
+
+    def count_values(self):
+        return Counter(self)
+
+    def count_by(self, by=None):
+        '''count the number of elements in the series'''
+        key, elements = {}, self
+        if callable(by) is True:
+            elements = map(by, elements)
+
+        for el in elements:
+            key[el] = 0 if el not in key else 1
+            key[el] += 1
+        return key
 
     def drop(self, label):
         label = repeat(label, len(self))
@@ -311,6 +345,9 @@ class Series(list):
         except Exception:
             return default
 
+    def has_duplicates(self):
+        return len(self) != len(set(self))
+
     def normalize(self):
         pass
 
@@ -320,11 +357,17 @@ class Series(list):
     def max(self):
         return max(self)
 
+    def max_n(self, n=1):
+        return Series(nlargest(n, self))
+
     def min(self):
         return min(self)
 
-    def mean(self, *arg, **kwargs):
-        return sum(self) / float(len(self))
+    def min_n(self, n=1):
+        return Series(nsmallest(1, self))
+
+    def mean(self):
+        return sum(self, 0.0) / len(self)
 
     def percenttile(self, q):
         return sorted(self)[int(q * len(self))]
@@ -349,17 +392,18 @@ class Series(list):
     def select(self):
         pass
 
-    def sum(self, *arg, **kwargs):
-        return sum(self)
+    def sum(self):
+        return sum(self, 0.0)
 
     def std(self):
         Ex, Ex2, length = 0, 0, float(len(self))
-        for i in self:
-            Ex += i
-            Ex2 += pow(i, 2)
-        Ex /= length
-        Ex2 /= length
-        return sqrt(Ex2 - pow(Ex2, 2))
+        if length <= 1:
+            return 0
+        
+        for val in self:
+            Ex += val
+            Ex2 += pow(val, 2)
+        return sqrt((Ex2 - Ex ** 2 / length) / (length - 1.0))
 
     def tolist(self):
         return list(self)

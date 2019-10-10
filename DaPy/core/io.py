@@ -95,7 +95,7 @@ def parse_excel(dtype, addr, fline, tline, nan):
         try: 
             series_set = SeriesSet(None, None, nan)
             for cols in range(sheet.ncols):
-                column = Series(sheet.col_values(cols))
+                column = Series(sheet.col_values(cols))[fline:]
                 title = column.get(tline)
                 if tline >= 0:
                     column.pop(tline)

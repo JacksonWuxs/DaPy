@@ -867,7 +867,11 @@ class BaseSheet(object):
                 try:
                     return set(func(val, False))
                 except TypeError:
+                    pass
+                try:
                     return set(func(val))
+                except TypeError:
+                    return set()
 
         pattern = [_ for _ in PATTERN_BETWEEN1.split(string) if _.strip()]
         lvalue = auto_str2value(clear_pattern(pattern[4]))
@@ -1722,7 +1726,7 @@ class SeriesSet(BaseSheet):
 
         if inplace is False:
             if axis == 0:
-                return SeriesSet(map(func, self[cols]), cols, self.nan)
+                return SeriesSet(map(func, self[cols]), nan=self.nan)
 
             ret = SeriesSet(columns=self.columns, nan=self.nan)
             row = [func(self[_]) if _ in cols else self.nan for _ in self.columns]
@@ -1742,7 +1746,7 @@ class SeriesSet(BaseSheet):
         if axis == 0:
             new_col = self._check_col_new_name(None)
             new_seq = (func(row) for row in self[cols])
-            self.append_col(new_val, new_col)
+            self.append_col(new_seq, new_col)
         return self
 
     def create_index(self, columns):
@@ -2450,17 +2454,26 @@ class SeriesSet(BaseSheet):
         >>> data
         A: <0.0, 1, 2, 3, 4.0, 5.0, 6>
         '''
-        col = self._check_columns_index(col)
+        cols = self._check_columns_index(col)
         isnan_fun = self._isnan
         if limit is None:
             limit = self.shape.Ln
         assert limit >= 1, 'fill with at least 1 missing value, not limit=%s' % limit
-        assert method in ('linear', 'polynomial', 'quadratic', None)
+        assert method in ('linear', 'polynomial', 'quadratic', None, 'mean', 'mode')
         if method is None:
-            self._fillna_value(fill_with, col, isnan_fun, limit)
+            self._fillna_value(fill_with, cols, isnan_fun, limit)
+        elif method == 'mean':
+            for col in cols:
+                mean = Series(_ for _ in self[col] if not isnan_fun(_)).mean()
+                self._fillna_value(mean, [col], isnan_fun, limit)
+        elif method == 'mode':
+            for col in cols:
+                seq = Series(_ for _ in self[col] if not isnan_fun(_))
+                mode = Counter(seq).most_common()[0][0]
+                self._fillna_value(mode, [col], isnan_fun, limit)
         else:
             func = simple_linear_reg
-            self._fillna_simple_function(col, isnan_fun, limit, func)
+            self._fillna_simple_function(cols, isnan_fun, limit, func)
 
     def _fillna_value(self, fill_with, col, _isnan, all_limit):
         err = '`fill_with` must be a value'
@@ -2480,7 +2493,7 @@ class SeriesSet(BaseSheet):
                         limit -= 1
                         if limit == 0:
                             break
-
+                        
     def _fillna_simple_function(self, col, _isnan, all_limit, func):
         '''establish a linear model to predict the missing value
 
@@ -2592,6 +2605,7 @@ class SeriesSet(BaseSheet):
             miss_symbol = [miss_symbol]
         if isinstance(miss_symbol, set) is False:
             miss_symbol = set(miss_symbol)
+
         miss_symbol.add(None)
         split, strip = str.split, str.strip
         if kwrd.get('careful_cut', None):
@@ -2631,7 +2645,10 @@ class SeriesSet(BaseSheet):
                         # different types of data in the same column
                         seq.append(auto_str2value(val))
                     except:
-                        val = auto_str2value(val, transfer)
+                        if val not in miss_symbol:
+                            val = auto_str2value(val, transfer)
+                        else:
+                            val = nan
                         mis = []
                         miss += (mis,)
                         if val in miss_symbol:
@@ -2648,7 +2665,6 @@ class SeriesSet(BaseSheet):
                             missed = len(data[0]) - 1
                             mis.append(missed)
                             data += (Series(chain(repeat(nan, missed), [val])),)
-
         sheet._dim = SHEET_DIM(len(data[0]), len(data))
         sheet._init_col_name(columns)
         for i, (missing, seq, col) in enumerate(zip(miss, data, sheet.columns)):
@@ -2657,6 +2673,25 @@ class SeriesSet(BaseSheet):
             sheet._missing.append(add_space + sum(missing))
             sheet.data[col] = seq
         return sheet
+
+    def get_best_features(self, method='variance', X=None, Y=None, top_k=1):
+        cols = self._check_columns_index(X)
+        assert method in ('variance', 'anova')
+        if isinstance(top_k, float):
+            top_k = int(top_k * self.shape.Col)
+        assert isinstance(top_k, int) and top_k >= 0, '`top_k` must be greater than 0'
+        
+        if method == 'variance':
+            feature_importance = [(self[_].cv(), _) for _ in cols]
+
+        if method == 'anova':
+            assert Y in self.data, 'Y must be a column in this dataset'
+            from DaPy.methods import ANOVA
+            feature_importance = [(ANOVA(self[_, Y], Y).F, _) for _ in cols]
+
+        feature_importance = list(filter(lambda val: not self._isnan(val[0]), feature_importance))
+        feature_importance = sorted(feature_importance, reverse=True)[:top_k]
+        return self[tuple(_[1] for _ in feature_importance)]
 
     def get_categories(self, cols, cut_points, group_name,
                        boundary=(False, True), inplace=False):
@@ -2828,8 +2863,9 @@ class SeriesSet(BaseSheet):
         cols = self._check_columns_index(cols)
         new_features = SeriesSet(nan=self.nan)
         assert isinstance(n_power, int) and n_power > 1, '`n_power` must be an integer and greater than 1'
+        pairs = combinations(cols, n_power)
 
-        for combine in combinations(cols, n_power):
+        for combine in pairs:
             count = Counter(combine)
             title, seq = create_title(combine[0], count), self[combine[0]]
             miss_values = 0
@@ -2887,6 +2923,25 @@ class SeriesSet(BaseSheet):
             return ranks
         return self.join(ranks, inplace=True)
 
+    def get_nan_instrument(self, cols=None, inplace=False):
+        '''create instrument variable for determining whether a variable is miss or not'''
+        cols = self._check_columns_index(cols)
+        inplace = SeriesSet(nan=self.nan) if inplace is False else self
+
+        check_nan = self._isnan
+        for col in cols:
+            seq = self[col].apply(lambda val: 1 if check_nan(val) else 0)
+            subset_quickly_append_col(inplace, col + '=NaN', seq, 0, pos=None)            
+        return inplace
+
+    def get_numeric_label(self, cols=None, inplace=False):
+        cols = self._check_columns_index(cols)
+        labels = self if inplace else SeriesSet(nan=self.nan)
+        for col in cols:
+            label = {}
+            labels[col] = self._data[col].apply(lambda val: label.setdefault(val, len(label)))
+        return labels
+    
     def items(self):
         '''items() -> list of tuple(column, Series)'''
         return [(_, self._data[_]) for _ in self.columns]
@@ -2909,7 +2964,6 @@ class SeriesSet(BaseSheet):
     def _iloc(self, subset, indexs):
         if is_seq(indexs) is False:
             indexs = tuple(indexs)
-
         for miss, (key, sequence) in zip(self._missing, self.iter_items()):
             seq = sequence[indexs]
             if isinstance(seq, Series) is False:
@@ -3302,7 +3356,7 @@ class SeriesSet(BaseSheet):
             return self._reverse(axis)
         return SeriesSet(self)._reverse(axis)
 
-    def update(self, where, set_value=None, **set_values):
+    def update(self, where, set_value={}, **set_values):
         '''update(where, set_value=None, **set_values) -> SeriesSet'''
         if callable(where) is False:
             where = self._trans_where(where, axis=0)
@@ -3318,7 +3372,7 @@ class SeriesSet(BaseSheet):
                     exp = '"%s"' % exp
                 set_value[key] = self._trans_where(exp, axis=0)
 
-        for index in self._where_by_rows(where, limit='all'):
+        for index in self._where_by_rows(where, limit=self.shape.Ln):
             row = Row(self, index)
             for key, value in set_value.items():
                 row[key] = value(row)
