@@ -2,18 +2,18 @@
 #### Ⅰ. Loading a dataset
 DaPy comes with a few famous datasets, for examples the **iris** 
 and **wine** datasets for classification.   
-  
+
 In the following, we will start a Python shell and then 
 load the wine datasets as an example: 
 ```Python
->>> from DaPy import machine_learn
+>>> from DaPy.methods.classifiers import MLPClassifier
 >>> from DaPy import datasets
 >>> wine, info = datasets.wine()
 ```
 This function will return a *DaPy.SeriesSet* structure that holds 
 all the data while a description of data will be returned at the 
 same time. 
-  
+
 In general, to load from an external dataset, you can use these 
 statements, please refer to GuideBook for more details:
 ```Python
@@ -75,7 +75,7 @@ sheet:data
 #### Ⅱ. Preprocessing data
 Before we start a machine learning subject, we should process our 
 data so that the data can meet the requirements of the models.   
-  
+
 By just accessed our data we found that our dataset is arrangement 
 by class. For supporting a balance proportion of the training data, we can 
 mass our data with *shuffles()*. In addition, for the reason that 
@@ -94,11 +94,11 @@ target variables and feature variables:
 In the case of the wine dataset, the task is to predict, given a new record, 
 which class it represents. We are given samples of each of the 3 possible classes on 
 which we fit an estimator to be able to predict the classes to which unseen samples belong.  
-  
+
 In DaPy, an simple estimator is in the DaPy.machine_learn that 
 implements *mutilayer perceptrons*: 
 ```Python
->>> mlp = machine_learn.MLP()
+>>> mlp = MLPClassifier()
 >>> mlp.create(input_cell=13, output_cell=3)
  - Create structure: 13 - 12 - 3
 ```
@@ -123,18 +123,18 @@ dataset apart in 80% of total. We select this training set with the
     Completed: 89.98 	Remain Time: 0.18 s	Error: 3.39%
     Completed: 99.98 	Remain Time: 0.00 s	Error: 3.18%
  - Total Spent: 2.0 s	Error: 3.1763 %
->>> mlp.show_error()
+>>> mlp.plot_error()
 ```
    ![Page Not Found](https://github.com/JacksonWuxs/DaPy/blob/master/doc/material/QuickStartResult.png 'Result of Training')  
-  
+
 Now, *mlp* has been trained. It should be attention that the *Error* 
 in last line does not means the correct proportion of classfication, 
 instead that it means the absolutely error of the target vector.  
-  
+
 Let us use our model to classifier the left records in wine dataset, 
 which we have not used to train the estimator:
 ```Python
->>> mlp.performance(feature[142:], target[142:], mode='clf')
+>>> Performance(mlp, feature[142:], target[142:], mode='clf')
 'Classification Correct: 97.2222%'
 ```
 As you can see, our model has a satisfactory ability in classification. 
@@ -151,13 +151,6 @@ it is possible to save our model in a file with pickle model. There are two ways
 In a real working environment, you can quickly use your trained 
 model to predict a new record with two ways:
 ```Python
->>> # the first way
->>> from DaPy.machine_learn import MLP
->>> mlp = MLP()
->>> mlp.load('First_mlp.pkl')
->>> mlp.predict_proba(My_new_data)
->>>
->>> # the second way
 >>> import pickle
 >>> mlp = pickle.load(open('First_mlp.pkl', 'rb'))
 ```

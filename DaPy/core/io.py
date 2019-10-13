@@ -95,12 +95,9 @@ def parse_excel(dtype, addr, fline, tline, nan):
         try: 
             series_set = SeriesSet(None, None, nan)
             for cols in range(sheet.ncols):
-                column = Series(sheet.col_values(cols))[fline:]
-                title = column.get(tline)
-                if tline >= 0:
-                    column.pop(tline)
-                series_set.append_col(series=column,
-                                      variable_name=title)
+                column = Series(sheet.col_values(cols))
+                title = column.pop(tline).strip() if tline >= 0 else None
+                series_set.append_col(column[fline:], title)
             yield series_set, name
         except UnicodeEncodeError:
             warn('can not decode characters, use `DaPy.io.encode()` to fix.')
