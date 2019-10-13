@@ -65,7 +65,7 @@ class Row(Sequence):
 
     def __getattr__(self, index):
         if index in self._sheet.data:
-            return self.sheet[index][self.columns.index(index)]
+            return self.sheet[index][self._line]
         raise AttributeError('Row has not attribute or column named %s.' % index)
 
     def __eq__(self, y):
@@ -100,7 +100,7 @@ class Row(Sequence):
 
         if isinstance(index, STR_TYPE):
             return self._sheet._data[index][self._line]
-        
+
         if isinstance(index, slice):
             if None == index.start and None == index.stop:
                 return self.data

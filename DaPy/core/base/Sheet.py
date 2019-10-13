@@ -48,6 +48,8 @@ PATTERN_BETWEEN2 = re_compile(r'(.+?)(>=|>)(.+?)(>=|>)(.+?)')
 PATTERN_EQUALS = (PATTERN_EQUAL, PATTERN_LESS, PATTERN_GREAT)
 SIMPLE_EQUAL_PATTERN = ('!=', '<=', '>=')
 
+PATTERN_CHANGE_LINE = re_compile(r'\n')
+
 LOCK_ERROR = 'sheet is locked by indexes, See drop_index()'
 
 def subset_quickly_append_col(subset, col, seq, miss, pos=None):
@@ -531,7 +533,7 @@ class BaseSheet(object):
         if new_name is None:
             return self._check_col_new_name('C_%d' % len(self._columns))
 
-        new_name = str(new_name)
+        new_name = PATTERN_CHANGE_LINE.sub('', str(new_name))
         if is_str(new_name) and new_name not in self._columns:
             return new_name
         return auto_plus_one(self._columns, new_name)

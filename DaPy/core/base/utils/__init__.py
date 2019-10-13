@@ -128,9 +128,8 @@ def argsort(seq, key=None, reverse=False):
     >>> argsort([5, 2, 1, 10])
     [2, 1, 0, 3]
     '''
-    # if hasattr(seq, '__getitem__'):
-    #     return tuple(sorted(xrange(len(seq)), key=seq.__getitem__, reverse=reverse))
-    return tuple(map(itemgetter(0), sorted(enumerate(seq), key=itemgetter(1), reverse=reverse)))
+    sorted_seq = sorted(enumerate(seq), key=itemgetter(1), reverse=reverse)
+    return tuple(map(itemgetter(0), sorted_seq))
 
 def hash_sort(records, *orders):
     assert all(map(lambda x: isinstance(x[0], int), orders)), 'keyword must be int'
