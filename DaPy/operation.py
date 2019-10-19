@@ -2,21 +2,31 @@
 from copy import copy
 from collections import Counter
 from operator import itemgetter
+from itertools import repeat
 
 from .core import DataSet, Frame, SeriesSet, Matrix as mat, Series
 from .core import is_seq, is_math, is_value, range, filter, zip, xrange
 
-def merge(*datas, **kwrds):
+def merge(sheets=(), keys=(), how='inner'):
     '''laterally merge multiple datasets into a new dataset.
     More info with help(dp.DataSet.merge)
 
     Parameters
     ----------
+    sheets : 2-D data sheet(s)
+        
     keys : int, str and list
         the key column in each dataset.
         `int` -> the number of key column index;
         `str` -> the name of key column;
         `list` -> the number or names for each key column in each dataset
+
+    how : 'inner', 'outer', 'left', 'right' (default='inner')
+        how to handle rows which not match the columns
+        `left` -> Keep only all rows in the current sheet;
+        `right` -> Keep only all rows in the other sheet;
+        `inner` -> Keep only rows from the common parts of two tables;
+        `outer` -> Keep all rows from both sheets;
 
     Return
     ------
@@ -25,36 +35,44 @@ def merge(*datas, **kwrds):
     Example
     -------
     >>> import DaPy as dp
-    >>> data1 = dp.SeriesSet([['A', 39, 'F'], ['B', 40, 'F'], ['C', 38, 'M']],
+    >>> data1 = dp.SeriesSet([['A', 39, 'F'],
+                            ['B', 40, 'F'], ['C', 38, 'M']],
                           ['Name', 'Age', 'Gender'])
-    >>> data2 = dp.Frame([['A', 'F', True], ['B', 'F', False], ['C', 'M', True]],
+    >>> data2 = dp.SeriesSet([['A', 'F', True], ['B', 'F', False],
+                            ['C', 'M', True]],
                           ['Name', 'Gender', 'Married'])
-    >>> data3 = [['A', 'China'], ['B', 'US'], ['C', 'Japan'], ['D', 'England']]
-    >>> dp.merge(data1, data2, data3, keys=0, keep_key='self', keep_same=False).show()
-     Name | Age  | Gender | Married |   C_1  
-    ------+------+--------+---------+---------
-      A   |  39  |   F    |    F    |  China  
-      B   |  40  |   F    |    F    |    US   
-      C   |  38  |   M    |    M    |  Japan  
-     None | None |  None  |   None  | England 
+    >>> data3 = dp.SeriesSet([['A', 'China'], ['B', 'US'],
+                        ['C', 'Japan'], ['D', 'England']],
+                        ['Name', 'Country'])
+    >>> data = [data1, data2, data3]
+    >>> dp.merge(data, 0, 'inner')['Name', 'Age', 'Gender', 'Married', 'Country'].show()
+     Name | Age | Gender | Married | Country
+    ------+-----+--------+---------+---------
+      A   |  39 |   F    |   True  |  China  
+      B   |  40 |   F    |  False  |    US   
+      C   |  38 |   M    |   True  |  Japan
+    >>> dp.merge(data, 0, 'outer')['Name', 'Age', 'Gender', 'Married', 'Country'].show()
+     Name | Age | Gender | Married | Country
+    ------+-----+--------+---------+---------
+      A   |  39 |   F    |   True  |  China  
+      B   |  40 |   F    |  False  |    US   
+      C   |  38 |   M    |   True  |  Japan  
+     nan  | nan |  nan   |   nan   | England 
     '''
-    keys = kwrds.get('keys', 0)
-    keep_key = kwrds.get('keep_key', True)
-    keep_same = kwrds.get('keep_same', True)
     if not is_seq(keys):
-        keys = [keys] * len(datas)
-    assert len(keys) == len(datas), 'keys should have same lenth as datas.'
+        keys = [keys] * len(sheets)
+    assert len(keys) == len(sheets), 'keys should have same lenth as datas.'
 
-    if len(datas) == 1:
-        if isinstance(datas[0], DataSet):
-            return merge(*datas[0].data, **kwrds)
+    if len(sheets) == 1:
+        if isinstance(sheets[0], DataSet):
+            return merge(sheets[0].data, keys, how)
         raise RuntimeError('only one sheets, can not merge.')
     
-    first_data, last_key = SeriesSet(datas[0]), keys[0]
-    for key, data in zip(keys[1:], datas[1:]):
-        first_data.merge(data, last_key, key, keep_key, keep_same)
-        last_key = key
-    return first_data
+    merged, left = SeriesSet(sheets[0]), keys[0]
+    for right, data in zip(keys[1:], sheets[1:]):
+        merged = merged.merge(data, how, left, right)
+        left = right
+    return merged
 
 def delete(data, index, axis=0):
     if isinstance(index, int):
@@ -147,6 +165,10 @@ def column_stack(tup):
     if not isinstance(tup[0], mat):
         tup[0] = mat(copy(tup[0]))
         return column_stack(tup)
+
+def _repeat(val, times):
+    '''create a series which contains `val` for `times`'''
+    return Series(repeat(val, times))
 
 def row_stack(tup):
     if isinstance(tup, tuple):

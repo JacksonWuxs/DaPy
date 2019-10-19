@@ -3,6 +3,7 @@ from operator import itemgetter
 from collections import deque
 from DaPy.core.base.constant import SHEET_DIM
 from DaPy.core.base.utils import count_nan
+from DaPy.core.base.Series import Series
 
 def inner_join(left, other, left_on, right_on, joined):
     # creating the union indexes
@@ -56,7 +57,7 @@ def left_join(left, right, left_on, right_on, joined):
     for i, val in enumerate(left[left_on]):
         rind = union_r.get((val,))
         if rind:
-            left_ind.extend([i] * len(rind))
+            left_ind.extend(repeat(i, len(rind)))
             right_ind.extend(rind)
         else:
             left_ind.append(i)
@@ -67,14 +68,13 @@ def create_join_by_index(left, other, left_index, right_index, joined, add_last)
     if add_last:
         left.append_row([])
         other.append_row([])
-        
     for getter, data in zip([left_index, right_index], [left, other]):
         for miss, (col, seq) in zip(data._missing, data.iter_items()):
             col = joined._check_col_new_name(col)
             subseq = seq[getter]
             if miss != 0:
                 miss = count_nan(data._isnan, subseq)
-                subseq = [left.nan if data._isnan(v) else v for v in subseq]
+                subseq = Series(left.nan if data._isnan(v) else v for v in subseq)
             joined._data[col] = subseq
             joined._missing.append(miss)
             joined._columns.append(col)
@@ -83,7 +83,7 @@ def create_join_by_index(left, other, left_index, right_index, joined, add_last)
     joined._dim = SHEET_DIM(ln, col)
     for i, seq in enumerate(joined.iter_values()):
         bias = ln - len(seq)
-        seq.extend([joined.nan] * bias)
+        seq.extend(repeat(joined.nan, bias))
         joined._missing[i] += bias
     if add_last:
         left.drop_row(-1)

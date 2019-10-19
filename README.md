@@ -9,59 +9,26 @@
 
 ### Overview
 
-DaPy is a data analysis library designed with ease of use in mind, which lets you smoothly implement your thoughts by providing well-designed **data structures** and abundant  **professional ML models**. There has been a lot of famous data operation modules like Pandas already, but there is no module, which
+DaPy is a data analysis library designed with ease of use in mind and it lets you smoothly implement your thoughts by providing well-designed **data structures** and abundant  **professional ML models**. There has been a lot of famous data operation modules already like Pandas, but there is no module, which
 
-* can write the codes in Chain Programming;
-* can quickly do simple feature engineering with simple APIs;
-* can easily operate the data row by row;
-* can show the log of each steps on console like MySQL.
+* supports writing codes in Chain Programming;
+* operates feature engineering methods with simple APIs;
+* handles data as easily as using Excel (do not pay attention to data structures);
+* shows the log of each steps on console like MySQL.
+
+Thus, DaPy is more suitable for data analysts, statistic professors and who works with big data with limited  computer knowledge than the engineers.
 
 ### Example
 
-This example simply shows the characters of DaPy of **chain programming**, **working log** and **simple feature engineering method**. Our goal in this example is to train a classifier for Iris classification task. Detail information can be read from [here](https://github.com/JacksonWuxs/DaPy/blob/master/doc/Quick%20Start/English.md).
+This example simply shows the characters of DaPy of **chain programming**, **working log** and **simple feature engineering methods**. Our goal in this example is to train a classifier for Iris classification task. Detail information can be read from [here](https://github.com/JacksonWuxs/DaPy/blob/master/doc/Quick%20Start/English.md).
 
 ![](https://github.com/JacksonWuxs/DaPy/blob/master/doc/Quick%20Start/quick_start.gif)
 
-### Why I need DaPy?
-
-We already have abundant of great libraries for Data Science like Numpy and Pandas, why we need DaPy? 
-
-The answer is <u>*DaPy is designed for Data Analysis, not for coders.*</u>  In DaPy, users only need to focus on their thought of handling data, and pay less attention to coding tricks. 
-
-For example, while manipulating data by rows fits for people's habits, it is not a good idea in Pandas. Because Pandas is build for operate time series data, it is forbidden to operate rows from `DataFrame.iterrows()`.  However, DaPy relies on the concept of "views" to solve this problem, making it easy to process data in rows in a way that suits people's habits.
-
-```python
->>> import DaPy as dp
->>> sheet = dp.SeriesSet({'A': [1, 2, 3], 'B': [4, 5, 6]})
->>> for row in sheet:
-		print(row.A, row[0])   # get the value by column name or index
-		row[1] = 'b'   # assign value by index
-1, 1
-2, 2
-3, 3
->>> sheet.show()
- A | B
----+---
- 1 | b 
- 2 | b 
- 3 | b 
->>> row0 = sheet[0]   # get row view object 
->>> row0
-[1, 'b']
->>> sheet.append_col(series=[7, 8, 9], variable_name='newColumn') # operate the sheet
->>> sheet.show()
- A | B | newColumn
----+---+-----------
- 1 | b |     7     
- 2 | b |     8     
- 3 | b |     9     
->>> row0
-[1, 'b', 7]
-```
-
 ### Features of DaPy
 
-We hope DaPy is an user-friendly tool. Therefore, we effort to the design of APIs in DaPy in order to let you quickly adept it and use it flexibly. Here are just a few of things that make DaPy simple:  
+We already have abundant of great libraries for data science, why we need DaPy? 
+
+The answer is <u>*DaPy is designed for data analysts, not for coders.*</u>  In DaPy, users only need to focus on their thought of handling data, and pay less attention to coding tricks. For example, in contrast with Pandas, DaPy supports you manipulating data by rows as same as using SQL. Here are just a few of things that make DaPy simple:  
 
 - Variety of ways to visualize data in CMD
 - 2D data sheet structures following Python syntax habits
@@ -70,75 +37,9 @@ We hope DaPy is an user-friendly tool. Therefore, we effort to the design of API
 - Flexible IO tools for loading and saving data (e.g. Website, Excel, Sqlite3, SPSS, Text)
 - Built-in basic models (e.g. Decision Tree, Multilayer Perceptron, Linear Regression, ...)
 
-Also, we hope it can be used in some real-world tasks, thereby we are keeping an eye on its *efficiency*. Although DaPy is implemented by pure Python, it has comparable efficiency to some exists libraries. Following dialog shows a testing result and the data had 4.32 million rows and 7 columns.
+Also, DaPy has high efficiency to support you solving real-world situations. Following dialog shows a testing result which provides that DaPy has comparable efficiency than some exists C written libraries. The detail of test can be found from here.
 
 ![Performance Test](https://github.com/JacksonWuxs/DaPy/blob/master/doc/material/Result.jpg)
-
-Following are the standards of performance test. 
-
-* Task 1: load
-
-  Libraries have to load the original data from a CSV format file. In this CSV file, it has different columns with different data types. The libraries must have the ability to automatically predict the best matched data type then transfer the values. We recorded the time consumption of each library spent on the task. The commands we used are listed as bellow.
-
-  ```python
-  >>> pandas.readcsv(addr) 
-  >>> numpy.genfromtxt(addr, dtype=None, delimiter=',', encoding=None, names=True)
-  >>> DaPy.read(addr)
-  ```
-
-* Task 2: Traverse
-
-  Libraries have to traverse each row of the data loaded in Task1. We recorded the time consumption of each library spent on the task. The commands we used are listed as bellow.
-
-  ```python
-  >>> for row in pd_DataFrame.itertuples():
-  		pass
-  >>> for row in np_Ndarray:
-  		pass
-  >>> for row in dp_SeriesSet.iter_rows():
-  		pass
-  ```
-
-* Task 3: Sort
-
-  Libraries have to sort the records from the data loaded in Task 1 by one column named "Price". We recorded the time consumption of each library spend on the task. The commands we used in this task are listed as bellow.
-
-  ```Python
-  >>> pd_DataFrame.sort_values(by='Price')
-  >>> np_Ndarray.sort(axis=0, order='Price')
-  >>> dp_SeriesSet.sort('Price')
-  ```
-
-* Task 4: Query
-
-  Libraries have to select the records that the keyword "Price" is greater than 99999. We recorded the time consumption of each library spent on the task. The commands we used are listed as bellow.
-
-  ```python
-  >>> pd_DataFrame.query('Price >= 99999')
-  >>> numpy.extract(tuple(_['Price'] > 99999 for _ in np_Ndarray), np_Ndarray)
-  >>> dp_SeriesSet.query('Price >= 99999', limit=None)
-  ```
-
-* Task 5: Groupby
-
-  Libraries have to separate the records into groups according to the keyword of "Date", than calculate the mean of each column for each subset. Because `numpy.ndarray`  doesn't support the `groupby` operation, Numpy skips this task. We recorded the time consumption of each library spent on the task. The commands we used are listed as bellow. 
-
-  ```python
-  >>> pd_DataFrame.groupby('Date')[['Price', 'Volume', 'Token', 'LastToken', 'LastMaxVolume']].mean()
-  >>> dp_SeriesSet.groupby('Date', np.mean, apply_col=['Price', 'Volume', 'Token', 'LastToken', 'LastMaxVolume'])
-  ```
-
-* Task 6: Save
-
-  Libraries have to save their data into a CSV format file. We recorded the time consumption of each library spent on the task. The commands we used are listed as bellow. 
-
-  ```python
-  >>> pd_DataFrame.to_csv('test_Pandas.csv', index=0)
-  >>> np.savetxt('test_numpy.csv', np_Ndarray, delimiter=',', fmt='%s%s%s%s%s%s%s')
-  >>> dp_SeriesSet.save('test_Numpy.csv')
-  ```
-
-  
 
 ### Install
 

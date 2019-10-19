@@ -3326,7 +3326,6 @@ class SeriesSet(BaseSheet):
         assert how in ('inner', 'outer', 'left', 'right')
         if isinstance(other, SeriesSet) is False:
             other = SeriesSet(other)
-
         self_on = self._check_columns_index(self_on)
         right_on = other._check_columns_index(right_on)
         assert len(self_on) == len(right_on) == 1, 'only support single index'

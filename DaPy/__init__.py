@@ -38,14 +38,14 @@ from .matlib import cov, corr, frequency, quantiles, _sum as sum, diff, cumsum
 from .matlib import distribution, describe, mean, _abs as abs, _max as max
 from .io import read, encode, save
 from .operation import delete, column_stack, row_stack, merge, concatenate
-from .operation import get_dummies, get_ranks
+from .operation import get_dummies, get_ranks, _repeat as repeat
 from warnings import warn      
 from datetime import datetime
 
 __title__ = 'DaPy'
 __description__ = 'Enjoy the tour in data mining !'
 __url__ = 'http://dapy.kitgram.cn'
-__version__ = '1.10.16'
+__version__ = '1.10.17'
 __build__ = 0x201910
 __author__ = 'Xuansheng Wu (wuxsmail@163.com)'
 __license__ = '''DaPy  Copyright (C) 2018 - 2019 WU Xuansheng'+\
@@ -54,7 +54,7 @@ __license__ = '''DaPy  Copyright (C) 2018 - 2019 WU Xuansheng'+\
               and you are welcome to redistribute it under certain
               conditions; type `show c' for details.'''
 __copyright__ = 'Copyright 2018-2019 Xuansheng Wu.'
-__date__ = datetime(2019, 10, 8)
+__date__ = datetime(2019, 10, 16)
 
 def _unittests():
     from unittest import TestSuite, defaultTestLoader, TextTestRunner
