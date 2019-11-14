@@ -14,6 +14,7 @@ except ImportError:
     darray = list
 
 from .constant import STR_TYPE, VALUE_TYPE, SEQ_TYPE, DUPLICATE_KEEP, PYTHON3
+from .DapyObject import Object, check_thread_locked
 from .utils import filter, map, range, xrange, zip, zip_longest
 from .utils import is_iter, is_math, is_seq, is_value, isnan, auto_plus_one
 from .utils.utils_isfunc import SET_SEQ_TYPE
@@ -62,9 +63,9 @@ class Series(list):
         other = self._check_operate_value(other)
         return quickly_apply(ge, self, other)
 
-    def __le__(self, other):
+    def __lt__(self, other):
         other = self._check_operate_value(other)
-        return quickly_apply(le, self, other)
+        return quickly_apply(lt, self, other)
 
     def __le__(self, other):
         other = self._check_operate_value(other)
@@ -120,6 +121,7 @@ class Series(list):
         if isinstance(key, slice):
             return Series(list.__getitem__(self, key))
 
+    @check_thread_locked
     def __delitem__(self, key):
         '''delete data from current series
 
@@ -350,28 +352,28 @@ class Series(list):
 
     def normalize(self):
         pass
-
+        
     def isnan(self):
         return Series(map(isnan, self))
 
-    def max(self):
+    def max(self, axis=0):
         return max(self)
 
     def max_n(self, n=1):
         return Series(nlargest(n, self))
 
-    def min(self):
+    def min(self, axis=0):
         return min(self)
 
     def min_n(self, n=1):
         return Series(nsmallest(1, self))
 
-    def mean(self):
+    def mean(self, axis=0):
         return sum(self, 0.0) / len(self)
 
     def percenttile(self, q):
         return sorted(self)[int(q * len(self))]
-    
+
     def pop(self, ind):
         if isinstance(ind, int):
             return list.pop(self, ind)

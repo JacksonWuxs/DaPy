@@ -408,14 +408,11 @@ class DataSet(object):
         else:
             self._data.reverse()
     
-    def _add(self, item, sheet):
+    def _add(self, item, name):
         if isinstance(item, DataSet):
-            if sheet and 1 == len(item._sheets):
-                new_sheets = [self._check_sheet_new_name(sheet)
-                              for sheet_name in item.sheets]
-            else:
-                new_sheets = [self._check_sheet_new_name(sheet_name) \
-                          for sheet_name in item._sheets]
+            name = '' if not name else name + '_'
+            new_sheets = [self._check_sheet_new_name(name + new) \
+                          for new in item.sheets]
             self._data.extend(item._data)
             self._sheets.extend(new_sheets)
             self._types.extend(item._types)
@@ -423,10 +420,10 @@ class DataSet(object):
         else:
             self._data.append(item)
             self._types.append(type(item))
-            self._sheets.append(self._check_sheet_new_name(sheet))
+            self._sheets.append(self._check_sheet_new_name(name))
 
     @timer
-    def add(self, item, sheet=None):
+    def add(self, items, names=None):
         ''' add a new sheet to the current dataset
 
         Parameter
@@ -434,14 +431,13 @@ class DataSet(object):
         item : object
             the new sheet object
 
-        sheet : str or None ( default=None)
+        name : str or None ( default=None)
             the new sheet name
 
         Example
         -------
         >>> import DaPy as dp
         >>> data2 = dp.DataSet([[1, 1, 1], [1, 1, 1]])
-        >>> data2.toframe()
         >>> data2
         sheet:sheet0
         ============
@@ -463,8 +459,13 @@ class DataSet(object):
         -------+-------+-------
            1   |   1   |   1   
            1   |   1   |   1 
-        ''' 
-        self._add(item, sheet)
+        '''
+        if not is_seq(items):
+            items = (items,)
+        if not is_seq(names):
+            names = (names,)
+        for item, name in zip(items, names):
+            self._add(item, name)
 
     @timer
     @operater
@@ -1022,7 +1023,7 @@ class DataSet(object):
     
     @timer
     @operater
-    def to_dict(self):
+    def todict(self):
         pass
 
     @timer

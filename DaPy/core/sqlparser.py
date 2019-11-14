@@ -3,7 +3,6 @@ from re import findall
 from datetime import datetime
 from .base import SeriesSet, Series
 from .base.utils import fast_str2value, auto_str2value
-from .base.Sheet import subset_quickly_append_col
 
 legal_types = {'integer': int, 'int': int, 'smallint': int, 'tinyint': int,
                'decimal': float, 'numeric': float,
@@ -65,9 +64,9 @@ def parse_insert_statement(string, dtypes=None, nan=None):
             else:
                 seq.append(tran(val))
 
-    sheet = SeriesSet(nan=nan)
+    subset = SeriesSet(nan=nan)
     for col, seq, miss in zip(columns, data, miss):
-        subset_quickly_append_col(sheet, col, seq, miss)
+        subset._quickly_append_col(col, seq, miss)
     return sheet
     
     

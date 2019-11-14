@@ -90,7 +90,7 @@ class Test2_Transfer(TestCase):
         self.assertEqual(sheet.missing, [0, 0, 1, 0])
         self.assertEqual(sheet.columns, ['A', 'B', 'C', 'D'])
 
-        df = self.pd.DataFrame(sheet.to_dict())
+        df = self.pd.DataFrame(sheet.todict())
         self.assertEqual(df.shape, (3, 4))
         assert (df.columns == ['A', 'B', 'C', 'D']).all()
 
@@ -238,11 +238,11 @@ class Test1_CoreOperations(TestCase):
         self.assertEqual(new[0], ['Alan', 35, 'Alan', 'M', 35])
         self.assertEqual(new[-1], ['', '', 'Janny', 'F', 26])
                                 
-        new = left.merge(right, 'inner', 'Name', 'Name')
+        new = left.merge(right, 'inner', 'Name', 'Name').sort('Name')
         self.assertEqual(tuple(new.shape), (3, 5))
         self.assertEqual(new.missing, [0, 0, 0, 0, 0])
         self.assertEqual(new.columns, ['Name', 'Age', 'Name_1', 'gender', 'Age_1'])
-        self.assertEqual(new[0], ['Bob', 27, 'Bob', 'M', 27])
+        self.assertEqual(new[0], ['Alan', 35, 'Alan', 'M', 35])
         self.assertEqual(new[-1], ['Charlie', 30, 'Charlie', 'F', 30])
         
         new = left.merge(right, 'left', 'Name', 'Name')

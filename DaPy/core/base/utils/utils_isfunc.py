@@ -1,5 +1,5 @@
 from operator import itemgetter
-from collections import Iterable
+from collections import Iterable, OrderedDict
 from DaPy.core.base.constant import PYTHON3, PYTHON2
 from DaPy.core.base.constant import MATH_TYPE, SEQ_TYPE, STR_TYPE, VALUE_TYPE
 
@@ -7,6 +7,10 @@ SET_VALUE_TYPE = set(VALUE_TYPE)
 SET_STR_TYPE = set(STR_TYPE)
 SET_MATH_TYPE = set(MATH_TYPE)
 SET_SEQ_TYPE = set(SEQ_TYPE)
+
+DICT_TYPE = (dict, OrderedDict)
+def is_dict(val):
+    return isinstance(val, DICT_TYPE) or hasattr(val, 'items')
 
 def is_value(n):
     '''Determine that if a value is a value

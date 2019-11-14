@@ -6,7 +6,7 @@ from DaPy.core.base.constant import PYTHON2, PYTHON3, STR_TYPE
 
 from .utils_2to3 import (filter, map, pickle, range, split,
                          strip, xrange, zip, zip_longest)
-from .utils_isfunc import is_empty, is_iter, is_math, is_seq, is_str, is_value
+from .utils_isfunc import is_empty, is_iter, is_math, is_seq, is_str, is_value, is_dict
 from .utils_str_transfer import _str2bool, _str2date, _str2percent
 
 __all__ = ['str2value', 'argsort', 'hash_sort',

@@ -12,11 +12,12 @@
 DaPy is a data analysis library designed with ease of use in mind and it lets you smoothly implement your thoughts by providing well-designed **data structures** and abundant  **professional ML models**. There has been a lot of famous data operation modules already like Pandas, but there is no module, which
 
 * supports writing codes in Chain Programming;
+* multi-threading safety data containers;
 * operates feature engineering methods with simple APIs;
 * handles data as easily as using Excel (do not pay attention to data structures);
 * shows the log of each steps on console like MySQL.
 
-Thus, DaPy is more suitable for data analysts, statistic professors and who works with big data with limited  computer knowledge than the engineers.
+Thus, DaPy is more suitable for data analysts, statistic professors and who works with big data with limited  computer knowledge than the engineers. In DaPy, our data structure offers 70 APIs for data mining, including 40+ data operation functions, 10+ feature engineering functions and 15+ data exploring functions.
 
 ### Example
 
@@ -43,7 +44,7 @@ Also, DaPy has high efficiency to support you solving real-world situations. Fol
 
 ### Install
 
-The latest version 1.10.1 had been updated to PyPi.
+The latest version 1.11.1 had been updated to PyPi.
 
 ```
 pip install DaPy
@@ -166,10 +167,19 @@ Some of functions in DaPy depend on requirements.
 
 ### Version-Log
 
+* V1.10.2 (2019-11-12)
+  * Refactored the structure of DaPy, `SeriesSet` and `Series` are thread-safe contrainers;
+  * Added `SeriesSet.get_best_features()`,  automatically identify the importance of each variable;
+  * Added `SeriesSet.get_categories()`, separate numerical values into categories;   
+  * Added `SeriesSet.get_date_label()`, transfer datetime objects into categorical variables;
+  * Added `SeriesSet.get_interactions()`, create new variables by multiplying each others;
+  * Added `SeriesSet.get_ranks()`, get ranks of each record;
+  * Added `SeriesSet.get_nan_instrument()`, create a instrument variable to symbol whether a variable has missing value or not;
+  * Added `SeriesSet.get_numeric_label()`, encode string values into numerical values;
 * V1.10.1 (2019-08-22)
   * Added ```SeriesSet.update()```, update some values of specific records;
-  * Added ```BaseSheet.tolist()``` and ```BaseSheet.toarray()```, transfer your data to list or numpy.array;
-  * Added ```BaseSheet.query()```, select records with a python statement in string;
+  * Added ```SeriesSet.tolist()``` and ```BaseSheet.toarray()```, transfer your data to list or numpy.array;
+  * Added ```SeriesSet.query()```, select records with a python statement in string;
   * Added ```SeriesSet.dropna()```, drop rows or variables which contain NaN;
   * Added ```SeriesSet.fillna()```, fill missing values in the dataset with constant value or linear model;
   * Added ```SeriesSet.label_date()```, transfer a datetime object to several columns;
