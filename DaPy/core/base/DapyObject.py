@@ -32,9 +32,6 @@ def check_thread_locked(func):
         lock = self.THREAD_LOCK
         if not lock:
             return func(self, *args, **kwrds)
-        try:
-            lock.acquire()
+        with lock:
             return func(self, *args, **kwrds)
-        finally:
-            lock.release()
     return locked_func

@@ -3,7 +3,7 @@
 
 # DaPy - Enjoy the Tour in Data Mining
 
-![](https://img.shields.io/badge/Version-1.10.1-green.svg)  ![](https://img.shields.io/badge/Python2-pass-green.svg)![](https://img.shields.io/badge/Python3-pass-green.svg)![](https://img.shields.io/badge/Download-PyPi-green.svg)  ![](https://img.shields.io/badge/License-GNU-blue.svg)
+![](https://img.shields.io/badge/Version-1.11.1-green.svg)  ![](https://img.shields.io/badge/Python2-pass-green.svg)![](https://img.shields.io/badge/Python3-pass-green.svg)![](https://img.shields.io/badge/Download-PyPi-green.svg)  ![](https://img.shields.io/badge/License-GNU-blue.svg)
 
 [中文版](https://github.com/JacksonWuxs/DaPy/blob/master/README_Chinese.md)
 
@@ -34,6 +34,7 @@ The answer is <u>*DaPy is designed for data analysts, not for coders.*</u>  In D
 - Variety of ways to visualize data in CMD
 - 2D data sheet structures following Python syntax habits
 - SQL-like APIs to process data
+- Thread-safety data container
 - Variety functions for preprocessing and feature engineering
 - Flexible IO tools for loading and saving data (e.g. Website, Excel, Sqlite3, SPSS, Text)
 - Built-in basic models (e.g. Decision Tree, Multilayer Perceptron, Linear Regression, ...)
@@ -167,8 +168,8 @@ Some of functions in DaPy depend on requirements.
 
 ### Version-Log
 
-* V1.10.2 (2019-11-12)
-  * Refactored the structure of DaPy, `SeriesSet` and `Series` are thread-safe contrainers;
+* V1.11.1 (2019-11-12)
+  * Refactored the structure of DaPy, `SeriesSet` and `Series` are thread-safety containers;
   * Added `SeriesSet.get_best_features()`,  automatically identify the importance of each variable;
   * Added `SeriesSet.get_categories()`, separate numerical values into categories;   
   * Added `SeriesSet.get_date_label()`, transfer datetime objects into categorical variables;

@@ -96,7 +96,7 @@ def parse_excel(dtype, addr, fline, tline, nan):
             series_set = SeriesSet(None, None, nan)
             for cols in range(sheet.ncols):
                 column = Series(sheet.col_values(cols))
-                title = column.pop(tline).strip() if tline >= 0 else None
+                title = column[tline].strip() if tline >= 0 else None
                 series_set.append_col(column[fline:], title)
             yield series_set, name
         except UnicodeEncodeError:

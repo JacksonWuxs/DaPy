@@ -1,4 +1,4 @@
-from collections import Counter
+from collections import Counter, defaultdict
 from copy import copy
 from itertools import chain, combinations, repeat
 from operator import eq, ge, gt, itemgetter, le, lt
@@ -762,9 +762,9 @@ class BaseSheet(Object):
 
     
     def _group_index_by_column_value(self, columns, engine=list):
-        subset = {}
+        subset = defaultdict(engine)
         for i, row in enumerate(zip(*(self._data[col] for col in columns))):
-            subset.setdefault(row, engine()).append(i)
+            subset[row].append(i)
         return subset
 
     def _getslice_col(self, i, j):
@@ -891,7 +891,6 @@ class BaseSheet(Object):
                 miss_values = count_nan(self._isnan, seq)
             new_features._quickly_append_col(title, seq, miss_values)
         return new_features
-
     
     def _get_nan_instrument(self, instruments, cols):
         check_nan = self._isnan
@@ -900,7 +899,6 @@ class BaseSheet(Object):
             instruments._quickly_append_col(col + '=NaN', seq, 0, pos=None)
         return instruments            
 
-    
     def _get_ranks(self, ranks, cols, duplicate):
         from DaPy.operation import get_ranks
         cols = self._check_columns_index(cols)
@@ -1213,7 +1211,6 @@ class BaseSheet(Object):
         self._dim = SHEET_DIM(len(seq), self._dim.Col + 1)
         return self
 
-    
     def _replace(self, old, new, col, regex):
         col = self._check_columns_index(col)
         assert self._isnan(new) is False, 'transfer value cannot be NaN'
@@ -1240,13 +1237,11 @@ class BaseSheet(Object):
                     to_replace = where(old_)
                     for i in self._sorted_index.equal(old_):
                         sequence[i] = to_replace
-
             else:
                 # iter each row and compare
                 for i, val in enumerate(sequence):
                     sequence[i] = where(val)
         return self
-
     
     def _reverse(self, axis=0):
         assert axis in (0, 1)

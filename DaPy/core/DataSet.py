@@ -46,7 +46,7 @@ def operater(callfunc):
 
 
 class DataSet(object):
-    '''A easy-to-use functional data structure similar to MySQL
+    '''A easy-to-use functional data structure similar to MySQL database
     
     DataSet is one of the fundamantal data structure in DaPy. 
     It supports users easily to opearte any data structure in 
@@ -605,62 +605,10 @@ class DataSet(object):
         pass
 
     @timer
+    @operater
     def extend(self, other):
-        '''extend your data by another object, new data as new records.
-
-        Examples
-        --------
-        >>> import DaPy as dp
-        >>> data = dp.DataSet() # Initiallized a empty DataSet object.
-        >>> data.add(dp.Frame(
-                        [[11, 11],
-                        [21, 21],
-                        [31, 31],
-                        [41, 41]],
-                        ['C1', 'C2']), 'Table1')
-        >>> data.add(dp.Frame(
-                        [[21, 21],
-                        [22, 22],
-                        [23, 23],
-                        [24, 24]],
-                        ['C2', 'C3']), 'Table2')
-        >>> data['Table1'].extend(data['Table2'])
-        >>> data
-        sheet:Table1
-        ============
-         C1  | C2 |  C3 
-        -----+----+------
-         11  | 11 | None 
-         21  | 21 | None 
-         31  | 31 | None 
-         41  | 41 | None 
-        None | 21 |  21  
-        None | 22 |  22  
-        None | 23 |  23  
-        None | 24 |  24  
-
-        sheet:Table2
-        ============
-        C2 | C3
-        ----+----
-        21 | 21 
-        22 | 22 
-        23 | 23 
-        24 | 24 
-        '''
-        if isinstance(other, DataSet):
-            map(self.extend, other._data)
-            return
-
-        for sheet, data in zip(self._sheets, self._data):
-            if hasattr(data, 'extend') is False:
-                LogErr('sheet: %s has no attribute extend(), ignored.' % sheet)
-                continue
-            try:
-                data.extend(other)
-            except Exception as e:
-                LogErr('sheet: %s.extend() failed because %s.'%(sheet, e))
-
+        pass
+    
     @timer 
     @operater        
     def join(self, other):
@@ -806,9 +754,7 @@ class DataSet(object):
             dtype_dic = {'COL': SeriesSet, 'SERIESSET': SeriesSet, 
                          'MATRIX': Matrix, 'MAT': Matrix}
             dtype = dtype_dic.get(dtype.upper(), SeriesSet)
-            self._data.append(dtype.from_file(addr, **kwrd))
-            self._types.append(dtype)
-            self._sheets.append(self._check_sheet_new_name(sheet_name))
+            self._add(dtype.from_file(addr, **kwrd), sheet_name)
 
         elif ftype == 'pkl':
             self._add(pickle.load(open(addr, 'rb')), sheet_name)
@@ -1025,26 +971,6 @@ class DataSet(object):
     @operater
     def todict(self):
         pass
-
-    @timer
-    def toframe(self):
-        '''Transform all of the stored data structure to DaPy.Frame
-        '''
-        for i, data in enumerate(self._data):
-            if isinstance(data, Frame):
-                continue
-            try:
-                if hasattr(data, 'columns'):
-                    if hasattr(data, 'miss_value'):
-                        self._data[i] = Frame(data, data.columns,
-                                           miss_value=data.miss_symbol)
-                    else:
-                        self._data[i] = Frame(data, data.columns)
-                else:
-                    self._data[i] = Frame(data)
-            except:
-                LogErr('sheet:%s can not transform to Frame.'%self._sheets[i])
-            self._types[i] = Frame
 
     @timer
     def tocol(self):

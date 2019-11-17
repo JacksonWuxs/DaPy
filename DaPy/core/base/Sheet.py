@@ -16,8 +16,6 @@ from datetime import datetime
 from itertools import chain, repeat
 from operator import eq, ge, gt, le, lt
 from re import compile as re_compile
-from threading import Thread
-from queue import Queue
 
 from .BaseSheet import BaseSheet
 from .constant import (DUPLICATE_KEEP, PYTHON2, PYTHON3, SHEET_DIM, STR_TYPE,
@@ -34,57 +32,18 @@ from .utils import (argsort, auto_plus_one, auto_str2value, count_nan,
 from .utils.utils_join_table import inner_join, left_join, outer_join
 from .utils.utils_regression import simple_linear_reg
 
-__all__ = ['SeriesSet', 'Frame']
+__all__ = ['SeriesSet']
 
-def reader(queue, params, seek):
-    with open(**params) as file_:
-        file_.seek(seek)
-        for row in file_:
-            queue.put(row)
+def reader(file_, queue):
+    for row in file_:
+        queue.put(strip(row))
     queue.put(False)
             
-
-def analyzer(queue, sep, miss, data, dtypes, miss_symbol, nan, auto_str2value, fast_str2value):
+def analyzer(queue, sep, miss, data, dtypes, miss_symbol, nan):
     while True:
         row = queue.get()
         if row is False:
             break
-        # begin to read the data
-##        for row in file_:  # iter row
-        for mis, seq, transfer, val in zip_longest(miss, data, dtypes, split(strip(row), sep)):  
-            # iter value
-            try:
-                if val in miss_symbol:
-                    seq.append(nan)
-                    mis.append(1)
-                else:
-                    seq.append(transfer(val))
-            except ValueError:
-                # different types of data in the same column
-                seq.append(auto_str2value(val))
-            except Exception as e:
-                if val not in miss_symbol:
-                    val = auto_str2value(val, transfer)
-                else:
-                    val = nan
-                mis = []
-                miss += (mis,)
-                if val in miss_symbol:
-                    val = nan
-                    mis.append(1)
-                else:
-                    dtypes.append(
-                        fast_str2value[str(val.__class__).split()[1][1:-2].split('.')[0]]
-                    )
-                if not data:
-                    data += (Series([val]),)
-                else:
-                    missed = len(data[0]) - 1
-                    mis.append(missed)
-                    data += (Series(chain(repeat(nan, missed), [val])),)
-    queue.put(data)
-    
-
 class SeriesSet(BaseSheet):
 
     '''Variable stores in sequenes
@@ -831,6 +790,34 @@ class SeriesSet(BaseSheet):
     def extend(self, item, inplace=False):
         '''extend the current SeriesSet with records in set.
 
+
+        Examples
+        --------
+        >>> import DaPy as dp
+        >>> data1 = dp.SeriesSet(
+                        [[11, 11],
+                        [21, 21],
+                        [31, 31],
+                        [41, 41]],
+                        ['C1', 'C2']), 'Table1')
+        >>> data2 = dp.SeriesSet(
+                        [[21, 21],
+                        [22, 22],
+                        [23, 23],
+                        [24, 24]],
+                        ['C2', 'C3']), 'Table2')
+        >>> data1.extend(data2)
+         C1  | C2 |  C3 
+        -----+----+------
+         11  | 11 | nan 
+         21  | 21 | nan 
+         31  | 31 | nan 
+         41  | 41 | nan 
+         nan | 21 |  21  
+         nan | 22 |  22  
+         nan | 23 |  23  
+         nan | 24 |  24  
+
         Notes
         -----
         1. This function has been added into unit test.
@@ -960,8 +947,8 @@ class SeriesSet(BaseSheet):
                     # setup the title line
                     columns = tuple(map(strip, split(line, sep)))
 
-            # begin to read the data
-            for row in file_:  # iter row
+            # begin to load data
+            for row in file_:
                 for mis, seq, transfer, val in zip_longest(miss, data, dtypes, split(strip(row), sep)):  
                     # iter value
                     try:
@@ -970,24 +957,21 @@ class SeriesSet(BaseSheet):
                             mis.append(1)
                         else:
                             seq.append(transfer(val))
-                    except ValueError:
-                        # different types of data in the same column
+                            
+                    except ValueError:# different types of data in the same variable
                         seq.append(auto_str2value(val))
-                    except:
-                        if val not in miss_symbol:
-                            val = auto_str2value(val, transfer)
-                        else:
-                            val = nan
+                        
+                    except Exception: # we found a new variable
                         mis = []
                         miss += (mis,)
                         if val in miss_symbol:
                             val = nan
                             mis.append(1)
                         else:
-                            dtypes.append(
-                                fast_str2value[str(val.__class__).split()[1][1:-2].split('.')[0]]
-                            )
-
+                            val = auto_str2value(val, transfer)
+                            type_name = str(val.__class__).split()[1][1:-2].split('.')[0]
+                            dtypes.append(fast_str2value[type_name])
+                            
                         if not data:
                             data += (Series([val]),)
                         else:
@@ -1001,7 +985,7 @@ class SeriesSet(BaseSheet):
             add_space = sheet.shape.Ln - len(seq)
             seq.extend(repeat(sheet.nan, add_space))
             sheet._missing.append(add_space + sum(missing))
-            sheet.data[col] = seq
+            sheet._data[col] = seq
         return sheet
 
     def get(self, key, default=None):
