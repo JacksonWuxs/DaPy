@@ -49,6 +49,19 @@ class SeriesSet(BaseSheet):
     '''Variable stores in sequenes
     '''
 
+    __all__ = [
+        'info', 'missing', 'T', 'append_col', 'append_row', 'apply',
+        'create_index', 'corr', 'copy', 'count', 'count_nan', 'count_values',
+        'describe', 'query', 'drop', 'drop_col', 'drop_row', 'dropna', 
+        'drop_duplicates', 'extend', 'fillna', 'from_file', 'get', 
+        'get_best_features', 'get_categories', 'get_date_label', 'get_dummies',
+        'get_interactions', 'get_ranks', 'get_nan_instrument', 'get_numeric_label',
+        'groupby', 'sort', 'show', 'iter_groupby', 'items', 'iter_times', 
+        'iter_rows', 'iter_values', 'iloc', 'insert_row', 'insert_col', 'join',
+        'keys', 'merge', 'normalized', 'pop', 'pop_row', 'pop_col', 'reverse', 
+        'reshape', 'replace', 'update', 'shuffle', 'select', 'sum', 'values'
+    ]
+
     def __init__(self, series=None, columns=None, nan=float('nan')):
         self._data = dict()
         BaseSheet.__init__(self, series, columns, nan)
@@ -545,8 +558,6 @@ class SeriesSet(BaseSheet):
               'Descriptive Statistics'.center(lenth) + '\n' +\
                '=' * lenth + '\n' + message + '=' * lenth)
 
-
-
     def query(self, expression, col=None, limit=1000):
         '''sheet.query('A_col != 1') -> SeriesSet
 
@@ -764,12 +775,14 @@ class SeriesSet(BaseSheet):
         pop_ind, lenth = [], float(self.shape.Col)
         for i, row in enumerate(self.iter_rows()):
             num = count_nan(self._isnan, row)
-            if how == 'any' and num > 0:
-                pop_ind.append(i)
+            if how == 'any':
+                if num > 0:
+                    pop_ind.append(i)
             elif num / lenth > how:
                 pop_ind.append(i)
-            elif how == 'all' and num == lenth:
-                pop_ind.append(i)
+            elif how == 'all':
+                if num == lenth:
+                    pop_ind.append(i)
         return self.drop_row(pop_ind, inplace)
 
     def drop_duplicates(self, col=None, keep='first', inplace=False):
@@ -1534,11 +1547,12 @@ class SeriesSet(BaseSheet):
         -----
         1. This function has been added into unit test.
         '''
-        if isinstance(other, Series) or all(map(is_value, other)):
-            other = SeriesSet({None: other})
-        if not isinstance(other, SeriesSet) and all(map(is_iter, other)):
-            new_col = [title + '_1' for title in self._columns]
-            other = SeriesSet(other, new_col)
+        if not isinstance(other, SeriesSet):
+            if isinstance(other, Series) or all(map(is_value, other)):
+                other = SeriesSet({None: other})
+            if not isinstance(other, SeriesSet) and all(map(is_iter, other)):
+                new_col = [title + '_1' for title in self._columns]
+                other = SeriesSet(other, new_col)
         if not isinstance(other, SeriesSet):
             raise TypeError('could not extend a single value only.')
         if inplace is False:

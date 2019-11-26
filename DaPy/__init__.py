@@ -23,16 +23,15 @@ Enjoy the tour in data mining!
 :License: GNU 3.0, see LICENSE for more details.
 '''
 
-__all__ = [ 'Frame', 'SeriesSet', 'mat', 'DataSet', 'datasets', 'methods',
+__all__ = [ 'SeriesSet', 'mat', 'DataSet', 'datasets', 'methods', 'Table', 
             'exp', 'dot', 'multiply', 'zeros', 'ones', 'C', 'P', 'add',
             'diag', 'log', 'boxcox', 'cov', 'corr', 'frequency', 'quantiles',
             'distribution', 'describe', 'mean', 'abs', 'max', 'nan', 'inf', 
             'sum', 'diff', 'read', 'encode', 'save', 'delete', 'column_stack',
             'merge', 'row_stack', 'boxcox', 'show_time', 'get_dummies']
 
-from .core import Frame, SeriesSet, DataSet, Matrix as mat, Series
-from .core import nan, inf, LogInfo, LogWarn, LogErr, SHOW_LOG
-from .core import argsort
+from .core import SeriesSet, DataSet, Matrix, Series
+from .core import nan, inf, argsort
 from .matlib import exp, dot, multiply, zeros, ones, C, P, add, diag, log, boxcox
 from .matlib import cov, corr, frequency, quantiles, _sum as sum, diff, cumsum
 from .matlib import distribution, describe, mean, _abs as abs, _max as max
@@ -42,10 +41,13 @@ from .operation import get_dummies, get_ranks, _repeat as repeat
 from warnings import warn      
 from datetime import datetime
 
+Table = SeriesSet
+mat = Matrix
+
 __title__ = 'DaPy'
 __description__ = 'Enjoy the tour in data mining !'
 __url__ = 'http://dapy.kitgram.cn'
-__version__ = '1.11.1'
+__version__ = '1.11.2'
 __build__ = 0x201910
 __author__ = 'Xuansheng Wu (wuxsmail@163.com)'
 __license__ = '''DaPy  Copyright (C) 2018 - 2019 WU Xuansheng'+\
@@ -54,7 +56,7 @@ __license__ = '''DaPy  Copyright (C) 2018 - 2019 WU Xuansheng'+\
               and you are welcome to redistribute it under certain
               conditions; type `show c' for details.'''
 __copyright__ = 'Copyright 2018-2019 Xuansheng Wu.'
-__date__ = datetime(2019, 11, 17)
+__date__ = datetime(2019, 11, 19)
 
 def _unittests():
     from unittest import TestSuite, defaultTestLoader, TextTestRunner
@@ -65,4 +67,4 @@ def _unittests():
     tester.run(_tests)
 
 if 'Alpha' in __version__:
-    LogInfo('In developing edition of DaPy-%s' % __version__)
+    print('In developing edition of DaPy-%s' % __version__)

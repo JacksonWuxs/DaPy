@@ -382,7 +382,7 @@ class BaseSheet(Object):
             if col in self._sorted_index:
                 self._sorted_index[col].append(val)
 
-    def _append_col(self, series, variable_name):
+    def _append_col(self, series, variable_name=None):
         miss, series = self._check_sequence(series, self._dim.Ln)
         size = len(series)
         if size > self._dim.Ln:
@@ -568,7 +568,6 @@ class BaseSheet(Object):
             line = 0
         self._dim = SHEET_DIM(line, col)
         return self
-
     
     def _drop_row(self, index):
         assert self.locked, LOCK_ERROR
@@ -578,7 +577,6 @@ class BaseSheet(Object):
             self._missing[i] = count_nan(self._isnan, seq)
         self._dim = SHEET_DIM(self._dim.Ln - len(index), self._dim.Col)
         return self
-
     
     def _extend(self, item):
         other_miss = item.missing
@@ -910,8 +908,8 @@ class BaseSheet(Object):
     
     def _get_numeric_label(self, to_return, cols):
         for col in self._check_columns_index(cols):
-            label = {}
-            seq = self[col].apply(lambda val: label.setdefault(val, len(label)))
+            labels = {}
+            seq = self[col].apply(lambda val: labels.setdefault(val, len(labels)))
             to_return[col] = seq
         return labels
 
@@ -1101,17 +1099,16 @@ class BaseSheet(Object):
     def _join(self, other):
         assert is_value(other) is False, 'cannot join a value to the dataset.'
         error = "can't join empty object, given %s" % other
-        assert (hasattr(other, 'shape') and other.shape[0] != 0) or other, error
+        assert (hasattr(other, 'shape') and other.shape[1] != 0) or other, error
         bias = other.shape.Ln - self.shape.Ln
         if bias > 0:
             for i, title in enumerate(self._columns):
                 self._data[title].extend(repeat(self.nan, bias))
                 self._missing[i] += bias
         for (title, seq), miss in zip(other.iter_items(), other._missing):
-            if miss != 0:
+            if len(seq) < self.shape.Ln or miss != 0:
                 miss, seq = self._check_sequence(seq, self._dim.Ln)
             self._quickly_append_col(title, seq, miss)
-        self._dim = SHEET_DIM(self.shape.Ln + bias, len(self._columns))
         return self
 
     def _match_column_from_str(self, statement):
@@ -1197,7 +1194,7 @@ class BaseSheet(Object):
         if all([col in self._sorted_index for col in useful_col]) is False:
             subset = self[useful_col]
             where = subset._trans_where(expression, axis=0)
-            return subset._where_by_rows(where, limit), select_col
+            return tuple(subset._where_by_rows(where, limit)), select_col
         return sorted(self._where_by_index(expression))[:limit], select_col
 
     def _quickly_append_col(self, col, seq, miss, pos=None):
@@ -1205,7 +1202,7 @@ class BaseSheet(Object):
         col = self._check_col_new_name(col)
         if pos is None:
             pos = len(self.columns)
-        self.data[col] = seq
+        self._data[col] = seq
         self._columns.insert(pos, col)
         self._missing.insert(pos, miss)
         self._dim = SHEET_DIM(len(seq), self._dim.Col + 1)
@@ -1339,8 +1336,11 @@ class BaseSheet(Object):
             if where is None:
                 return lambda x: True
             where = ' ' + where + ' '
+            last_length = len(where)
             for i in argsort(self._columns, key=len, reverse=True):
                 where = sub(self._columns[i], '___x___[%d]' % i, where)
+            if last_length == len(where):
+                where = "'''%s'''" % where.strip()
             where = 'lambda ___x___: ' + where
 
         if axis == 1:
@@ -1355,17 +1355,13 @@ class BaseSheet(Object):
             where = 'lambda ___x___: ___x___ ' + where
         return eval(where)
 
-    
     def _update(self, where, **set_values):
         if callable(where) is False:
             where = self._trans_where(where, axis=0)
         assert set_values, '`set_value` are empty'
         for key, exp in set_values.items():
             if callable(exp) is False:
-                exp = str(exp)
-                if exp.isalpha() is True:
-                    exp = '"%s"' % exp
-                set_value[key] = self._trans_where(exp, axis=0)
+                set_values[key] = self._trans_where(str(exp), axis=0)
 
         for index in self._where_by_rows(where, limit=self.shape.Ln):
             row = Row(self, index)

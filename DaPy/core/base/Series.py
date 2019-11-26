@@ -14,7 +14,6 @@ except ImportError:
     darray = list
 
 from .constant import STR_TYPE, VALUE_TYPE, SEQ_TYPE, DUPLICATE_KEEP, PYTHON3
-from .DapyObject import Object, check_thread_locked
 from .utils import filter, map, range, xrange, zip, zip_longest
 from .utils import is_iter, is_math, is_seq, is_value, isnan, auto_plus_one
 from .utils.utils_isfunc import SET_SEQ_TYPE
@@ -121,7 +120,6 @@ class Series(list):
         if isinstance(key, slice):
             return Series(list.__getitem__(self, key))
 
-    @check_thread_locked
     def __delitem__(self, key):
         '''delete data from current series
 

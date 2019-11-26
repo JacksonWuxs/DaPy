@@ -1,6 +1,6 @@
 from time import clock
 
-from DaPy import LogInfo, Series
+from DaPy.core import LogInfo, Series
 from .base import BaseEngineModel, Activators
 
 class BaseBPModel(BaseEngineModel):

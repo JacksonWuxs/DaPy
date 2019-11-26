@@ -16,8 +16,8 @@ except ImportError:
     import pickle as pkl
 
 
-CELL = u'\u25CF'.encode('utf-8')
-ONE_CELL = u'\u2460'.encode('utf-8')
+CELL = u'\u25CF'
+ONE_CELL = u'\u2460'
 
 
 class BaseMLP(BaseBPModel):
@@ -119,23 +119,23 @@ class BaseMLP(BaseBPModel):
     def __repr__(self):
         max_size_y = max([layer.shape[1] for layer in self._layers]) * 2
         size_x = [layer.__repr__() for layer in self._layers]
-        print_col = list()
+        print_col = []
         for layer in self._layers:
-            blank = max_size_y / layer.shape[1]
+            blank = int(max_size_y / layer.shape[1])
             normal = [blank * i for i in range(1, 1 + layer.shape[1])]
             bias = - (max_size_y - max(normal) + min(normal)) / 2 
-            print_col.append([bias + pos for pos in normal])
+            print_col.append([int(bias + pos) for pos in normal])
 
         output = '  '.join(size_x) + '\n'
         output += '-' * len(output) + '\n'
-        output += '   '.join([ONE_CELL.center(len(name)) for name in size_x[:-1]]) + '\n'
+        output += '   '.join([ONE_CELL.center(len(name) - 1) for name in size_x[:-1]]) + '\n'
         for i in range(1, 1 + max_size_y):
             line = ''
             for j, layer in enumerate(self._layers):
                 if i in print_col[j]:
-                    line += CELL.center(len(size_x[j])) + '   '
+                    line += CELL.center(len(size_x[j]) - 1) + '   '
                 else:
-                    line += ' '.center(len(size_x[j])) + '  '
+                    line += ''.center(len(size_x[j]) + 1) + '  '
             output += line + '\n'
         output += '---------------------------\n'
         output += 'Tips:' + CELL + ' represents the normal cell in layer; \n'

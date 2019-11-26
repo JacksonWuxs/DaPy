@@ -12,13 +12,13 @@ class MLPClassifier(BaseMLP, BaseClassifier):
     def __init__(self, engine='numpy', learn_rate=0.05, l1_penalty=0, l2_penalty=0, upfactor=1.05, downfactor=0.95):
         BaseMLP.__init__(self, engine, learn_rate, l1_penalty, l2_penalty, upfactor, downfactor)
         BaseClassifier.__init__(self)
+        self._final_func = 'softmax'
 
     def _check_target_labels(self, target):
         target = SeriesSet(target)
         if target.shape.Col == 1:
             target = get_dummies(target[target.columns[0]], dtype='SeriesSet')
         self._labels = target.columns
-        self._final_func = 'softmax'
         return self._engine.mat(list(target.iter_rows()))
 
     def fit(self, X, Y, n_epoch=500, n_layers=None,

@@ -4,7 +4,7 @@ from DaPy.matlib import zeros, mean
 from math import sqrt
 
 
-def ConfuMat(Y, y_, labels=None):
+def ConfuMat(Y, y_, labels):
     '''calculate confution Matrix'''
     labels = sorted(set(Y) | set(y_))
     confu = zeros((len(labels) + 1, len(labels) + 1))
@@ -21,7 +21,7 @@ def ConfuMat(Y, y_, labels=None):
 
 def Accuracy(confumat):
     upper = sum([confumat[i][i] for i in range(confumat.shape[1] - 1)])
-    return round(upper / float(confumat[-1][-1]) * 100, 4)
+    return round(upper / float(confumat[-1][-1]), 4)
 
 def Kappa(confumat):
     as_ = confumat[:, -1].tolist()[:-1]
@@ -63,15 +63,19 @@ def Performance(predictor, data, target, mode='reg'):
             target = SeriesSet(target)
             assert target.shape[1] == 1, 'testify target must be a sequence'
             target = target[target.columns[0]]
+        if hasattr(predictor, 'labels'):
+            labels = predictor.labels
+        else:
+            labels = sorted(set(result) | set(target))
             
-        confuMat = ConfuMat(target, result, predictor.labels)
-        LogInfo('Classification Accuracy: %.4f' % Accuracy(confuMat) + '%')
+        confuMat = ConfuMat(target, result, labels)
+        LogInfo('Classification Accuracy: %.4f' % Accuracy(confuMat))
         LogInfo('Classification Kappa: %.4f' % Kappa(confuMat))
-        if confuMat.shape[1] == 2:
+        if confuMat.shape[1] == 3:
             proba = predictor.predict_proba(data)
             if proba.shape[1] == 2:
                 proba = proba[:, 0]
-            target = Series(1 if _ == predictor.labels[0] else 0 for _ in target)
+            target = Series(1 if _ == labels[0] else 0 for _ in target)
             LogInfo('Classification AUC: %.4f' % Auc(target, proba))
         return confuMat
     
@@ -93,19 +97,26 @@ class Score(object):
     '''performace score to evalulate a regressor'''
 
     @staticmethod
+    def error(target, predict):
+        if predict.shape[1] != 1:
+            predict = predict.T
+        assert predict.shape[0] == target.shape[0]
+        return target - predict
+
+    @staticmethod
     def MAE(target, predict):
-        return mean(abs(target - predict))
+        return mean(abs(Score.error(target, predict)))
 
     @staticmethod
     def MSE(target, predict):
-        return mean((target - predict) ** 2)
+        return mean(Score.error(target, predict) ** 2)
 
     @staticmethod
     def R2_score(target, predict):
-        SSE = sum((predict - target) ** 2)
+        SSE = sum(Score.error(target, predict) ** 2)
         SST = sum((target - mean(target)) ** 2)
         return 1 - SSE / SST
 
     @staticmethod
     def MAPE(target, predict):
-        return mean(abs((target - predict) / target))
+        return mean(abs(Score.error(target, predict) / target))

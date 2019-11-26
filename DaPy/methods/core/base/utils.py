@@ -1,4 +1,4 @@
-from DaPy import LogWarn
+from DaPy.core import LogWarn
 
 def eng2str(obj):
     return str(obj).split()[1][1: -1]

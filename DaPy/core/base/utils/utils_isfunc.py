@@ -55,13 +55,6 @@ def is_iter(obj):
     else:
         return False
 
-def _isnan(value):
-    if isinstance(value, float):
-        if value > 0 or value < 0 or value == 0:
-            return False
-        return True
-    return False
-
 def is_seq(obj):
     ''' Determine that if a variable is a sequence object
     '''
