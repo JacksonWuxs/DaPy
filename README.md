@@ -126,9 +126,9 @@ Following programs are also great data analyzing/ manipulating frameworks in Pyt
 
 ### Further-Info
 
--  Version change log 
-- Todo List
-- License
+-  [Version change log](https://github.com/JacksonWuxs/DaPy/blob/master/doc/homepage/Version-Log.md)
+- [Todo List](https://github.com/JacksonWuxs/DaPy/blob/master/doc/homepage/TODO.md)
+- [License](https://github.com/JacksonWuxs/DaPy/blob/master/doc/homepage/License.md)
 
 
 
