@@ -105,10 +105,10 @@ Some of functions in DaPy depend on requirements.
 
 ### Contributors
 
-- Contributors:
+- ###### Contributors:
 
    	1. Xuansheng WU (@JacksonWoo: wuxsmail@163.com )
-   	2. Feichi YANG  (@Nick Yang: yangfeichi@163.com)  
+      	2. Feichi YANG  (@Nick Yang: yangfeichi@163.com)  
 
 - ###### Members:
 
@@ -118,7 +118,7 @@ Some of functions in DaPy depend on requirements.
 
 Following programs are also great data analyzing/ manipulating frameworks in Python:
 
-* [Agate](https://github.com/wireservice/agate): Data analysis library optimized for humans]
+* [Agate](https://github.com/wireservice/agate): Data analysis library optimized for humans
 * [Numpy](https://github.com/numpy/numpy): fundamental package for scientific computing with Python
 * [Pandas](https://github.com/pandas-dev/pandas): Python Analysis Data 
 * [Scikit-Learn](https://github.com/scikit-learn/scikit-learn): Machine Learn in Python  
