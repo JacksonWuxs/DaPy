@@ -107,12 +107,13 @@ Some of functions in DaPy depend on requirements.
 
 - ###### Contributors:
 
-    1. Xuansheng WU (@JacksonWoo: wuxsmail@163.com)   
-       2. Feichi YANG  (@Nick Yang: yangfeichi@163.com)  
+    - Xuansheng WU (@JacksonWoo: wuxsmail@163.com)   
+
+    - Feichi YANG  (@Nick Yang: yangfeichi@163.com)  
 
 - ###### Members:
 
-    1. Rong XING (@TerenceXing: terencexing@126.com)
+    - Rong XING (@TerenceXing: terencexing@126.com)
 
 ### Related
 
