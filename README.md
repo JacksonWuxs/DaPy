@@ -111,9 +111,6 @@ Some of functions in DaPy depend on requirements.
 
     - Feichi YANG  (@Nick Yang: yangfeichi@163.com)  
 
-- ###### Members:
-
-    - Rong XING (@TerenceXing: terencexing@126.com)
 
 ### Related
 
