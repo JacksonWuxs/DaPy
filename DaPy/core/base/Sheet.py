@@ -28,39 +28,17 @@ from .Series import Series
 from .utils import (argsort, auto_plus_one, auto_str2value, count_nan,
                     fast_str2value, hash_sort, is_dict, is_empty, is_iter,
                     is_math, is_seq, is_str, is_value, isnan, range, split,
-                    str2date, strip, xrange, zip_longest)
+                    str2date, strip, xrange, zip_longest, count_str_printed_length)
 from .utils.utils_join_table import inner_join, left_join, outer_join
 from .utils.utils_regression import simple_linear_reg
 
 __all__ = ['SeriesSet']
 
-def reader(file_, queue):
-    for row in file_:
-        queue.put(strip(row))
-    queue.put(False)
-            
-def analyzer(queue, sep, miss, data, dtypes, miss_symbol, nan):
-    while True:
-        row = queue.get()
-        if row is False:
-            break
+
 class SeriesSet(BaseSheet):
 
     '''Variable stores in sequenes
     '''
-
-    __all__ = [
-        'info', 'missing', 'T', 'append_col', 'append_row', 'apply',
-        'create_index', 'corr', 'copy', 'count', 'count_nan', 'count_values',
-        'describe', 'query', 'drop', 'drop_col', 'drop_row', 'dropna', 
-        'drop_duplicates', 'extend', 'fillna', 'from_file', 'get', 
-        'get_best_features', 'get_categories', 'get_date_label', 'get_dummies',
-        'get_interactions', 'get_ranks', 'get_nan_instrument', 'get_numeric_label',
-        'groupby', 'sort', 'show', 'iter_groupby', 'items', 'iter_times', 
-        'iter_rows', 'iter_values', 'iloc', 'insert_row', 'insert_col', 'join',
-        'keys', 'merge', 'normalized', 'pop', 'pop_row', 'pop_col', 'reverse', 
-        'reshape', 'replace', 'update', 'shuffle', 'select', 'sum', 'values'
-    ]
 
     def __init__(self, series=None, columns=None, nan=float('nan')):
         self._data = dict()
@@ -108,6 +86,35 @@ class SeriesSet(BaseSheet):
 
     def __le__(self, other):
         return self.__compare_value__(other, SeriesSet(nan=self.nan), le)
+
+    @check_thread_locked
+    def accumulate(self, func=None, cols=None, skipna=True, inplace=False):
+        '''accumulate(func=None, cols=None, skpna=True, inplace=False) -> SeriesSet
+        return accumulated values for sequences
+
+        Parameters
+        ----------
+        func : callable-object or None (default=None)
+            the function used to operate each two values, default is `add`
+
+        col : str, str in list (default='all')
+            the columns that you expect to process
+
+        skipna : True / False (default=True)
+            whether accumulate values without NaN
+            Attention: in this function, we support float('nan') as NaN only
+
+        inplace : True or False (default=0)
+            update values in current dataset or return new values
+
+        Returns
+        -------
+        accumulated_data : SeriesSet
+        '''
+        assert inplace in (True, False), '`inplace` must be True or False'
+        if inplace is False:
+            return SeriesSet(self)._accumulate(func, cols, skipna)
+        return self._accumulate(func, cols, skipna)
     
     @check_thread_locked
     def append_col(self, series, variable_name=None):
@@ -207,9 +214,9 @@ class SeriesSet(BaseSheet):
         self._append_row(row)
         return self
 
-    def apply(self, func, col=None, axis=0, inplace=False):
-        '''apply(func, col=None, inplace=False, axis=0)
-           apply a process to column(s) or row(s)
+    def apply(self, func, cols=None, axis=0, *args, **kwrds):
+        '''apply(func, col=None, *args, **kwrds)
+            apply a function to columns or rows
 
         Parameters
         ----------
@@ -218,51 +225,74 @@ class SeriesSet(BaseSheet):
 
         col : str, str in list (default='all')
             the columns that you expect to process
-        
-        inplace : True or False (default=False)
-            operate the values in the current sheet or on the copy
+
+        axis : 1 or 0 (default=0)
+            apply the function along rows(0) or columns(1)
+
         
         Returns
         -------
         applied_sheet : SeriesSet
-            if you `inplace` is True, it will return the subset 
-            which drop out the values.
 
         Example
         -------
-        >>> sheet = example()
-        - read() in 0.000s.
-        >>> sheet['B_col']
-        Sereis([2,nan,3,3,5, ..., nan,nan,2,9,4])
-        >>> power = lambda row: row.B_col ** 2
-        >>> sheet.apply(power, axis=0)
-        - apply() in 0.000s.
-        sheet:sample
-        ============
-        A_col: <4, nan, 9, 9, 25, ... ,nan, nan, 4, 81, 16>
+        >>> sheet = dp.Table([[1, 2, 3], [4, 5, 6]])
+        >>> func = lambda arr: arr.sum() / arr.std()
+        >>> sheet.apply(func, axis=1).show()
+        >>> sheet.apply(func, axis=0).show()
+        '''
+        assert axis in (0, 1), '`axis` must be 0 or 1'
+        assert callable(func), '`func` must be a callable object'
+        cols = self._check_columns_index(cols)
+
+        if axis == 0:
+            subset = self[cols]
+            try:
+                func(subset[0].tolist(), *args, **kwrds)
+                subset = subset.iter_values()
+            except:
+                pass
+
+            return SeriesSet([func(row, *args, **kwrds) for row in subset])
+        
+        result = {}
+        for key in cols:
+            result[key] = func(self[key], *args, **kwrds)
+        return SeriesSet(result)
+
+    @check_thread_locked
+    def map(self, func, cols=None, inplace=False):
+        '''apply(func, col=None, *args, **kwrds)
+            apply a function to columns or rows
+
+        Parameters
+        ----------
+        func : callable object or dict-like object
+
+        col : str, str in list (default='all')
+            the columns that you expect to process
+
+        inplace : True or False (default=0)
+            update values in current dataset or return new values
+
+        Returns
+        -------
+        mapped_sheet : SeriesSet
 
         Notes
         -----
         1. Function may be locked when `inplace` is True and 
            sheet.locked is False. When you operate the 
            column which is an Index, it will be locked.
+        
         '''
         assert inplace in (True, False), '`inplace` must be True or False'
-        assert axis in (0, 1), '`axis` must be 0 or 1'
-        assert callable(func), '`func` parameter should be a callable object'
-        cols = self._check_columns_index(col)
-
         if inplace is False:
-            if axis == 0:
-                return SeriesSet(map(func, self[cols]), nan=self.nan)
-            ret = SeriesSet(columns=self.columns, nan=self.nan)
-            row = [func(val.tolist()) if key in cols else self.nan for key, val in self.items()]
-            ret.append_row(row)
-            return ret[cols]
-        return self._apply_inplace(func, cols, axis)
+            return SeriesSet(self)._map(func, cols)
+        return self._map(func, cols)
 
-    def create_index(self, columns):
-        '''create_index(column) -> None
+    def set_index(self, columns):
+        '''set_index(column) -> None
         set a column as an Index for quickly searching
 
         Create an Index for quickly searching the records. 
@@ -486,6 +516,64 @@ class SeriesSet(BaseSheet):
             counter.update(self._data[title])
         return counter
 
+    def query(self, expression, col=None, limit=1000):
+        '''sheet.query('A_col != 1') -> SeriesSet
+
+        Parse a string of python syntax statement and select rows which
+        match the query. Two algorithms are used in this function. The first
+        solution, binary select, needed sorted indexes before calling this
+        function, has a high efficiency with O(logN) time comsumption. On the 
+        other hand, normal linear comparing select, implemented like `where`
+        function, has a linear efficiency of O(N) speed.
+
+        Parameters
+        ----------
+        expression : str
+            the statement you want to use to select data,
+            you can write it like python condition syntax.
+
+        col : None, str or list (default=None)
+            which columns you want to select
+
+        limit : int, None (default=1000)
+            the maximum number of rows you want to select,
+            this is a good way to speed up selection from
+            million of rows if you need only 1 of them
+            in each time.
+
+        Return
+        ------
+        subset : SeriesSet
+            the selection result according to your statement.
+
+        Example
+        -------
+        >>> from DaPy.datasets import iris
+        >>> sheet, info = iris()
+        >>> sheet.query('5.5 >= sepal length > 5 and sepal width > 4').show()
+         sepal length | sepal width | petal length | petal width | class
+        --------------+-------------+--------------+-------------+--------
+             5.2      |     4.1     |     1.5      |     0.1     | setosa
+             5.5      |     4.2     |     1.4      |     0.2     | setosa
+        >>> data.query('sepal length / 2.0 == sepal width').show()
+         sepal length | sepal width | petal length | petal width |   class
+        --------------+-------------+--------------+-------------+------------
+             6.4      |     3.2     |     4.5      |     1.5     | versicolor
+             7.2      |     3.6     |     6.1      |     2.5     | virginica
+             6.4      |     3.2     |     5.3      |     2.3     | virginica
+             5.6      |     2.8     |     4.9      |     2.0     | virginica
+             6.0      |     3.0     |     4.8      |     1.8     | virginica
+
+        See Also
+        --------
+        DaPy.core.base.Sheet.SeriesSet.set_index
+        DaPy.core.base.IndexArray.SortedIndex
+        '''
+        sub_index, select_col = self._query(expression, col, limit)
+        if len(sub_index) == 0:
+            return SeriesSet(None, select_col, nan=self.nan)
+        return self.iloc(sub_index)[select_col]
+
     def describe(self, level=0):
         '''describe(lvel=0, show=True) -> None
         summary the information of current sheet
@@ -558,64 +646,6 @@ class SeriesSet(BaseSheet):
               'Descriptive Statistics'.center(lenth) + '\n' +\
                '=' * lenth + '\n' + message + '=' * lenth)
 
-    def query(self, expression, col=None, limit=1000):
-        '''sheet.query('A_col != 1') -> SeriesSet
-
-        Parse a string of python syntax statement and select rows which
-        match the query. Two algorithms are used in this function. The first
-        solution, binary select, needed sorted indexes before calling this
-        function, has a high efficiency with O(logN) time comsumption. On the 
-        other hand, normal linear comparing select, implemented like `where`
-        function, has a linear efficiency of O(N) speed.
-
-        Parameters
-        ----------
-        expression : str
-            the statement you want to use to select data,
-            you can write it like python condition syntax.
-
-        col : None, str or list (default=None)
-            which columns you want to select
-
-        limit : int, None (default=1000)
-            the maximum number of rows you want to select,
-            this is a good way to speed up selection from
-            million of rows if you need only 1 of them
-            in each time.
-
-        Return
-        ------
-        subset : SeriesSet
-            the selection result according to your statement.
-
-        Example
-        -------
-        >>> from DaPy.datasets import iris
-        >>> sheet, info = iris()
-        >>> sheet.query('5.5 >= sepal length > 5 and sepal width > 4').show()
-         sepal length | sepal width | petal length | petal width | class
-        --------------+-------------+--------------+-------------+--------
-             5.2      |     4.1     |     1.5      |     0.1     | setosa
-             5.5      |     4.2     |     1.4      |     0.2     | setosa
-        >>> data.query('sepal length / 2.0 == sepal width').show()
-         sepal length | sepal width | petal length | petal width |   class
-        --------------+-------------+--------------+-------------+------------
-             6.4      |     3.2     |     4.5      |     1.5     | versicolor
-             7.2      |     3.6     |     6.1      |     2.5     | virginica
-             6.4      |     3.2     |     5.3      |     2.3     | virginica
-             5.6      |     2.8     |     4.9      |     2.0     | virginica
-             6.0      |     3.0     |     4.8      |     1.8     | virginica
-
-        See Also
-        --------
-        DaPy.core.base.Sheet.SeriesSet.create_index
-        DaPy.core.base.IndexArray.SortedIndex
-        '''
-        sub_index, select_col = self._query(expression, col, limit)
-        if len(sub_index) == 0:
-            return SeriesSet(None, select_col, nan=self.nan)
-        return self.iloc(sub_index)[select_col]
-
     def drop(self, index=-1, axis=0, inplace=False):
         '''remove a column or a row in the sheet
 
@@ -682,6 +712,12 @@ class SeriesSet(BaseSheet):
         return self._drop_col(index)
 
     @check_thread_locked
+    def diff(self, lag=1, cols=None, inplace=False):
+        if inplace is False:
+            return SeriesSet(self, nan=self.nan)._diff(lag, cols)
+        return self._diff(lag, cols)
+
+    @check_thread_locked
     def drop_row(self, index=-1, inplace=True):
         '''drop_row(index=-1, inplace=True) -> SeriesSet
         drop out rows according to the index'''
@@ -689,6 +725,7 @@ class SeriesSet(BaseSheet):
             return SeriesSet(self, nan=self.nan)._drop_row(index)
         return self._drop_row(index)
 
+    @check_thread_locked
     def dropna(self, axis=0, how='any', inplace=False):
         '''dropna(axis=0, how='any', inplace=False)
         
@@ -883,6 +920,10 @@ class SeriesSet(BaseSheet):
         A: <0.0, 1, 2, 3, 4.0, 5.0, 6>
         '''
         return self._fillna(fill_with, col, method, limit)
+
+    def flatten(self, axis=0):
+        '''flatten 2-dimentions table into 1-dimention Series'''
+        return Series(self._flatten(axis))
         
     @classmethod
     def from_file(cls, addr, **kwrd):
@@ -958,10 +999,10 @@ class SeriesSet(BaseSheet):
                 line = file_.readline()
                 if i == title_line:
                     # setup the title line
-                    columns = tuple(map(strip, split(line, sep)))
+                    columns = tuple(map(lambda x: strip(x), split(line, sep)))
 
             # begin to load data
-            for row in file_:
+            for i, row in enumerate(file_):
                 for mis, seq, transfer, val in zip_longest(miss, data, dtypes, split(strip(row), sep)):  
                     # iter value
                     try:
@@ -969,12 +1010,12 @@ class SeriesSet(BaseSheet):
                             seq.append(nan)
                             mis.append(1)
                         else:
-                            seq.append(transfer(val))
+                            seq.append(transfer(val.encode('utf-8')))
                             
                     except ValueError:# different types of data in the same variable
                         seq.append(auto_str2value(val))
                         
-                    except Exception: # we found a new variable
+                    except Exception as e: # we found a new variable
                         mis = []
                         miss += (mis,)
                         if val in miss_symbol:
@@ -1316,17 +1357,26 @@ class SeriesSet(BaseSheet):
         '''
         return self._sort(SeriesSet(nan=self.nan), *orderby)
 
-    def show(self, lines=None):
+    def show(self, max_lines=None, max_display=75, max_col_size=25, multi_line=True):
         '''show(lines=None) -> None
         
         Parameters
         ----------
-        lines : None, int (default=None)
+        max_lines : None, int (default=None)
             number of rows you want to show
+
+        max_display : int (default=75)
+            maximum width to display
+
+        max_col_size : int (default=25)
+            maximum width of each column
+
+        multi_line : bool (default=True)
+            display values which have more than `max_col_size` letters or not
         
         Returns
         -------
-        str_frame : a string shows the table data
+        None
 
         Examples
         --------
@@ -1365,7 +1415,63 @@ class SeriesSet(BaseSheet):
         --------
         DaPy.SeriesSet.describe()
         '''
-        return self._show(lines)
+        if self._columns == []:
+            print('empty sheet instant')
+            return
+        assert multi_line in (True, False), '`multilines` must be True or False'
+        assert isinstance(max_display, int) and max_display > 0, '`max_display` must be an integer'
+        assert isinstance(max_col_size, int) and max_col_size > 0, '`max_col_size` must be an integer'
+        assert max_col_size < max_display, '`max_col_size` must be less than `max_display`'
+        error = '`lines` must be an int or None.'
+        assert (is_math(max_lines) and max_lines > 0) or max_lines is None, error
+        if max_lines is None or 2 * max_lines >= self._dim.Ln:
+            max_lines, omit = -1, 0
+            str_series = SeriesSet(self)
+        else:
+            omit = self._dim.Ln - 2 * max_lines
+            str_series = self[:max_lines]._extend(self[-max_lines:])
+
+        # transfer all data into string type
+        str_series.insert_row(0, self.columns)
+        for key, arr in str_series.iter_items():
+            str_series[key] = arr.apply(lambda val: str(val).replace('\n', ''))
+
+        # make sure each value doesn't be out of boundary
+        match_size_str = re_compile(r'.{0,%s}' % max_col_size)
+        not_omit = int(max_col_size // 2 - 6)
+        row_line = set()
+        row, omit_line = 1, -1
+        for i in range(str_series.shape.Ln - 1):
+            inner_row = 0
+            if i == max_lines:
+                omit_line = row
+            for j, col in enumerate(self.columns):
+                val = str_series[col][row]
+                vals = match_size_str.findall(val)[:-1]
+                if len(vals) != 1:
+                    if multi_line is False:
+                        str_series[col][row] = val[:not_omit] + '...' + val[-not_omit:]
+                        continue
+                    for _ in range(len(vals) - 1 - inner_row):
+                        inner_row += 1
+                        str_series.insert_row(inner_row + row, '')
+                    for i, val in enumerate(vals, row):
+                        str_series[col][i] = val
+            row += inner_row + 1
+
+        # begin to display
+        col_size = [max(col.apply(count_str_printed_length)) for col in str_series.iter_values()]
+        frame = u''
+        titles_, col_size_, values_ = [], [], []
+        for size, value in zip(col_size, str_series.iter_values()):
+            col_size_.append(size)
+            values_.append(value)
+            max_len = sum(col_size_) + 3 * len(col_size_) - 1
+            if max_len > max_display:
+                frame += self._show(col_size_, zip(*values_), omit_line, max_len, omit) + '\n'
+                titles_, col_size_, values_ = [], [], []
+        frame += self._show(col_size_, zip(*values_), omit_line, max_len, omit) + '\n'
+        print(frame)
 
     def iter_groupby(self, keys, func=None, apply_col=None):
         '''iter_groupby(keys, func=None, apply_col=None)
@@ -1841,12 +1947,12 @@ class SeriesSet(BaseSheet):
             return self._reverse(axis)
         return SeriesSet(self)._reverse(axis)
 
-    def reshape(self, nshape, axis=0):
+    def reshape(self, nshape=None, axis=0):
         '''Gives a new shape without changing its data.
     
         Parameters
         ----------
-        nshape : int or tuple of ints
+        nshape : None or tuple of ints (default=None)
             The new shape should be compatible with the original shape. If
             an integer, then the result will be a 1-D array of that length.
             One shape dimension can be -1. In this case, the value is
@@ -1883,37 +1989,31 @@ class SeriesSet(BaseSheet):
           10 |  11 
         '''
         type_error = '`new_shape` must be contained by a tuple'
-        assert is_seq(nshape) or isinstance(nshape, int), type_error
-        assert axis in (0, 1), 'axis must be 1 or 0'
-        if axis == 0:
-            iter_chain = chain(*self.iter_rows())
-        else:
-            iter_chain = chain(*self.iter_values())
+        assert is_seq(nshape) or nshape is None, type_error
+        if nshape == -1:
+            return self.flatten(axis)
         
-        if is_seq(nshape):
-            total_values = self.shape.Ln * self.shape.Col
-            nshape = list(nshape)
-            if len(nshape) == 1:
-                nshape.append(-1)
-            assert len(nshape) == 2 and nshape.count(-1) <= 1
-            if -1 == nshape[0]:
-                nshape[0] = total_values / float(nshape[1])
-            if -1 == nshape[1]:
-                nshape[1] = total_values / float(nshape[0])
-            assert isinstance(nshape[0], int), isinstance(nshape[1], int)
-            assert nshape[0] > 0 and nshape[1] > 0
-            err = "can't reshape size %s into shape %s" % (self.shape, nshape)
-            assert nshape[0] * nshape[1] == total_values, err
-            
-            shape_ln = nshape[1]
-            sheet, row = [], []
-            for i, value in enumerate(iter_chain, 1):
-                row.append(value)
-                if i % shape_ln == 0:
-                    sheet.append(row)
-                    row = []
-        else:
-            sheet = Series(iter_chain)
+        total_values = self.shape.Ln * self.shape.Col
+        nshape = list(nshape)
+        if len(nshape) == 1:
+            nshape.append(-1)
+        assert len(nshape) == 2 and nshape.count(-1) <= 1
+        if -1 == nshape[0]:
+            nshape[0] = total_values / float(nshape[1])
+        if -1 == nshape[1]:
+            nshape[1] = total_values / float(nshape[0])
+        assert isinstance(nshape[0], int), isinstance(nshape[1], int)
+        assert nshape[0] > 0 and nshape[1] > 0
+        err = "can't reshape size %s into shape %s" % (self.shape, nshape)
+        assert nshape[0] * nshape[1] == total_values, err
+        
+        shape_ln = nshape[1]
+        sheet, row = [], []
+        for i, value in enumerate(self._flatten(axis), 1):
+            row.append(value)
+            if i % shape_ln == 0:
+                sheet.append(row)
+                row = []
         return SeriesSet(sheet, nan=self.nan)
 
     @check_thread_locked
@@ -2073,6 +2173,7 @@ class SeriesSet(BaseSheet):
     def values(self):
         for col in self.columns:
             yield self._data[col]
+            
 
 class Frame(BaseSheet):
 

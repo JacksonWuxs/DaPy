@@ -23,7 +23,7 @@ def parse_create_statement(string):
 
 INSERT_PATTERN = re_compile(u"insert into [`]{0,1}([_A-Za-z0-9\u4e00-\u9fa5]{1,})[`]{0,1}([ ]{0,1}\([\s\S]*\))? values[ ]{0,1}(\([\s\S]*\))", flags=2)
 STR_CLEAN_PATTERN = re_compile(u'''(^["|""|'|'']|["|""|'|'']$)''')
-# RECORD_PATTERN = re_compile(u'(\()([\s\S]*?)(\))(,|;)')
+## RECORD_PATTERN = re_compile(u'(\()([\s\S]*?)(\))(,|;)')
 RECORD_PATTERN = re_compile(u',(?![^\(]*\))')
 SPLIT_PATTERN = re_compile(u',(?=(?:[^"]*"[^"]*")*[^"]*$)')
 def parse_insert_statement(string, dtypes=None, nan=None):

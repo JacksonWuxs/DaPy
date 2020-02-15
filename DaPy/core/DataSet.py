@@ -1,16 +1,17 @@
-from collections import Counter, namedtuple, Iterator
+from collections import Counter, Iterator, namedtuple
 from copy import copy
 from functools import wraps
-from os.path import isfile
 from operator import methodcaller
-from time import clock
+from os.path import isfile
 from pprint import pprint
+from time import clock
 
-from .base import (Frame, LogErr, LogInfo, LogWarn, Matrix, Series, SeriesSet,
-                   auto_plus_one, filter, is_iter, is_seq, is_str, is_value,
-                   map, pickle, range, zip, PYTHON3)
-from .io import (parse_addr, parse_excel, parse_html, parse_sav, parse_sql, parse_db, parse_mysql_server,
-                 write_db, write_html, write_txt, write_xls, write_sql)
+from .base import (PYTHON3, Frame, LogErr, LogInfo, Matrix, Series,
+                   SeriesSet, auto_plus_one, is_iter, is_seq, is_str,
+                   map, pickle, range, zip)
+from .io import (parse_addr, parse_db, parse_excel, parse_html,
+                 parse_mysql_server, parse_sav, parse_sql, write_db,
+                 write_html, write_sql, write_txt, write_xls)
 
 __all__ = ['DataSet']
 
@@ -21,7 +22,7 @@ def timer(func):
     def timer_func(self, *args, **kwrds):
         start = clock()
         ret = func(self, *args, **kwrds)
-        if self.log is True:
+        if self.logging is True:
             name, spent = func.__name__, clock() - start
             LogInfo('%s() in %.3fs.' % (name, spent))
         return ret
@@ -29,7 +30,6 @@ def timer(func):
 
 def operater(callfunc):
     callfunc = getattr(SeriesSet, callfunc.__name__)
-
     @wraps(callfunc)
     def operate_func(self, *args, **kwrds):
         ret_set = DataSet()
@@ -109,7 +109,7 @@ class DataSet(object):
         log : bool (default=True)
             show the time consuming for each operation
         '''
-        self.log = log
+        self.logging = log
         
         if obj is None:
             self._data = []
@@ -149,6 +149,7 @@ class DataSet(object):
 
     @property
     def columns(self):
+        '''names of columns of each table'''
         if len(self._data) > 1:
             new_ = list()
             for i, data in enumerate(self._data):
@@ -158,9 +159,9 @@ class DataSet(object):
                     new_.append([self._sheets[i], None])
             new_title = ['sheet name']
             new_title.extend(['title_%d'%i for i in range(1, len(max(new_, key=len)))])
-            return Frame(new_, new_title)
+            return SeriesSet(new_, new_title)
         
-        elif len(self._data) == 1:
+        if len(self._data) == 1:
             if hasattr(self._data[0], 'columns'):
                 return self._data[0].columns
         return None
@@ -469,7 +470,7 @@ class DataSet(object):
 
     @timer
     @operater
-    def apply(self, func, col=None, inplace=False, axis=0):
+    def apply(self, func, col=None, axis=0, *args, **kwrds):
         pass
         
     @timer
@@ -504,7 +505,7 @@ class DataSet(object):
     
     @timer
     @operater
-    def create_index(self, column):
+    def set_index(self, column):
         pass
     
     @timer
@@ -621,6 +622,11 @@ class DataSet(object):
 
     @timer
     @operater
+    def map(self, func, cols=None, inplace=False):
+        pass
+
+    @timer
+    @operater
     def merge(self, other, self_key=0, other_key=0, keep_key=True, keep_same=True):
         pass
 
@@ -693,14 +699,13 @@ class DataSet(object):
             the delimiter symbol inside.
 
         dtypes : type name in str or dict of columns (default=None):
-            DaPy autometally transfers the str source text into the most
-            suitable data type in efficiency, whereas some of process costs
-            long time. For example, "2018-1-1" is a datetime label, however,
-            it is spend a lot of to time transfer this label into datetime.
-            In some case, you don't need it in datetime, so just set this column
+            DaPy autometally transfers str source text into the most
+            suitable data type in efficiency. However, some of process costs
+            long time. For example, "2018-1-1" is a datetime label and
+            DaPy spends a long time time to transfer this label into datetime.
+            Thus, in some cases, you don't need it in datetime, so just set this column
             type into "str" to save time. The supported data types are "int",
             "float", "str", "datetime" and "bool".
-            
             use this keyword as following samples
             >>> read("addr.csv", dtypes={'A_col': int, 'B_col': float})
             >>> read("addr.csv", dtypes="float")
@@ -1017,7 +1022,7 @@ class DataSet(object):
     def toarray(self):
         pass
 
-    def show(self, lines=None):
+    def show(self, max_lines=None, max_display=75, max_col_size=25, multi_line=True):
         '''show(lines=None) -> None
 
         See Also
@@ -1028,7 +1033,7 @@ class DataSet(object):
             print('sheet:' + self._sheets[i])
             print('=' * (len(self._sheets[i]) + 6))
             if hasattr(data, 'show'):
-                data.show(lines)
+                data.show(max_lines, max_display, max_col_size, multi_line)
             else:
                 pprint(data.__repr__())
 

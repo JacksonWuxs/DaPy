@@ -1,6 +1,7 @@
 from math import isnan as _isnan
 from re import compile as _compile
 from operator import itemgetter
+from collections import Counter
 
 from DaPy.core.base.constant import PYTHON2, PYTHON3, STR_TYPE
 
@@ -18,29 +19,17 @@ __all__ = ['str2value', 'argsort', 'hash_sort',
 if PYTHON3 is True:
     from functools import lru_cache
 else:
-    from string import atof as str2float, atoi as str2int
     from repoze.lru import lru_cache
 
-str2float = float
-
-@lru_cache(maxsize=None)
-def str2int(value):
-    return int(value)
-
-@lru_cache(maxsize=None)
-def str2bool(value):
-    return _str2bool(value)
-
-@lru_cache(maxsize=None)
-def str2date(value):
-    return _str2date(value)
-
-str2percent = _str2percent
-
+try:
+    from .string_transfer import str2int, str2float, str2pct, str2bool, str2datetime as str2date
+except ImportError:
+    from .py_string_transfer import str2int, str2float, str2pct, str2bool, str2datetime as str2date
+    
 def isnan(value):
     try:
         return _isnan(value)
-    except TypeError:
+    except Exception:
         return False
 
 # following masks are used to recognize string patterns
@@ -84,22 +73,22 @@ def auto_str2value(value, dtype=None):
     if dtype is not None:
         assert isinstance(dtype, STR_TYPE), 'prefer_type should be a string'
         assert dtype.lower() in ('float', 'int', 'bool', 'datetime', 'str')
-        return fast_str2value[dtype](value)
+        return fast_str2value[dtype](value.encode('utf-8'))
 
     if INT_MASK.match(value):
-        return str2int(value)
-    
+        return str2int(value.encode('utf-8'))    
+
     elif FLOAT_MASK.match(value):
-        return str2float(value)
+        return str2float(value.encode('utf-8'))
 
     elif PERCENT_MASK.match(value):
-        return str2percent(value)
+        return str2pct(value.encode('utf-8'))
 
     elif DATE_MASK.match(value):
-        return str2date(value)
+        return str2date(value.encode('utf-8'))
 
     elif BOOL_MASK.match(value.lower()):
-        return str2bool(value)
+        return str2bool(value.encode('utf-8'))
 
     else:
         return value
@@ -109,7 +98,7 @@ fast_str2value = {'float': str2float,
             'int': str2int,
             'bool': str2bool,
             'datetime': str2date,
-            'percent': str2percent,
+            'percent': str2pct,
             'str': lambda x: x}
 
 def argsort(seq, key=None, reverse=False):
@@ -179,4 +168,14 @@ def auto_plus_one(exists, item, start=1):
     return '%s_%d' % (item, start)
 
 def count_nan(nan_func, series):
-    return [nan_func(v) for v in series].count(True)
+    return sum(map(nan_func, series))
+
+def count_not_char(string):
+    return len(tuple(filter(lambda val: ord(val) > 126, string)))
+
+def count_str_printed_length(string):
+    return len(string) + count_not_char(string)
+
+def string_align(string, length):
+    return string.center(length - count_not_char(string))
+    

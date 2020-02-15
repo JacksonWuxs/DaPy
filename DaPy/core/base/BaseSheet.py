@@ -16,13 +16,13 @@ from .Series import Series
 from .utils import (argsort, auto_plus_one, auto_str2value, count_nan,
                     fast_str2value, hash_sort, is_dict, is_empty, is_iter,
                     is_math, is_seq, is_str, is_value, isnan, range, split,
-                    str2date, strip, xrange, zip_longest)
+                    str2date, strip, xrange, zip_longest, string_align)
 from .utils.utils_str_patterns import *
 from .utils.utils_join_table import inner_join, left_join, outer_join
 from .utils.utils_regression import simple_linear_reg
 
-LOCK_ERROR = 'sheet is locked by indexes, See drop_index()'
 
+LOCK_ERROR = 'sheet is locked by indexes, See drop_index()'
 def where_by_index_combine(rows, symbols):
     '''put all rows together'''
     final_rows = set(rows[0])
@@ -130,11 +130,11 @@ class BaseSheet(Object):
 
         old_col = self.columns
         self._init_col_name(item)
-        if isinstance(self._data, dict):
-            for old, new in zip(old_col, self.columns):
-                seq = self.data.get(old, Series())
+        for old, new in zip_longest(old_col, self.columns):
+            seq = self.data.get(old, Series())
+            if old in self._data:
                 del self.data[old]
-                self.data[new] = seq
+            self.data[new] = seq
 
     @property
     def nan(self):
@@ -142,7 +142,6 @@ class BaseSheet(Object):
         return self._nan
 
     @nan.setter
-    
     def nan(self, item):
         '''self.nan = None -> change another missing value symbol'''
         assert is_value(item), 'sheet.nan must be a value'
@@ -228,7 +227,6 @@ class BaseSheet(Object):
                         return True
         return False
 
-    
     def __delitem__(self, key):
         ok_types = tuple([STR_TYPE] + [int, list, tuple, slice])
         assert isinstance(key, ok_types), 'not allowed type "%s"' % type(key)
@@ -248,7 +246,6 @@ class BaseSheet(Object):
         
         if isinstance(key, slice):
             self.__delslice__(key)
-
     
     def __delslice__(self, key):
         start, stop, axis = self._check_slice(key)
@@ -299,7 +296,7 @@ class BaseSheet(Object):
         if is_str(interval):
             return self._data[interval]
 
-        raise TypeError('SeriesSet index must be int, str and slice, ' +
+        raise TypeError('Table index must be int, str and slice, ' +
                         'not %s' % str(type(interval)).split("'")[1])
 
     def __iter__(self):
@@ -314,19 +311,24 @@ class BaseSheet(Object):
         '''sheet['Col'] = [1, 2, 3, 4] -> None'''
         error = 'only support setting record(s) or column(s)'
         if isinstance(key, int):
-            if key <= self._dim.Ln:
+            bias = key + 1 - self._dim.Ln
+            if bias <= 0:
                 self.__delitem__(key)
-                self.insert_row(key, value)
+                self._insert_row(key, value)
             else:
-                self.append_row(value)
+                shape = (bias - 1, self.shape.Col)
+                empty = type(self).make_table(shape, self.nan, self.nan)
+                empty.columns = self.columns
+                self._extend(empty)
+                self._append_row(value)                
 
         elif is_str(key):
-            if key in self._columns:
+            if key in self._data:
                 pos = self._columns.index(key)
                 self.__delitem__(key)
-                self.insert_col(pos, value, key)
+                self._insert_col(pos, value, key)
             else:
-                self.append_col(value, key)
+                self._append_col(value, key)
         
         elif isinstance(key, slice):
             start, stop, axis = self._check_slice(key)
@@ -335,8 +337,43 @@ class BaseSheet(Object):
 
             if axis == 0:
                 self._setitem_slice_row(start, stop, value)
+
+        elif isinstance(key, tuple):
+            args, int_args, slc_args, str_args = self._analyze_keywords(key)
+            if len(key) == 2 and len(int_args) == 1 and len(str_args) == 1:
+                ln, col = int_args[0], str_args[0]
+                self._setitem_cell(ln, col, value)
+            if len(args) == len(str_args):
+                if isinstance(value, BaseSheet):
+                    assert value.shape[1] == len(args), 'values shape donot match keys shape'
+                    for key, series in zip(str_args, value.iter_values()):
+                        self[key] = series
         else:
             raise TypeError(error)
+
+    def _analyze_keywords(self, key):
+        args, int_args, slc_args, str_args = [], [], [], []
+        for arg in key:
+            if isinstance(arg, slice):
+                slc_args.append(arg)
+                for value in (arg.start, arg.stop):
+                    if value is not None:
+                        args.append(value)
+            elif isinstance(arg, int):
+                args.append(arg)
+                int_args.append(arg)
+            elif is_str(arg):
+                args.append(arg)
+                str_args.append(arg)
+        return args, int_args, slc_args, str_args
+
+    def _accumulate(self, func=None, cols=None, skipna=True):
+        for col in self._check_columns_index(cols):
+            self[col] = seq = self[col].accumulate(func, skipna)
+            index = self.columns.index(col)
+            if self._missing[index] != 0:
+                self._missing[index] = count_nan(self._isnan, seq)
+        return self
 
     def _add_row(self, row):
         # when user just input a single value as a row
@@ -356,7 +393,7 @@ class BaseSheet(Object):
                     row.append(value)
                     seq = Series(repeat(self.nan, self.shape.Ln))
                     self._quickly_append_col(key, seq, self.shape.Ln)
-
+        
         # in the normal way, we first calculate the bias of length
         lenth_bias = len(row) - self._dim.Col
         if lenth_bias > 0 and self.shape.Ln == 0:
@@ -366,7 +403,6 @@ class BaseSheet(Object):
             for _ in xrange(lenth_bias):
                 series = Series(repeat(self._nan, self.shape.Ln))
                 self._quickly_append_col(None, series, self.shape.Ln)
-
         miss, row = self._check_sequence(row, self.shape.Col)
         self._dim = SHEET_DIM(self._dim.Ln + 1, max(self._dim.Col, len(row)))
         if miss != 0:
@@ -392,16 +428,17 @@ class BaseSheet(Object):
                 self._data[title].extend([self._nan] * bias)
         self._quickly_append_col(variable_name, series, miss)
 
-    def _apply_inplace(self, func, cols, axis):
-        if axis == 1:
-            err = 'Your are operating columns which are Index. '
-            err += 'Please delete that column at first!'
-            assert all(map(lambda x: x not in self._sorted_index, cols)), err
-            for name in self._check_columns_index(cols):
-                seq = Series(map(func, self.data[name]))
-                ind = self.columns.index(seq)
-                self._missing[ind] = count_nan(self._isnan, seq)
-                self.data[name] = seq
+    def _map(self, func, cols):
+        err = 'Your are operating columns which are Index. '
+        err += 'Please delete that Index at first!'
+        assert all(map(lambda x: x not in self._sorted_index, cols)), err
+        for name in self._check_columns_index(cols):
+            self.data[name] = seq = self.data[name].map(func)
+            ind = self.columns.index(seq)
+            self._missing[ind] = count_nan(self._isnan, seq)
+        return self
+    
+    def _apply(self, func, col, *args, **kwrds):
         if axis == 0:
             new_col = self._check_col_new_name(None)
             subset = self[cols]
@@ -443,7 +480,8 @@ class BaseSheet(Object):
         if is_value(series):
             return 0, Series(repeat(series, size))
 
-        assert is_iter(series), "append item should be an iterable object"
+        if is_str(series) or not is_iter(series):
+            series = [series]
         series = Series(series)
         if len(series) < size:
             series = chain(series, [self._nan] * (size - len(series)))
@@ -464,7 +502,7 @@ class BaseSheet(Object):
         types_1 = is_str(start) == is_str(stop)
         types_2 = is_math(start) == is_math(stop)
         types_3 = None in (start, stop)
-        error = 'only support delete row or column at each time'
+        error = 'only support operate row or column at each time'
         assert types_1 or types_2 or types_3, error
         if isinstance(start, int) or isinstance(stop, int):
             start, stop = self._check_slice_row(start, stop)
@@ -487,7 +525,7 @@ class BaseSheet(Object):
             stop = lenth
         elif stop < 0:
             stop += lenth
-        error = 'Index out of range'
+        error = 'Index [%s:%s] out of range % s' % (start, stop, lenth)
         assert 0 <= start <= lenth and 0 <= stop <= lenth, error
         return start, stop
 
@@ -548,12 +586,19 @@ class BaseSheet(Object):
         if is_seq(row):
             return tuple(self._check_rows_index(_)[0] for _ in row)
         
-        # isinstance(row, slice):
+        #if isinstance(row, slice):
         start, stop, axis = self._check_slice(row)
         assert axis == 0, "don't put a column index in here"
         return range(start, stop)
 
-    
+    def _diff(self, lag=1, cols=None):
+        cols = self._check_columns_index(cols)
+        for col in cols:
+            seq = self[col].diff(lag)
+            seq.insert(0, self.nan)
+            self[col] = seq
+        return self
+
     def _drop_col(self, index):
         pop_name = list(set(self._check_columns_index(index)))
         line, col = self.shape
@@ -591,8 +636,7 @@ class BaseSheet(Object):
                 seq = self.data[title]
             seq.extend(sequence)
             self._data[title] = seq
-        self._dim = SHEET_DIM(self.shape.Ln + item.shape.Ln, 
-                              len(self._columns))
+        self._dim = SHEET_DIM(self.shape.Ln + item.shape.Ln,  len(self._columns))
 
         for i, sequence in enumerate(self.values()):
             if len(sequence) != self._dim.Ln:
@@ -600,7 +644,6 @@ class BaseSheet(Object):
                 sequence.extend(repeat(self.nan, add_miss_size))
                 self._missing[i] += add_miss_size
         return self
-
     
     def _fillna(self, fill_with=None, col=None, method=None, limit=None):
         cols = self._check_columns_index(col)
@@ -704,6 +747,12 @@ class BaseSheet(Object):
                         if limit == 0:
                             break
                     start = None
+
+    def _flatten(self, axis):
+        assert axis in (0, 1), 'axis must be 1 or 0'
+        if axis == 0:
+            return chain.from_iterable(self.iter_rows())
+        return chain.from_iterable(self.iter_values())
     
     def _getitem_by_tuple_subcol(self, key, subset):
         '''given columns, get subset'''
@@ -736,18 +785,7 @@ class BaseSheet(Object):
         if is_seq(key) and len(key) == 2 and isinstance(key[0], slice):
             self._check_mixture_tuple(key)
 
-        args, int_args, slc_args = [], [], []
-        for arg in key:
-            if isinstance(arg, slice):
-                slc_args.append(arg)
-                for value in (arg.start, arg.stop):
-                    if value is not None:
-                        args.append(value)
-            else:
-                args.append(arg)
-                if isinstance(arg, int):
-                    int_args.append(arg)
-
+        args, int_args, slc_args = self._analyze_keywords(key)[:3]
         subcol = all(map(is_str, args))
         subrow = all(map(is_math, args))
         err = "don't get subset with columns and rows at the " +\
@@ -757,7 +795,6 @@ class BaseSheet(Object):
         if subcol is True:
             return self._getitem_by_tuple_subcol(key, subset)
         return self._getitem_by_tuple_subrow(int_args, slc_args, subset)
-
     
     def _group_index_by_column_value(self, columns, engine=list):
         subset = defaultdict(engine)
@@ -1053,7 +1090,7 @@ class BaseSheet(Object):
 
     def _iter_groupby(self, keys, func=None, apply_col=None):
         def operate_subset(subset, key):
-            ret = subset.apply(func, col=apply_col, axis=1)
+            ret = subset.apply(func, cols=apply_col, axis=1)
             for key_value, key_name in zip(key, keys):
                 if key_name not in ret.columns:
                     pos = self.columns.index(key_name)
@@ -1117,7 +1154,16 @@ class BaseSheet(Object):
         useful_col = [col.strip() for col in findall(pattern, statement)]
         return [col.replace('(', '').replace(')', '') for col in useful_col]
 
-    
+    @classmethod
+    def make_table(cls, shape, fill_with=None, nan=NaN):
+        table = cls(nan=nan)
+        shape = table._analyze_keywords(shape)[1]
+        assert len(shape) == 2, 'shape of Table object must be 2 dimensions with integers'
+        ln, col = shape
+        for col in range(col):
+            table.append_col(Series(repeat(fill_with, ln)))
+        return table      
+
     def _normalized(self, process, cols):
         assert process in ('NORMAL', 'STANDAR', 'LOG', 'BOX-COX')
         cols = self._check_columns_index(cols)
@@ -1136,10 +1182,9 @@ class BaseSheet(Object):
                     var = float(statis.Sn)
 
                 assert var != 0, 'range or std of `%s` is 0 ' % title
-                self._apply_inplace(
+                self._map(
                     lambda val: (val - center) / var,
-                    cols=title,
-                    axis=1)
+                    cols=title)
 
             elif process == 'BOX-COX':
                 func = lambda val: boxcox(
@@ -1147,13 +1192,12 @@ class BaseSheet(Object):
                     kwrds.get('lamda', 1), 
                     kwrds.get('a', 0),
                     kwrds.get('k', 1))
-                self._apply_inplace(func, col=title, axis=1)
+                self._map(func, col=title)
 
             elif process == 'LOG':
-                self._apply_inplace(
+                self._map(
                     lambda val: log(val, kwrds.get('base', 2.71828183)),
-                    cols=title,
-                    axis=1)
+                    cols=title)
         return self
 
     
@@ -1250,7 +1294,15 @@ class BaseSheet(Object):
                 sequence.reverse()
         return self
 
-    
+    def _setitem_slice_row(self, start, stop, value):
+        nan_num = 1 if self._isnan(value) else 0
+        for i, arr in enumerate(self.iter_values()):
+            block = arr[start:stop]
+            lenth = len(block)
+            arr[start:stop] = repeat(value, lenth)
+            self._missing[i] -= count_nan(self._isnan, block)
+            self._missing[i] += nan_num * lenth           
+
     def _setitem_slice_col(self, start, stop, value):
         columns = self.columns[start:stop]
         err = "number of columns don't match number of given data"
@@ -1268,42 +1320,39 @@ class BaseSheet(Object):
             self._data[column] = seq
             self._missing[i] = miss
 
-    
+    def _setitem_cell(self, ln, col, val):
+        if col not in self._data:
+            self._append_col(Series(), col)
+        if ln + 1 > self.shape.Ln:
+            dtype = type(self)
+            shape = (ln + 1, self.shape.Col)
+            empty = dtype.make_table(shape, self.nan, self.nan)
+            empty.columns = self.columns
+            self._extend(empty)
+        arr = self._data[col]
+        if self._isnan(arr[ln]):
+            self._missing[self.columns.index(col)] -= 1
+        if self._isnan(val):
+            self._missing[self.columns.index(col)] += 1
+        arr[ln] = val
+        
     def _shuffle(self):
         new_index = range(self._dim.Ln)
         shuffles(new_index)
         return self._arrange_by_index(new_index)
 
-    def _show(self, lines=None):
-        if not self._columns:
-            frame = 'empty sheet instant'
-        else:
-            error = '`lines` must be an int or None.'
-            assert (is_math(lines) and lines > 0) or lines is None, error
-            if lines is None or 2 * lines >= self._dim.Ln:
-                lines, omit = -1, 0
-                temp = self
-            else:
-                omit = self._dim.Ln - 2 * lines
-                temp = self[:lines]
-                temp.extend(self[-lines:], inplace=True)
-            temporary_series = [[title, ] for title in self._columns]
-            for i, col in enumerate(temp.values()):
-                temporary_series[i].extend(map(str, col))
-
-            col_size = [len(max(col, key=len)) for col in temporary_series]
-            frame = ' ' + ' | '.join([title.center(col_size[i]) for i, title in
-                                      enumerate(self._columns)]) + '\n'
-            frame += '+'.join(['-' * (_ + 2) for _ in col_size]) + '\n'
-
-            for i, item in enumerate(temp.iter_rows()):
-                if i == lines:
-                    frame += ('.. Omit %d Ln ..' % omit).center(len(line)) + '\n'
-                line = ''
-                for j, value in enumerate(item):
-                    line += ' ' + str(value).center(col_size[j]) + ' |'
-                frame += line[:-1] + '\n'
-        print(frame)
+    def _show(self, col_size, rows, omit_line, max_len, omit):
+        frame = u''
+        for i, row in enumerate(rows):
+            if i == omit_line:
+                frame += ('.. Omit %d Ln ..' % omit).center(max_len) + '\n'
+            line = ''
+            for size, value in zip(col_size, row):
+                line += ' ' + string_align(value, size) + ' |'
+            frame += line[:-1] + '\n'
+            if i == 0:
+                frame += '+'.join(['-' * (_ + 2) for _ in col_size]) + '\n'
+        return frame
 
     def _sort(self, subset, *orderby):
         err = "orderby must be a sequence of conditions like ('A_col', 'DESC')"

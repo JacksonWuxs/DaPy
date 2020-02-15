@@ -1,6 +1,6 @@
 from unittest import TestCase
 from collections import OrderedDict
-from DaPy import Frame, SeriesSet, nan, Series
+from DaPy import SeriesSet, nan, Series
 from copy import copy
 
 DICT_DATA = OrderedDict(A=[1, 3, 6])

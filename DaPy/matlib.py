@@ -170,7 +170,7 @@ def diag(values):
     return Matrix().make_eye(len(values), values)
 
 def diff(seq, lag=1):
-    return [seq[i] - seq[i-lag] for i in range(lag, len(seq))]
+    return Series(seq).diff(lag)
 
 def log(data, base=2.71828183):
     if is_seq(data):
@@ -317,7 +317,8 @@ def cov(x, y=None, **kwrds):
     formula:  cov(x,y) = E(xy) - E(x)E(y) 
     '''
     # high level data structure
-    if hasattr(x, 'shape') or y is None:
+    assert is_iter(x) and is_iter(y), 'input X and Y must be containers'
+    if hasattr(x, 'shape') and x.shape[1] != 1 or y is None:
         if hasattr(x, 'tolist'):
             x = x.tolist()
         size = len(x)

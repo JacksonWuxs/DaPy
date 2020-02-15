@@ -2,13 +2,13 @@
 #########################################
 # Author         : Xuansheng Wu           
 # Email          : wuxsmail@163.com 
-# created        : 2017-11-01 00:00 
-# Last modified  : 2019-10-8 15:32
+# created        : 2017-11-01
+# Last modified  : 2020-02-04
 # Filename       : DaPy.__init__.py
 # Description    : initial file for DaPy                     
 #########################################
 '''
-Data Analysis Library for Human.
+Data Analysis Library for Humans.
 
 DaPy module is a fundemantal data processing tool, which helps you
 readily process and analysis data. DaPy offers a series of humane data
@@ -19,7 +19,7 @@ data scientists can handle their data and complete the analysis task easily.
 
 Enjoy the tour in data mining!
 
-:Copyright (C) 2018 - 2019  Xuansheng Wu.
+:Copyright (C) 2018 - 2020  Xuansheng Wu.
 :License: GNU 3.0, see LICENSE for more details.
 '''
 
@@ -47,16 +47,16 @@ mat = Matrix
 __title__ = 'DaPy'
 __description__ = 'Enjoy the tour in data mining !'
 __url__ = 'http://dapy.kitgram.cn'
-__version__ = '1.11.2'
-__build__ = 0x201910
+__version__ = '1.14.1'
+__build__ = 0x20200214
 __author__ = 'Xuansheng Wu (wuxsmail@163.com)'
-__license__ = '''DaPy  Copyright (C) 2018 - 2019 WU Xuansheng'+\
+__license__ = '''DaPy  Copyright (C) 2018 - 2020 WU Xuansheng'+\
               This program comes with ABSOLUTELY NO WARRANTY;
               for details type `show w'.This is free software,
               and you are welcome to redistribute it under certain
               conditions; type `show c' for details.'''
-__copyright__ = 'Copyright 2018-2019 Xuansheng Wu.'
-__date__ = datetime(2019, 11, 19)
+__copyright__ = 'Copyright 2018-2020 Xuansheng Wu.'
+__date__ = datetime(2020, 2, 14)
 
 def _unittests():
     from unittest import TestSuite, defaultTestLoader, TextTestRunner

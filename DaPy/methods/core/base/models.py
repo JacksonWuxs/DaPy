@@ -75,6 +75,12 @@ class BaseEngineModel(object):
             return open(addr, mode)
         return addr
 
+    def _zeros(self, shape):
+        return self._engine.zeros(shape)
+
+    def _ones(self, shape):
+        return self._engine.ones(shape)
+
     def _check_input_X_matrix(self, mat):
         assert hasattr(mat, 'shape'), 'input X must have attribute `mat.T`'
         assert hasattr(mat, 'T'), 'input X must have attribute `mat.T`'

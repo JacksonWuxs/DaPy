@@ -1,9 +1,10 @@
 from copy import copy
 from collections import Counter
-from itertools import repeat
+from itertools import repeat, compress, accumulate
 from datetime import datetime, timedelta
 from operator import add, sub, mul, mod, pow
 from operator import eq, gt, ge, lt, le
+from operator import itemgetter
 from math import sqrt
 from heapq import nlargest, nsmallest
 from time import clock
@@ -13,7 +14,7 @@ try:
 except ImportError:
     darray = list
 
-from .constant import STR_TYPE, VALUE_TYPE, SEQ_TYPE, DUPLICATE_KEEP, PYTHON3
+from .constant import STR_TYPE, VALUE_TYPE, SEQ_TYPE, DUPLICATE_KEEP, PYTHON3, nan
 from .utils import filter, map, range, xrange, zip, zip_longest
 from .utils import is_iter, is_math, is_seq, is_value, isnan, auto_plus_one
 from .utils.utils_isfunc import SET_SEQ_TYPE
@@ -28,6 +29,8 @@ SHAPE_UNEQUAL_WARNING = "can't broadcast together with lenth %d and %d"
 def quickly_apply(operation, left, right):
     assert callable(operation) is True
     return Series(map(operation, left, right))
+
+getter1, getter0 = itemgetter(1), itemgetter(0)
 
 class Series(list):
     def __init__(self, array=[]):
@@ -69,6 +72,43 @@ class Series(list):
     def __le__(self, other):
         other = self._check_operate_value(other)
         return quickly_apply(le, self, other)
+
+    def __setitem__(self, key, val):
+        '''refresh data from current series
+
+        Parameters
+        ----------
+        key : slice, int, same-size series and tuple
+
+        val : single value or iterable container
+
+        Return
+        ------
+        None
+        '''
+        setitem = list.__setitem__
+        if isinstance(key, int):
+            setitem(self, key, val)
+
+        if isinstance(key, Series):
+            err = 'Index should be same size with current series'
+            assert len(key) == len(self), err
+            for i, key in enumerate(key):
+                if key is True:
+                    setitem(self, key, val)
+
+        if is_seq(key):
+            for key in key:
+                setitem(self, key, val)
+
+        if isinstance(key, slice):
+            start = 0 if key.start is None else key.start
+            stop = len(self) if key.stop is None else key.stop
+            step = 1 if key.step is None else key.step
+            start = start if start > 0 else start + len(self)
+            stop = start if stop > 0 else stop + len(self)
+            val = repeat(val, int((stop - start) / 2)) if is_value(val) else val
+            setitem(self, key, val)                        
     
     def __getitem__(self, key):
         '''get data from current series
@@ -98,7 +138,7 @@ class Series(list):
         
         if isinstance(key, Series):
             assert len(key) == len(self)
-            return Series(val for key_, val in zip(key, self) if key_)
+            return Series(compress(self, key))
 
         if is_seq(key):
             if len(key) == 1:
@@ -259,9 +299,51 @@ class Series(list):
     def abs(self):
         return self.__abs__()
 
-    def apply(self, func):
-        assert callable(func), 'func expects callable object'
-        return Series(map(func, self))
+    def accumulate(self, func=None, skipna=True):
+        '''return accumulate for each item in the series'''
+        assert skipna in (True, False), '`skipna` must be True or False'
+        values = Series(self) if skipna else self
+        if skipna:
+            index_nan = [i for i, val in enumerate(self) if isnan(val)]
+            values[index_nan] = 0.0
+        return Series(accumulate(values, func))
+
+    def apply(self, func, *args, **kwrds):
+        return Series(func(val, *args, **kwrds) for val in self)
+
+    def argmax(self):
+        max_val, max_ind = - float('inf'), None
+        for ind, val in enumerate(self):
+            if val > max_val:
+                max_val, max_ind = val, ind
+        return max_ind
+
+    def argmin(self):
+        max_val, max_ind = float('inf'), None
+        for ind, val in enumerate(self):
+            if val < max_val:
+                max_val, max_ind = val, ind
+        return max_ind
+
+    def argsort(self, key=None, reverse=False):
+        '''return the indices that would sort an array
+
+        Parameters
+        ----------
+        key : function or None (default=None)
+
+        reverse : True or False (default=False)
+
+        Return
+        ------
+        Series : index of original data
+
+        Example
+        -------
+        >>> Series([5, 2, 1, 10]).argsort()
+        Series([2, 1, 0, 3])
+        '''
+        return Series(map(getter0, sorted(enumerate(self), key=getter1, reverse=reverse)))
 
     def between(self, left, right, boundary='both'):
         '''select the values which fall between `left` and `right`
@@ -302,22 +384,20 @@ class Series(list):
         return sqrt((Ex2 - Ex ** 2 / length) / (length - 1.0)) / (Ex / length)
 
     def count_values(self):
+        '''return a counter object that contains frequency of values'''
         return Counter(self)
 
-    def count_by(self, by=None):
-        '''count the number of elements in the series'''
-        key, elements = {}, self
-        if callable(by) is True:
-            elements = map(by, elements)
+    def diff(self, lag):
+        '''return a differential series that has only len(arr) - lag elements'''
+        getter = list.__getitem__
+        return Series(getter(self, i) - getter(self, i - lag) for i in range(lag, len(self)))
 
-        for el in elements:
-            key[el] = 0 if el not in key else 1
-            key[el] += 1
-        return key
-
-    def drop(self, label):
-        label = repeat(label, len(self))
-        return Series((val for key_, val in zip(label, self) if val != key_))
+    def drop(self, todrop):
+        '''remove values that matches `label` from the series'''
+        if is_seq(todrop) is False:
+            todrop = (todrop,)
+        todrop = set(todrop)
+        return Series(filter(lambda val: val not in todrop, self))
 
     def drop_duplicates(self, keep=['first', 'last', False]):
         assert keep in ('first', 'last', False)
@@ -337,7 +417,7 @@ class Series(list):
         return Series((val for i, val in enumerate(self) if i not in to_drop_index))
 
     def dropna(self):
-        return Series((val for val in self if not isnan(val)))
+        return Series(filter(lambda val: not isnan(val), self))
     
     def get(self, index, default=None):
         try:
@@ -349,10 +429,36 @@ class Series(list):
         return len(self) != len(set(self))
 
     def normalize(self):
-        pass
+        mini, maxm = float(min(self)), max(self)
+        rang = maxm - mini
+        return Series(map(lambda x: (x - mini) / rang, self))
         
     def isnan(self):
         return Series(map(isnan, self))
+
+    def map(self, func):
+        '''given a map, return values that are tranformed by map
+
+        Parameters
+        ----------
+        func : callable-object or dict
+
+        Return
+        ------
+        Series : mapped values
+
+        Examples
+        --------
+        >>> arr = dp.Series([3, 5, 7, 1])
+        >>> arr.map(lambda val: val + 1)
+        Series([4, 6, 8, 2])
+        >>> arr.map({3: 'C'})
+        Series(['C', 5, 7, 1])
+        '''
+        if hasattr(func, '__getitem__'):
+            func = lambda val: obj.__getitem__(val) if val in obj else val
+        assert callable(func), '`func` expects a callable object or dict-like object'
+        return Series(map(func, self))
 
     def max(self, axis=0):
         return max(self)
@@ -386,11 +492,8 @@ class Series(list):
             to_ret.reverse()
             return to_ret
     
-    def replace(self):
-        pass
-
-    def select(self):
-        pass
+    def replace(self, old, new):
+        return Series(new if _ == old else _ for _ in self)
 
     def sum(self):
         return sum(self, 0.0)
@@ -414,6 +517,16 @@ class Series(list):
             return array(self)
         except ImportError:
             raise ImportError("can't find numpy")
+
+    def unique(self):
+        '''return unique items in the series'''
+        uniq_vals, temp_vals = Series(), set()
+        additem, appitem = set.add, list.append
+        for i, val in enumerate(self):
+            if val not in uniq_vals:
+                additem(temp_vals, val)
+                appitem(uniq_vals, val)
+        return uniq_vals
 
 
 SET_SEQ_TYPE.add(Series)
